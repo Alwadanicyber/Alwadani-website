@@ -3,13 +3,19 @@
   "name": "alwadani-learning",
   "main": "build/worker.ts",
   "compatibility_date": "2026-05-15",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "workers_dev": true,
-  "d1_databases": [{
-    "binding": "DB",
-    "database_name": "alwadani-learning",
-    "database_id": "00000000-0000-4000-8000-000000000000",
-    "migrations_dir": "drizzle"
-  }],
-  "observability": { "enabled": true }
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "alwadani_learning_platform",
+      "database_id": "2b4ab5b9-4e58-405e-9241-f55df047e4fd",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
 }
