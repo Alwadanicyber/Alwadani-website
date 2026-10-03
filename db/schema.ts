@@ -3,3 +3,7 @@ export const students=sqliteTable('students',{id:text('id').primaryKey(),name:te
 export const answers=sqliteTable('answers',{student:text('student').notNull().references(()=>students.id),question:integer('question').notNull(),choice:integer('choice').notNull(),correct:integer('correct').notNull()},t=>[primaryKey({columns:[t.student,t.question]})]);
 export const reads=sqliteTable('reads',{student:text('student').notNull().references(()=>students.id),lesson:integer('lesson').notNull()},t=>[primaryKey({columns:[t.student,t.lesson]})]);
 export const courses=sqliteTable('courses',{id:text('id').primaryKey(),title:text('title').notNull(),description:text('description').notNull(),definition:text('definition').notNull(),published:integer('published').notNull().default(0),grade:text('grade').notNull().default('general'),updated:text('updated').notNull()});
+
+export const teacherAccount=sqliteTable('teacher_account',{id:integer('id').primaryKey(),username:text('username').notNull(),passwordHash:text('password_hash').notNull(),updated:integer('updated').notNull()});
+export const teacherSessions=sqliteTable('teacher_sessions',{tokenHash:text('token_hash').primaryKey(),teacher:integer('teacher').notNull().references(()=>teacherAccount.id),created:integer('created').notNull(),expires:integer('expires').notNull()},t=>[index('idx_teacher_sessions_expires').on(t.expires)]);
+export const teacherAttempts=sqliteTable('teacher_attempts',{bucket:text('bucket').primaryKey(),count:integer('count').notNull(),expires:integer('expires').notNull()});

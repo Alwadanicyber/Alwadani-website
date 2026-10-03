@@ -1,7 +1,7 @@
 declare namespace Cloudflare {
   interface Env {
     DB?: D1Database;
-    TEACHER_EMAIL?: string;
+    TEACHER_SETUP_KEY?: string;
     BUCKET?: R2Bucket;
   }
 }

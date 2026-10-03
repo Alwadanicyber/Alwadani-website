@@ -1,5 +1,14 @@
-import {requireChatGPTUser} from '@/app/chatgpt-auth';
-import {teacherAccess} from '@/lib/teacher';
+import { setupKey, teacherAccount, teacherIdentity } from '@/lib/teacher';
 import TeacherDashboard from './dashboard';
-export const dynamic='force-dynamic';
-export default async function TeacherPage(){await requireChatGPTUser('/teacher');if(!await teacherAccess())return <div className="standalone fallback" dir="rtl"><h1>مساحة المعلم خاصة بمالك الموقع</h1><p>يمكنك التعلم دون تسجيل دخول من صفحة الدروس.</p><a href="/" className="primary">عرض الدروس</a><a href="/signout-with-chatgpt?return_to=/teacher" className="secondary">تبديل الحساب</a></div>;return <TeacherDashboard/>;}
+import TeacherLogin from './login';
+export const dynamic = 'force-dynamic';
+export default async function TeacherPage() {
+  try {
+    if (!setupKey()) return <TeacherLogin mode="unconfigured" />;
+    const identity = await teacherIdentity();
+    if (identity) return <TeacherDashboard username={identity.username} />;
+    return <TeacherLogin mode={await teacherAccount() ? 'login' : 'setup'} />;
+  } catch {
+    return <TeacherLogin mode="unconfigured" />;
+  }
+}
