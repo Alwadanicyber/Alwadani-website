@@ -1,0 +1,22 @@
+export const grading:Record<number,{answer:number;reason:string}>=Object.fromEntries([
+[1,0,'السؤال عن حدث ماضٍ يستخدم did، ثم الفعل الأساسي live.'],
+[2,1,'بعد didn’t نستخدم الفعل الأساسي work دون ‎-ed أو ‎-s.'],
+[3,2,'yesterday تدل على الماضي. الماضي من wear هو wore، أما worn فهو التصريف الثالث.'],
+[4,1,'الفاعل I يأخذ was في الماضي. تركيب الميلاد هو was born.'],
+[5,2,'The twins جمع، لذلك نستخدم were born.'],
+[6,1,'مع السنوات نستخدم in. نستخدم on لتاريخ محدد أو يوم.'],
+[7,1,'Michael مفرد، والمبني للمجهول في الماضي يتكون من was + التصريف الثالث raised.'],
+[8,2,'His parents جمع، لذلك نستخدم were قبل married.'],
+[9,1,'بعد was في المبني للمجهول نستخدم التصريف الثالث written، لا الماضي wrote ولا الفعل الأساسي write.'],
+[10,0,'لإثبات عادة ماضية نستخدم used to ثم الفعل الأساسي play.'],
+[11,1,'بعد didn’t تُحذف d من used، فالصحيح didn’t use to.'],
+[12,2,'بعد use to نستخدم الفعل الأساسي ride، لا rode أو riding.'],
+[13,1,'meet فعل غير منتظم، وصيغته في الماضي met.'],[14,0,'الماضي غير المنتظم من go هو went. gone هو التصريف الثالث.'],
+[15,2,'Yousef مفرد، لذلك ماضي be هنا هو was.'],[16,1,'ask فعل منتظم؛ نضيف ‎-ed في الماضي: asked.'],
+[17,0,'agree ينتهي بـ e، فنضيف d فقط: agreed.'],[18,2,'spend فعل غير منتظم، والماضي منه spent، لا spended.'],
+[19,0,'ماضي grow هو grew؛ نحافظ على up في الفعل المركب grew up.'],[20,1,'move ينتهي بـ e، فنضيف d ليصبح moved.'],
+[21,1,'ماضي get هو got.'],[22,2,'للنفي في الماضي نستخدم didn’t + الفعل الأساسي know، لا knew.'],
+[23,0,'introduce فعل منتظم ينتهي بـ e، فنضيف d: introduced.'],[24,1,'come فعل غير منتظم، والماضي منه came.'],
+[25,2,'watch فعل منتظم؛ نضيف ‎-ed: watched.'],[26,0,'want فعل منتظم؛ الماضي wanted.'],
+[27,1,'بعد didn’t نستخدم play في صورته الأساسية، دون ‎-ed.'],[28,2,'try ينتهي بحرف ساكن ثم y، فنحوّل y إلى i ونضيف ‎-ed: tried.']
+].map(([id,answer,reason])=>[id,{answer,reason}])) as Record<number,{answer:number;reason:string}>;
