@@ -1,0 +1,5 @@
+import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlite-core';
+export const students=sqliteTable('students',{id:text('id').primaryKey(),name:text('name').notNull(),created:text('created').notNull(),completed:text('completed'),course:text('course').notNull().default('life-stories'),snapshot:text('snapshot')},t=>[index('idx_students_course').on(t.course)]);
+export const answers=sqliteTable('answers',{student:text('student').notNull().references(()=>students.id),question:integer('question').notNull(),choice:integer('choice').notNull(),correct:integer('correct').notNull()},t=>[primaryKey({columns:[t.student,t.question]})]);
+export const reads=sqliteTable('reads',{student:text('student').notNull().references(()=>students.id),lesson:integer('lesson').notNull()},t=>[primaryKey({columns:[t.student,t.lesson]})]);
+export const courses=sqliteTable('courses',{id:text('id').primaryKey(),title:text('title').notNull(),description:text('description').notNull(),definition:text('definition').notNull(),published:integer('published').notNull().default(0),grade:text('grade').notNull().default('general'),updated:text('updated').notNull()});

@@ -1,0 +1,1 @@
+CREATE INDEX `idx_students_course` ON `students` (`course`);

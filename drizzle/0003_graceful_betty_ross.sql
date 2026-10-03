@@ -1,0 +1,1 @@
+ALTER TABLE `courses` ADD `grade` text DEFAULT 'general' NOT NULL;
