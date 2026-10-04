@@ -15,7 +15,7 @@ const ownerKey='test-owner-key-never-use-in-production-123456789';
 const password='Teacher-Test-Only-123!';
 const forged={'oai-authenticated-user-id':'test-owner','oai-authenticated-user-email':'teacher@test.example'};
 let cookies={};
-async function req(path,body,expected=200,headers={}){const r=await mf.dispatchFetch('https://course.test'+path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',origin:'https://course.test',cookie:Object.entries(cookies).map(([k,v])=>k+'='+v).join('; '),...headers},...(body?{body:JSON.stringify(body)}:{})});if(r.headers.get('set-cookie')){const c=r.headers.get('set-cookie').split(';')[0];const i=c.indexOf('=');cookies[c.slice(0,i)]=c.slice(i+1);}const d=await r.json();if(r.status!==expected)throw new Error(JSON.stringify({path,status:r.status,expected,d,body}));return d;}
+async function req(path,body,expected=200,headers={},method=body?'POST':'GET'){const r=await mf.dispatchFetch('https://course.test'+path,{method,headers:{'Content-Type':'application/json',origin:'https://course.test',cookie:Object.entries(cookies).map(([k,v])=>k+'='+v).join('; '),...headers},...(body?{body:JSON.stringify(body)}:{})});if(r.headers.get('set-cookie')){const c=r.headers.get('set-cookie').split(';')[0];const i=c.indexOf('=');cookies[c.slice(0,i)]=c.slice(i+1);}const d=await r.json();if(r.status!==expected)throw new Error(JSON.stringify({path,status:r.status,expected,d,body}));return d;}
 function assert(v,m){if(!v)throw new Error(m);}
 try{const db=await mf.getD1Database('DB');for(const file of readdirSync(project+'drizzle').filter(x=>x.endsWith('.sql')).sort()){for(const s of readFileSync(project+'drizzle/'+file,'utf8').split('--> statement-breakpoint'))await db.prepare(s.trim()).run();}
 // Neither browser-supplied Sites identity nor an anonymous request grants access.
@@ -66,6 +66,74 @@ await db.prepare('INSERT INTO students(id,name,created,course,snapshot) VALUES(?
 assert((await req('/api/classroom')).leaderboard.some(x=>x.name==='قديم'&&x.score===1),'Legacy leaderboard excluded');
 const orders=new Set();for(let n=0;n<6;n++){const session=await req('/api/classroom',{action:'start',name:'اختبار الترتيب '+n});orders.add(JSON.stringify(session.course.questions.map(q=>q.options)));const restored=await req('/api/classroom');assert(JSON.stringify(restored.course.questions)===JSON.stringify(session.course.questions),'Reload changed choices');assert(session.course.questions.every((q,i)=>[...q.options].sort().join('|')===[...originalDefinition.questions[i].options].sort().join('|')),'Choices missing or duplicated');assert(!('answer' in session.course.questions[0]),'Unsolved answer leaked');}
 assert(orders.size>1,'Different students have identical full option order');
+// Deletion is private, reversible, and preserves every student record.
+const mutateCourse=(method,body,expected=200,headers=auth)=>req('/api/teacher',body,expected,headers,method);
+const missingCourse='00000000-0000-4000-8000-000000000123';
+for(const method of ['DELETE','PATCH']){
+  const body={id:draft.id,...(method==='PATCH'?{action:'restore'}:{})};
+  await mutateCourse(method,body,403,{});
+  await mutateCourse(method,body,403,forged);
+  await mutateCourse(method,body,403,{...auth,origin:'https://other.test'});
+  await mutateCourse(method,body,403,{...auth,origin:''});
+  await mutateCourse(method,{...body,id:'invalid'},400);
+  await mutateCourse(method,{...body,id:missingCourse},404);
+  const malformed=await mf.dispatchFetch('https://course.test/api/teacher',{method,headers:{...auth,origin:'https://course.test','Content-Type':'application/json'},body:'{'});
+  assert(malformed.status===400,'Malformed course mutation accepted');
+}
+await mutateCourse('PATCH',{id:draft.id,action:'delete'},400);
+async function studentRecords(){
+  const students=(await db.prepare('SELECT * FROM students ORDER BY id').all()).results;
+  const answers=(await db.prepare('SELECT * FROM answers ORDER BY student,question').all()).results;
+  const reads=(await db.prepare('SELECT * FROM reads ORDER BY student,lesson').all()).results;
+  return JSON.stringify({students,answers,reads});
+}
+const studentRecordsBefore=await studentRecords();
+const savedDefinition=(await db.prepare('SELECT definition FROM courses WHERE id=?').bind(draft.id).first()).definition;
+const deleted=await mutateCourse('DELETE',{id:draft.id});
+assert(!deleted.courses.some(c=>c.id===draft.id)&&deleted.deletedCourses.some(c=>c.id===draft.id&&c.published===-1),'Deleted course missing from trash');
+assert(!(await req('/api/courses')).courses.some(c=>c.id===draft.id),'Deleted course is public');
+assert((await req('/api/courses?grade=grade-4')).courses.length===0,'Deleted course still appears in its grade');
+await req('/api/classroom?course='+draft.id,null,503);
+await req('/api/classroom',{action:'start',course:draft.id,name:'لا يبدأ الدرس المحذوف'},503);
+const hiddenPage=await mf.dispatchFetch('https://course.test/?course='+draft.id);
+assert((await hiddenPage.text()).includes('الدرس غير متاح حاليًا'),'Deleted direct link remains accessible');
+const trashBackup=await (await mf.dispatchFetch('https://course.test/api/teacher/export',{headers:auth})).json();
+assert(!trashBackup.courses.some(c=>c.id===draft.id),'Trash included in active lesson backup');
+await req('/api/teacher',{...updated,id:draft.id,published:1},409,auth);
+assert((await db.prepare('SELECT published,definition FROM courses WHERE id=?').bind(draft.id).first()).definition===savedDefinition,'Stale editor changed deleted content');
+await mutateCourse('DELETE',{id:draft.id});
+assert(await studentRecords()===studentRecordsBefore,'Deletion removed or changed student data');
+const restored=await mutateCourse('PATCH',{id:draft.id,action:'restore'});
+assert(restored.courses.some(c=>c.id===draft.id&&c.published===0)&&!restored.deletedCourses.some(c=>c.id===draft.id),'Restoration must create a private draft');
+assert(!(await req('/api/courses')).courses.some(c=>c.id===draft.id),'Restoration unexpectedly published the course');
+await req('/api/teacher',{...restored.courses.find(c=>c.id===draft.id),published:1},200,auth);
+const restoredProgress=(await req('/api/courses?grade=grade-4')).courses[0].progress;
+assert(restoredProgress.answered===1&&restoredProgress.completed===progress.courses[0].progress.completed,'Restored lesson lost student progress');
+assert((await req('/api/classroom?course='+draft.id)).answers[0].answerText==='works','Restored student snapshot or correction changed');
+
+// A discarded private draft can also be recovered.
+const disposableDraft=await req('/api/teacher',payload,200,auth);
+await mutateCourse('DELETE',{id:disposableDraft.id});
+const recoveredDraft=await mutateCourse('PATCH',{id:disposableDraft.id,action:'restore'});
+assert(recoveredDraft.courses.some(c=>c.id===disposableDraft.id&&c.published===0),'Private draft was not restored');
+await mutateCourse('DELETE',{id:disposableDraft.id});
+
+// Deleting the original source lesson stores a marker rather than reintroducing the fallback.
+const originalDeleted=await mutateCourse('DELETE',{id:'life-stories'});
+assert(!originalDeleted.courses.some(c=>c.id==='life-stories')&&originalDeleted.deletedCourses.some(c=>c.id==='life-stories'),'Original course fallback returned after deletion');
+assert(!(await req('/api/courses')).courses.some(c=>c.id==='life-stories'),'Original deleted lesson is public');
+await req('/api/classroom',null,503);
+const hiddenOriginal=await mf.dispatchFetch('https://course.test/?course=life-stories');
+assert((await hiddenOriginal.text()).includes('الدرس غير متاح حاليًا'),'Original deleted direct link is accessible');
+const restoredOriginal=await mutateCourse('PATCH',{id:'life-stories',action:'restore'});
+const restoredOriginalCourse=restoredOriginal.courses.find(c=>c.id==='life-stories');
+assert(restoredOriginalCourse.published===0&&restoredOriginalCourse.definition.questions.length===28,'Original content was not retained');
+await req('/api/teacher',{...restoredOriginalCourse,published:1},200,auth);
+assert((await req('/api/courses?grade=grade-9')).courses.length===1,'Original course did not return to its grade');
+assert(await studentRecords()===studentRecordsBefore,'Delete/restore changed existing answers, reads, completions or snapshots');
+const trashedAdmin=await req('/api/teacher',null,200,auth);
+assert(trashedAdmin.deletedCourses.length===1&&trashedAdmin.deletedCourses[0].id===disposableDraft.id,'Trash visibility is incorrect');
+
 // Recovery revokes existing sessions, expiration denies access, logout revokes.
 const oldAuth={...auth};
 await req('/api/teacher/auth',{action:'recover',username:'alwadani',password:'New-Teacher-Password-456!',setupKey:'wrong'},403,{'cf-connecting-ip':'198.51.100.10'});
@@ -86,5 +154,5 @@ await mf.setOptions({modules,modulesRoot:root,compatibilityDate:'2026-05-15',com
 await req('/api/teacher',null,403,forged);await req('/api/teacher/auth',{action:'setup',username:'someone',password,setupKey:ownerKey},503);
 assert((await req('/api/courses')).courses.length===2,'Unconfigured teacher blocks students');
 let blocked=false;try{requireProductionDatabase({d1_databases:[{binding:'DB',database_id:'00000000-0000-4000-8000-000000000000'}]});}catch{blocked=true;}assert(blocked,'Placeholder deployment accepted');
-console.log('PASS: independent owner setup/login/logout/recovery; secure hashed passwords and sessions; CSRF checks; forged headers denied; rate limit and expiration; deployment placeholder blocked;  export permissions and saved content; third middle placement; stable per-student choice shuffling; canonical scoring; legacy leaderboard;  grade assignment, filtering, saved progress, anonymous isolation, supplemental explanation, owner-only editing; anonymous student start; draft visibility; publishing; corrections; certificate; snapshot preservation; per-course sessions; all 28 original questions; page rendering.');
+console.log('PASS: reversible course deletion and draft restoration; owner-only deletion and restore; CSRF and malformed mutation rejection; original fallback suppression; student records and snapshots preserved; stale editors cannot republish deleted lessons; independent owner setup/login/logout/recovery; secure hashed passwords and sessions; CSRF checks; forged headers denied; rate limit and expiration; deployment placeholder blocked;  export permissions and saved content; third middle placement; stable per-student choice shuffling; canonical scoring; legacy leaderboard;  grade assignment, filtering, saved progress, anonymous isolation, supplemental explanation, owner-only editing; anonymous student start; draft visibility; publishing; corrections; certificate; snapshot preservation; per-course sessions; all 28 original questions; page rendering.');
 }finally{await mf.dispose();}
