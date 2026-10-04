@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "alwadani-learning",
+  "name": "alwadani-website",
   "main": "build/worker.ts",
   "compatibility_date": "2026-05-15",
   "compatibility_flags": [
@@ -17,5 +17,6 @@
   ],
   "observability": {
     "enabled": true
-  }
+  },
+  "account_id": "e12cbaf16e1259a8be2e8cf2f7f3686f"
 }

@@ -8,7 +8,7 @@
   "scripts": {
     "install:ci": "bash scripts/install-pnpm.sh",
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/sync-owner-secret.mjs",
     "start": "wrangler dev --config dist/server/wrangler.json --local --persist-to .wrangler/state",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
