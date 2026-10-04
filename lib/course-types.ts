@@ -1,3 +1,5 @@
+// Course publication states: -1 in trash, 0 private draft, 1 published.
+export const COURSE_TRASHED=-1;
 export type Lesson={title:string;en:string;tag:string;intro:string;formula:string;rules:string[][];note:string;example:string;translation:string};
 export type QuizQuestion={id:number;lesson:number;prompt:string;options:string[];answer:number;reason:string};
 export type Definition={lessons:Lesson[];questions:QuizQuestion[]};
