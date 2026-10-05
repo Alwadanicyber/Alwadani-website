@@ -16,7 +16,8 @@
     "db:local": "node scripts/local-database.mjs",
     "setup:hosting": "node scripts/setup-hosting.mjs",
     "deploy": "node scripts/deploy.mjs",
-    "test:integration": "node scripts/check-integration.mjs"
+    "test:integration": "node scripts/check-integration.mjs",
+    "test:records": "node scripts/check-records.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

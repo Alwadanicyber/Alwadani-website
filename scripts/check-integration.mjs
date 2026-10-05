@@ -17,7 +17,7 @@ const forged={'oai-authenticated-user-id':'test-owner','oai-authenticated-user-e
 let cookies={};
 async function req(path,body,expected=200,headers={},method=body?'POST':'GET'){const r=await mf.dispatchFetch('https://course.test'+path,{method,headers:{'Content-Type':'application/json',origin:'https://course.test',cookie:Object.entries(cookies).map(([k,v])=>k+'='+v).join('; '),...headers},...(body?{body:JSON.stringify(body)}:{})});if(r.headers.get('set-cookie')){const c=r.headers.get('set-cookie').split(';')[0];const i=c.indexOf('=');cookies[c.slice(0,i)]=c.slice(i+1);}const d=await r.json();if(r.status!==expected)throw new Error(JSON.stringify({path,status:r.status,expected,d,body}));return d;}
 function assert(v,m){if(!v)throw new Error(m);}
-try{const db=await mf.getD1Database('DB');for(const file of readdirSync(project+'drizzle').filter(x=>x.endsWith('.sql')).sort()){for(const s of readFileSync(project+'drizzle/'+file,'utf8').split('--> statement-breakpoint'))await db.prepare(s.trim()).run();}
+try{const db=await mf.getD1Database('DB');for(const file of readdirSync(project+'drizzle').filter(x=>x.endsWith('.sql')&&!x.startsWith('0005_')).sort()){for(const s of readFileSync(project+'drizzle/'+file,'utf8').split('--> statement-breakpoint'))await db.prepare(s.trim()).run();}
 // Neither browser-supplied Sites identity nor an anonymous request grants access.
 await req('/api/teacher',null,403,forged);
 const setupPage=await mf.dispatchFetch('https://course.test/teacher');assert((await setupPage.text()).includes('أنشئ حسابك الخاص'),'Setup page missing');
@@ -134,6 +134,46 @@ assert(await studentRecords()===studentRecordsBefore,'Delete/restore changed exi
 const trashedAdmin=await req('/api/teacher',null,200,auth);
 assert(trashedAdmin.deletedCourses.length===1&&trashedAdmin.deletedCourses[0].id===disposableDraft.id,'Trash visibility is incorrect');
 
+// Private interactive teacher records: additive setup, validation and concurrent edits.
+const recordsPath='/api/teacher/records';
+assert(!(await db.prepare("SELECT name FROM sqlite_master WHERE name='teacher_records'").first()),'Record table should not exist before the first authorized record request');
+for(const method of ['GET','POST','PUT']){
+  await req(recordsPath,method==='GET'?null:{},403,{},method);
+  await req(recordsPath,method==='GET'?null:{},403,forged,method);
+}
+assert(!(await db.prepare("SELECT name FROM sqlite_master WHERE name='teacher_records'").first()),'Anonymous requests created the record table');
+const recordList=await req(recordsPath,null,200,auth);assert(recordList.records.length===0,'Record list not empty');
+const student1=crypto.randomUUID(),student2=crypto.randomUUID(),student3=crypto.randomUUID();
+const performance=crypto.randomUUID(),homework=crypto.randomUUID(),exam=crypto.randomUUID();
+const recordPayload={title:'كشف تجريبي',grade:'grade-9',className:'3 / ب',teacherName:'معلم تجريبي',principalName:'مدير تجريبي',students:[{id:student1,name:'طالب أول'},{id:student2,name:'طالب ثان'},{id:student3,name:''}],tasks:[{id:performance,title:'حفظ الحروف',type:'performance',maxScore:10},{id:homework,title:'واجب الوحدة',type:'homework',maxScore:10},{id:exam,title:'الاختبار الأول',type:'exam',maxScore:20}],marks:{[student1]:{[performance]:'done',[homework]:'missing',[exam]:0},[student2]:{[performance]:'missing',[homework]:'done',[exam]:'absent'}}};
+for(const method of ['POST','PUT'])for(const origin of ['', 'https://other.test'])await req(recordsPath,recordPayload,403,{...auth,origin},method);
+const badRecords=[{...recordPayload,students:[]},{...recordPayload,students:[recordPayload.students[0],recordPayload.students[0]]},{...recordPayload,tasks:[]},{...recordPayload,grade:'invalid'},{...recordPayload,tasks:[{...recordPayload.tasks[0],type:'unknown'}]},{...recordPayload,marks:{[student1]:{[exam]:21}}},{...recordPayload,marks:{[student1]:{[exam]:-1}}},{...recordPayload,marks:{[student1]:{[homework]:5}}},{...recordPayload,marks:{[student1]:{[performance]:'absent'}}},{...recordPayload,marks:{[crypto.randomUUID()]:{[exam]:2}}}];
+for(const invalid of badRecords)await req(recordsPath,invalid,400,auth);
+const createdRecord=(await req(recordsPath,recordPayload,201,auth)).record;
+assert(createdRecord.version===1&&createdRecord.students.length===3&&createdRecord.marks[student1][exam]===0,'Initial record or zero score not retained');
+const listedRecords=(await req(recordsPath,null,200,auth)).records;
+assert(listedRecords.length===1&&listedRecords[0].studentCount===3&&listedRecords[0].taskCount===3&&!('marks' in listedRecords[0])&&!('students' in listedRecords[0]),'Record summary is incorrect');
+const fetchedRecord=(await req(recordsPath+'?id='+createdRecord.id,null,200,auth)).record;
+assert(fetchedRecord.principalName===recordPayload.principalName&&fetchedRecord.marks[student2][exam]==='absent','Record metadata or absence missing');
+await req(recordsPath+'?id='+createdRecord.id,null,403);
+await req(recordsPath+'?id=invalid',null,400,auth);
+await req(recordsPath+'?id='+crypto.randomUUID(),null,404,auth);
+const editRecord=structuredClone(createdRecord);editRecord.students[2].name='طالب ثالث';editRecord.marks[student1][exam]=7.5;editRecord.marks[student2][homework]=null;editRecord.teacherName='معلم معدّل';editRecord.tasks.push({id:crypto.randomUUID(),title:'مهمة إضافية',type:'performance',maxScore:10});
+const savedRecord=(await req(recordsPath,editRecord,200,auth,'PUT')).record;
+assert(savedRecord.version===2&&savedRecord.marks[student1][exam]===7.5&&savedRecord.marks[student2][homework]===null&&savedRecord.students[2].name==='طالب ثالث'&&savedRecord.tasks.length===4,'Record update did not persist');
+await req(recordsPath,{...createdRecord,title:'تعديل قديم'},409,auth,'PUT');
+assert((await req(recordsPath+'?id='+createdRecord.id,null,200,auth)).record.title===recordPayload.title,'Stale edit overwrote the record');
+const copyRecord=(await req(recordsPath,{...savedRecord,title:'نسخة مستقلة'},201,auth)).record;
+assert(copyRecord.id!==createdRecord.id&&copyRecord.version===1,'Record copy overwrote its source');
+const malformedRecord=await mf.dispatchFetch('https://course.test'+recordsPath,{method:'POST',headers:{...auth,origin:'https://course.test','Content-Type':'application/json'},body:'{'});assert(malformedRecord.status===400,'Malformed record accepted');
+const oversizedRecord=await mf.dispatchFetch('https://course.test'+recordsPath,{method:'POST',headers:{...auth,origin:'https://course.test','Content-Type':'application/json'},body:'x'.repeat(350001)});assert(oversizedRecord.status===400,'Oversized record accepted');
+// Migration remains safe after automatic setup and keeps existing saved records.
+for(const file of readdirSync(project+'drizzle').filter(x=>x.startsWith('0005_')&&x.endsWith('.sql'))){for(const statement of readFileSync(project+'drizzle/'+file,'utf8').split('--> statement-breakpoint'))await db.prepare(statement.trim()).run();}
+assert((await req(recordsPath,null,200,auth)).records.length===2,'Migration removed saved records');
+assert(await studentRecords()===studentRecordsBefore,'Record feature changed lesson student data');
+for(const [path,text] of [['/teacher/records','كشوفك، في مكان واحد'],['/teacher/settings','إعدادات المظهر'],['/teacher/classes','صفوفك الدراسية'],['/teacher?grade=grade-9','الصف الثالث المتوسط']]){const response=await mf.dispatchFetch('https://course.test'+path,{headers:auth});const html=await response.text();assert(response.status===200&&html.includes(text)&&html.includes('قائمة المعلم'),'New teacher page failed '+path);}
+for(const path of ['/teacher/records','/teacher/settings','/teacher/classes']){const response=await mf.dispatchFetch('https://course.test'+path);const html=await response.text();assert((response.status>=300&&response.status<400&&response.headers.get('location')?.endsWith('/teacher'))||(response.status===200&&html.includes('مرحبًا بعودتك')&&!html.includes('كشوفك، في مكان واحد')),'Private teacher page exposed '+path+' '+JSON.stringify({status:response.status,location:response.headers.get('location'),html:html.slice(0,500)}));}
+
 // Recovery revokes existing sessions, expiration denies access, logout revokes.
 const oldAuth={...auth};
 await req('/api/teacher/auth',{action:'recover',username:'alwadani',password:'New-Teacher-Password-456!',setupKey:'wrong'},403,{'cf-connecting-ip':'198.51.100.10'});
@@ -147,12 +187,12 @@ assert(loggedIn.status===200,'Password login failed');
 const loginCookie=loggedIn.headers.get('set-cookie').split(';')[0];
 await req('/api/teacher/auth',{action:'logout'},200,auth);await req('/api/teacher',null,403,auth);
 await req('/api/teacher',null,200,{cookie:loginCookie});
-await db.prepare('UPDATE teacher_sessions SET expires=0').run();await req('/api/teacher',null,403,{cookie:loginCookie});
+await db.prepare('UPDATE teacher_sessions SET expires=0').run();await req('/api/teacher',null,403,{cookie:loginCookie});await req(recordsPath,null,403,{cookie:loginCookie});
 const unauth=await mf.dispatchFetch('https://course.test/teacher');assert((await unauth.text()).includes('مرحبًا بعودتك'),'Login page missing');
 // Unconfigured installations fail closed even with forged identity headers.
 await mf.setOptions({modules,modulesRoot:root,compatibilityDate:'2026-05-15',compatibilityFlags:['nodejs_compat'],bindings:{},d1Databases:{DB:'test'},cf:false});
 await req('/api/teacher',null,403,forged);await req('/api/teacher/auth',{action:'setup',username:'someone',password,setupKey:ownerKey},503);
 assert((await req('/api/courses')).courses.length===2,'Unconfigured teacher blocks students');
 let blocked=false;try{requireProductionDatabase({d1_databases:[{binding:'DB',database_id:'00000000-0000-4000-8000-000000000000'}]});}catch{blocked=true;}assert(blocked,'Placeholder deployment accepted');
-console.log('PASS: reversible course deletion and draft restoration; owner-only deletion and restore; CSRF and malformed mutation rejection; original fallback suppression; student records and snapshots preserved; stale editors cannot republish deleted lessons; independent owner setup/login/logout/recovery; secure hashed passwords and sessions; CSRF checks; forged headers denied; rate limit and expiration; deployment placeholder blocked;  export permissions and saved content; third middle placement; stable per-student choice shuffling; canonical scoring; legacy leaderboard;  grade assignment, filtering, saved progress, anonymous isolation, supplemental explanation, owner-only editing; anonymous student start; draft visibility; publishing; corrections; certificate; snapshot preservation; per-course sessions; all 28 original questions; page rendering.');
+console.log('PASS: private teacher records, lazy additive D1 schema, progress/grades/absence persistence, concurrent edit conflicts, isolated copies, record validation, teacher navigation and settings; reversible course deletion and draft restoration; owner-only deletion and restore; CSRF and malformed mutation rejection; original fallback suppression; student records and snapshots preserved; stale editors cannot republish deleted lessons; independent owner setup/login/logout/recovery; secure hashed passwords and sessions; CSRF checks; forged headers denied; rate limit and expiration; deployment placeholder blocked;  export permissions and saved content; third middle placement; stable per-student choice shuffling; canonical scoring; legacy leaderboard;  grade assignment, filtering, saved progress, anonymous isolation, supplemental explanation, owner-only editing; anonymous student start; draft visibility; publishing; corrections; certificate; snapshot preservation; per-course sessions; all 28 original questions; page rendering.');
 }finally{await mf.dispose();}
