@@ -7,6 +7,7 @@ function read():TeacherRecord[]{
 }
 export function localList():RecordSummary[]{return read().map(r=>({id:r.id,title:r.title,grade:r.grade,className:r.classLabel||r.className,teacherName:r.teacherName,studentCount:r.students.length,taskCount:r.tasks.length,version:r.version,updated:r.updated}));}
 export function localFind(id:string){const record=read().find(r=>r.id===id);if(!record)throw new Error('لم يُعثر على الكشف في هذا المتصفح.');return record;}
+export function localDelete(id:string,version:number){const list=read(),record=list.find(r=>r.id===id);if(!record||record.version!==version)throw new Error('تغيّر الكشف من نافذة أخرى. حدّث القائمة قبل حذفه.');localStorage.setItem(key,JSON.stringify(list.filter(r=>r.id!==id)));}
 export function localSave(content:RecordContent,previous?:TeacherRecord):TeacherRecord{
   const list=read(),clean=validateRecord(content),existing=previous?list.find(r=>r.id===previous.id):undefined;
   if(previous&&(!existing||existing.version!==previous.version))throw new Error('تغيّر الكشف في نافذة أخرى. احفظ تعديلاتك كنسخة جديدة.');

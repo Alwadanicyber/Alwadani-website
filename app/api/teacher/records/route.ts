@@ -1,5 +1,5 @@
 import {teacherAccess} from '@/lib/teacher';
-import {createRecord,findRecord,listRecords,updateRecord} from '@/lib/record-store';
+import {createRecord,deleteRecord,findRecord,listRecords,updateRecord} from '@/lib/record-store';
 import {validateRecord,validRecordId} from '@/lib/records';
 export const dynamic='force-dynamic';
 const reply=(value:unknown,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'no-store'}});
@@ -26,3 +26,9 @@ async function save(req:Request,edit:boolean){
 }
 export async function POST(req:Request){return save(req,false);}
 export async function PUT(req:Request){return save(req,true);}
+export async function DELETE(req:Request){
+  if(!await teacherAccess())return reply({error:'غير مصرح بحذف الكشوف.'},403);
+  if(req.headers.get('origin')!==new URL(req.url).origin)return reply({error:'طلب غير صالح.'},403);
+  let body;try{const raw=await req.text();if(raw.length>1000)throw new Error();body=JSON.parse(raw);if(!validRecordId(body.id)||!Number.isSafeInteger(body.version)||body.version<1)throw new Error();}catch{return reply({error:'راجع الكشف المطلوب حذفه.'},400);}
+  try{if(!await deleteRecord(body.id,body.version))return reply({error:'تغيّر الكشف أو حُذف من جلسة أخرى. حدّث القائمة قبل المحاولة.'},409);return reply({deleted:true});}catch{return reply({error:'تعذّر حذف الكشف. حاول مجددًا.'},503);}
+}
