@@ -32,6 +32,8 @@ export default function Records({initialGrade,publicMode=false}:{initialGrade:st
     if(!recordRef.current||!dirtyRef.current)return Promise.resolve(true);
     if(conflict.current)return Promise.resolve(false);
     const run=async()=>{
+      // Local persistence completes synchronously; yield before assigning the in-flight promise.
+      await Promise.resolve();
       setSaveState('saving');setError('');
       try{
         while(dirtyRef.current&&recordRef.current){
