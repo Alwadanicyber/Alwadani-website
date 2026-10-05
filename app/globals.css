@@ -76,3 +76,14 @@
 @media print{.record-print-pages .mark-note{background:#fff4d7!important;color:#765615!important}}
 
 .page-heading .site-identity{font-size:14px;color:var(--muted-foreground);line-height:1.8;margin:0 0 8px}.site-identity span{display:inline-block}
+
+/* Paper records share names and headings with electronic records, with empty writing cells. */
+.record-format-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:0 0 26px}
+.record-format-options>label{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--border);border-radius:12px;background:var(--background);padding:18px;cursor:pointer;line-height:1.7}
+.record-format-options>label.selected{border-color:#287858;box-shadow:inset 0 0 0 1px #287858;background:var(--secondary)}
+.record-format-options input[type=radio]{width:18px;height:18px;min-height:0;flex-shrink:0;accent-color:#287858;margin:5px 0 0}
+.record-format-options span{display:grid;gap:5px}.record-format-options strong{font-size:16px}.record-format-options small{color:var(--muted-foreground);font-size:12px}
+.record-task-fields.record-title-only{grid-template-columns:minmax(0,1fr)}
+.record-table .record-blank-cell{height:60px;background:var(--card)}.blank-writing-space{display:block;min-height:38px}
+@media(max-width:620px){.record-format-options{grid-template-columns:minmax(0,1fr)}}
+@media print{.record-print-pages .record-blank-cell{height:36px;background:#fff!important}}

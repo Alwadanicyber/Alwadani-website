@@ -8,7 +8,7 @@ import ts from 'typescript';
 const dir=mkdtempSync(join(tmpdir(),'alwadani-record-check-'));
 try{
   for(const name of ['grades','records','record-export','education-brand','certificates','local-records']){const source=readFileSync(new URL('../lib/'+name+'.ts',import.meta.url),'utf8');const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText.replace(/from '\.\/(grades|records|education-brand)'/g,"from './$1.mjs'");writeFileSync(join(dir,name+'.mjs'),js);}
-  const {validateRecord,markLabel,markClass,completionCount,applyRecordTaskSettings}=await import(pathToFileURL(join(dir,'records.mjs')));
+  const {validateRecord,markLabel,markClass,completionCount,applyRecordTaskSettings,addRecordStudent,nextStudentSlot,MAX_STUDENTS}=await import(pathToFileURL(join(dir,'records.mjs')));
   const {recordHtml,recordCsv}=await import(pathToFileURL(join(dir,'record-export.mjs')));
   const student=randomUUID(),tasks=Array.from({length:7},(_,i)=>({id:randomUUID(),title:i===0?'<script>alert(1)</script>':'عمل '+(i+1),type:i===0?'exam':i===1?'homework':'performance',maxScore:20}));
   const record={title:'كشف <img src=x onerror=alert(1)>',grade:'grade-9',className:'3 / ب',teacherName:'معلم & مدير',principalName:'المدير',students:[{id:student,name:'=HYPERLINK("https://example.test")'}],tasks,marks:{[student]:{[tasks[0].id]:0,[tasks[1].id]:'missing',[tasks[2].id]:'done'}}};
@@ -44,6 +44,33 @@ try{
   const legacy={...commentRecord,tasks:[{...commentTask,mode:'status',positiveLabel:'مكتمل',negativeLabel:'لم يكتمل'}],students:[...record.students,{id:randomUUID(),name:''}],marks:{[student]:{[commentTask.id]:'done'}}};legacy.marks[legacy.students[1].id]={[commentTask.id]:'missing'};
   const converted=applyRecordTaskSettings(legacy,commentTask.id,{mode:'comments',choices:choices.slice(0,2)});assert.equal(converted.marks[student][commentTask.id],'choice:'+choices[0].id);assert.equal(converted.marks[legacy.students[1].id][commentTask.id],'choice:'+choices[1].id);assert.equal(legacy.marks[student][commentTask.id],'done');assert.equal(converted.students[1].name,'');
   const localComments=localSave(commentRecord);assert.equal(localFind(localComments.id).tasks[0].choices[2].label,choices[2].label);assert.equal(localFind(localComments.id).marks[student][commentTask.id],'choice:'+choices[2].id);assert.equal(validateRecord(JSON.parse(JSON.stringify(localComments))).tasks[0].choices.length,3);
+  // A printable blank record retains headings and names, never results or UI controls.
+  const blank=validateRecord({...record,format:'blank',marks:{}});
+  assert.equal(validateRecord(record).format,'electronic');
+  assert.throws(()=>validateRecord({...record,format:'paper'}));
+  assert.throws(()=>validateRecord({...record,format:'blank'}));
+  const blankHtml=recordHtml(blank),blankCsv=recordCsv(blank);
+  assert(!blankHtml.includes('لم يُرصد')&&!blankHtml.includes('0 / 20')&&!blankHtml.includes('record-legend">'));
+  assert(!blankHtml.includes('<select')&&!blankHtml.includes('<input')&&!blankHtml.includes('<br>من '));
+  assert(blankHtml.includes('&lt;script&gt;')&&blankHtml.includes('معلم &amp; مدير'));
+  assert.equal((blankHtml.match(/<td class="record-blank-cell"><\/td>/g)||[]).length,7);
+  assert.equal((blankHtml.match(/<section class="record-print-page/g)||[]).length,2);
+  assert(!blankCsv.includes('لم يُرصد')&&blankCsv.includes('"","","","","","",""'));
+  const savedBlank=localSave(blank);assert.equal(localFind(savedBlank.id).format,'blank');assert.equal(localList().find(r=>r.id===savedBlank.id).format,'blank');
+  assert.equal(validateRecord(JSON.parse(JSON.stringify(savedBlank))).format,'blank');
+
+  // Named additions reuse reserved trailing rows; earlier holes and all marks stay in place.
+  const roster={...record,marks:structuredClone(record.marks),students:Array.from({length:30},(_,i)=>({id:i===0?student:randomUUID(),name:i===0?'طالب أول':i===1?'طالب ثان':''}))};
+  const row3=roster.students[2].id;roster.marks[row3]={[tasks[0].id]:5};
+  const filled=addRecordStudent(roster,'  طالب ثالث  ');
+  assert.equal(filled.students.length,30);assert.equal(filled.students[2].id,row3);assert.equal(filled.students[2].name,'طالب ثالث');assert.equal(filled.marks[row3][tasks[0].id],5);assert.equal(roster.students[2].name,'');
+  const hole={...roster,students:roster.students.map((r,i)=>({...r,name:i===1?'':i===3?'آخر اسم':r.name}))};
+  assert.equal(nextStudentSlot(hole),4);assert.equal(addRecordStudent(hole,'بعد آخر اسم').students[4].name,'بعد آخر اسم');assert.equal(addRecordStudent(hole,'بعد آخر اسم').students[1].name,'');
+  const unnamed=addRecordStudent(roster,'  ');assert.equal(unnamed.students.length,31);assert.equal(unnamed.students[30].name,'');
+  const noNames={...blank,students:Array.from({length:3},()=>({id:randomUUID(),name:''}))};assert.equal(addRecordStudent(noNames,'أول طالب').students[0].name,'أول طالب');
+  const fullNames={...record,students:[{id:student,name:'طالب'}]};const appended=addRecordStudent(fullNames,'طالب إضافي');assert.equal(appended.students.length,2);assert.equal(appended.students[1].name,'طالب إضافي');assert.deepEqual(appended.marks,record.marks);
+  const maxRows={...blank,students:Array.from({length:MAX_STUDENTS},(_,i)=>({id:randomUUID(),name:i===0?'طالب أول':''}))};assert.equal(addRecordStudent(maxRows,'طالب ثان').students.length,MAX_STUDENTS);assert.equal(addRecordStudent(maxRows,'طالب ثان').students[1].name,'طالب ثان');assert.throws(()=>addRecordStudent(maxRows,''));assert.throws(()=>addRecordStudent({...maxRows,students:maxRows.students.map(r=>({...r,name:'طالب'}))},'طالب إضافي'));
+  console.log('PASS: blank HTML/CSV cells, pagination, local backup format, trailing student slots, stable IDs/marks and maximum-row behavior.');
   console.log('PASS: approved comment choices, colors, HTML/CSV output, local roundtrip, legacy status conversion and referenced-choice deletion guard.');
   console.log('PASS: custom tasks: numbers, checkboxes, editable status labels, incompatible marks rejected.');
   console.log('PASS: scored performance, subject decorations, per-student designs, certificate escaping, local persistence and conflict guard.');
