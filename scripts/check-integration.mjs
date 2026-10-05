@@ -137,7 +137,7 @@ assert(trashedAdmin.deletedCourses.length===1&&trashedAdmin.deletedCourses[0].id
 // Private interactive teacher records: additive setup, validation and concurrent edits.
 const recordsPath='/api/teacher/records';
 assert(!(await db.prepare("SELECT name FROM sqlite_master WHERE name='teacher_records'").first()),'Record table should not exist before the first authorized record request');
-for(const method of ['GET','POST','PUT']){
+for(const method of ['GET','POST','PUT','DELETE']){
   await req(recordsPath,method==='GET'?null:{},403,{},method);
   await req(recordsPath,method==='GET'?null:{},403,forged,method);
 }
@@ -146,7 +146,7 @@ const recordList=await req(recordsPath,null,200,auth);assert(recordList.records.
 const student1=crypto.randomUUID(),student2=crypto.randomUUID(),student3=crypto.randomUUID();
 const performance=crypto.randomUUID(),homework=crypto.randomUUID(),exam=crypto.randomUUID();
 const recordPayload={title:'كشف تجريبي',grade:'grade-9',className:'3 / ب',teacherName:'معلم تجريبي',principalName:'مدير تجريبي',students:[{id:student1,name:'طالب أول'},{id:student2,name:'طالب ثان'},{id:student3,name:''}],tasks:[{id:performance,title:'حفظ الحروف',type:'performance',maxScore:10},{id:homework,title:'واجب الوحدة',type:'homework',maxScore:10},{id:exam,title:'الاختبار الأول',type:'exam',maxScore:20}],marks:{[student1]:{[performance]:'done',[homework]:'missing',[exam]:0},[student2]:{[performance]:'missing',[homework]:'done',[exam]:'absent'}}};
-for(const method of ['POST','PUT'])for(const origin of ['', 'https://other.test'])await req(recordsPath,recordPayload,403,{...auth,origin},method);
+for(const method of ['POST','PUT','DELETE'])for(const origin of ['', 'https://other.test'])await req(recordsPath,recordPayload,403,{...auth,origin},method);
 const badRecords=[{...recordPayload,students:[]},{...recordPayload,students:[recordPayload.students[0],recordPayload.students[0]]},{...recordPayload,tasks:[]},{...recordPayload,grade:'invalid'},{...recordPayload,tasks:[{...recordPayload.tasks[0],type:'unknown'}]},{...recordPayload,marks:{[student1]:{[exam]:21}}},{...recordPayload,marks:{[student1]:{[exam]:-1}}},{...recordPayload,marks:{[student1]:{[homework]:5}}},{...recordPayload,marks:{[student1]:{[performance]:'absent'}}},{...recordPayload,marks:{[crypto.randomUUID()]:{[exam]:2}}}];
 for(const invalid of badRecords)await req(recordsPath,invalid,400,auth);
 const createdRecord=(await req(recordsPath,recordPayload,201,auth)).record;
@@ -178,11 +178,12 @@ for(const path of ['/teacher/records','/teacher/settings','/teacher/classes']){c
 
 for(const [path,text] of [['/tools','أدوات تسهّل يومك'],['/tools/records','كشوفك، في مكان واحد'],['/tools/certificates','لكل مبدع، شهادة']]){const response=await mf.dispatchFetch('https://course.test'+path);const html=await response.text();assert(response.status===200&&html.includes(text)&&html.includes('أدوات متاحة للجميع'),'Anonymous tools page unavailable '+path);assert(!html.includes(recordPayload.title),'Public tools exposed owner records');}
 const ratedId=crypto.randomUUID(),customId=crypto.randomUUID();
-const toolsRecord={...recordPayload,classLabel:'الصف الرابع عام أ',design:'blue',tasks:[{id:ratedId,title:'أداء شفهي',type:'performance-score',maxScore:5},{id:customId,title:'إحضار الكتاب',type:'custom',mode:'check',maxScore:10,positiveLabel:'أحضر',negativeLabel:'لم يحضر'}],marks:{[student1]:{[ratedId]:4,[customId]:'done'}}};
-const toolsSaved=(await req(recordsPath,toolsRecord,201,auth)).record;assert(toolsSaved.classLabel==='الصف الرابع عام أ'&&toolsSaved.design==='blue'&&toolsSaved.marks[student1][ratedId]===4&&toolsSaved.tasks[1].mode==='check','New record options did not persist in D1');
+const toolsRecord={...recordPayload,schoolName:'مدرسة تجريبية',subjectName:'اللغة الإنجليزية',classLabel:'الصف الرابع عام أ',design:'blue',tasks:[{id:ratedId,title:'أداء شفهي',type:'performance-score',maxScore:5},{id:customId,title:'إحضار الكتاب',type:'custom',mode:'check',maxScore:10,positiveLabel:'أحضر',negativeLabel:'لم يحضر'}],marks:{[student1]:{[ratedId]:4,[customId]:'done'}}};
+const toolsSaved=(await req(recordsPath,toolsRecord,201,auth)).record;assert(toolsSaved.schoolName==='مدرسة تجريبية'&&toolsSaved.subjectName==='اللغة الإنجليزية'&&toolsSaved.classLabel==='الصف الرابع عام أ'&&toolsSaved.design==='blue'&&toolsSaved.marks[student1][ratedId]===4&&toolsSaved.tasks[1].mode==='check','New record options did not persist in D1');
 await req(recordsPath,{...toolsRecord,marks:{[student1]:{[ratedId]:6}}},400,auth);
 await req(recordsPath,{...toolsSaved,tasks:toolsSaved.tasks.map(t=>t.id===customId?{...t,mode:'number'}:t)},400,auth,'PUT');
 await req(recordsPath,null,403);await req('/api/teacher',null,403);
+await req(recordsPath,{id:toolsSaved.id,version:toolsSaved.version+1},409,auth,'DELETE');assert((await req(recordsPath+'?id='+toolsSaved.id,null,200,auth)).record.id===toolsSaved.id,'Stale delete removed a newer record');await req(recordsPath,{id:toolsSaved.id,version:toolsSaved.version},200,auth,'DELETE');await req(recordsPath+'?id='+toolsSaved.id,null,404,auth);assert(await studentRecords()===studentRecordsBefore,'Record deletion changed lesson student data');
 
 // Recovery revokes existing sessions, expiration denies access, logout revokes.
 const oldAuth={...auth};

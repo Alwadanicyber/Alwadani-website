@@ -8,7 +8,7 @@ export const isNumberTask=(task:Pick<RecordTask,'type'|'mode'>)=>task.type==='ex
 export type RecordStudent={id:string;name:string};
 export type RecordMark=null|'done'|'missing'|'absent'|number;
 export const recordDesigns={white:'أبيض رسمي',green:'أخضر هادئ',blue:'أزرق أنيق',gold:'إطار ذهبي'};
-export type RecordContent={title:string;grade:string;className:string;classLabel?:string;design?:keyof typeof recordDesigns;teacherName:string;principalName:string;students:RecordStudent[];tasks:RecordTask[];marks:Record<string,Record<string,RecordMark>>};
+export type RecordContent={title:string;grade:string;className:string;classLabel?:string;schoolName?:string;subjectName?:string;design?:keyof typeof recordDesigns;teacherName:string;principalName:string;students:RecordStudent[];tasks:RecordTask[];marks:Record<string,Record<string,RecordMark>>};
 export type TeacherRecord=RecordContent&{id:string;version:number;created:string;updated:string};
 export type RecordSummary={id:string;title:string;grade:string;className:string;teacherName:string;studentCount:number;taskCount:number;version:number;updated:string};
 export const taskLabels:Record<TaskType,string>={performance:'مهمة أدائية','performance-score':'مهمة أدائية +',homework:'واجب',exam:'اختبار',custom:'مخصص'};
@@ -56,7 +56,7 @@ export function validateRecord(value:unknown):RecordContent{
       marks[studentId][taskId]=mark as RecordMark;
     }
   }
-  return {title,grade:value.grade,className,classLabel,design:design as RecordContent['design'],teacherName,principalName,students,tasks,marks};
+  return {title,grade:value.grade,className,classLabel,schoolName:text(value.schoolName??'','اسم المدرسة',120),subjectName:text(value.subjectName??'','المادة',120),design:design as RecordContent['design'],teacherName,principalName,students,tasks,marks};
 }
 export function markLabel(task:RecordTask,mark:RecordMark|undefined){
   if(mark===undefined||mark===null)return 'لم يُرصد';

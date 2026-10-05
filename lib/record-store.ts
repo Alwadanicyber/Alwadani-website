@@ -20,3 +20,4 @@ export async function updateRecord(id:string,version:number,content:RecordConten
   const db=await ready(),now=new Date().toISOString();
   const row=await db.prepare('UPDATE teacher_records SET title=?,grade=?,class_name=?,teacher_name=?,student_count=?,task_count=?,content=?,version=version+1,updated=? WHERE id=? AND version=? RETURNING id,content,version,created,updated').bind(content.title,content.grade,content.className,content.teacherName,content.students.length,content.tasks.length,JSON.stringify(content),now,id,version).first<RecordRow>();return row?decode(row):null;
 }
+export async function deleteRecord(id:string,version:number){const db=await ready();const result=await db.prepare('DELETE FROM teacher_records WHERE id=? AND version=?').bind(id,version).run();return result.meta.changes===1;}
