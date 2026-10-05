@@ -74,3 +74,5 @@
 :root[data-theme=dark] .mark-note{background:#544423;color:#f4e1a4}
 @container comment-options (max-width:580px){.comment-option-row{grid-template-columns:24px minmax(0,1fr) 36px;gap:12px}.comment-option-row>span{grid-column:1;grid-row:1}.comment-option-row>label:not(.comment-option-color){grid-column:2;grid-row:1}.comment-option-row .comment-option-color{grid-column:2;grid-row:2}.comment-option-row .remove{grid-column:3;grid-row:1}}
 @media print{.record-print-pages .mark-note{background:#fff4d7!important;color:#765615!important}}
+
+.page-heading .site-identity{font-size:14px;color:var(--muted-foreground);line-height:1.8;margin:0 0 8px}.site-identity span{display:inline-block}
