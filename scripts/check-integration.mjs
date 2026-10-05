@@ -161,6 +161,7 @@ await req(recordsPath+'?id='+crypto.randomUUID(),null,404,auth);
 const editRecord=structuredClone(createdRecord);editRecord.students[2].name='طالب ثالث';editRecord.marks[student1][exam]=7.5;editRecord.marks[student2][homework]=null;editRecord.teacherName='معلم معدّل';editRecord.tasks.push({id:crypto.randomUUID(),title:'مهمة إضافية',type:'performance',maxScore:10});
 const savedRecord=(await req(recordsPath,editRecord,200,auth,'PUT')).record;
 assert(savedRecord.version===2&&savedRecord.marks[student1][exam]===7.5&&savedRecord.marks[student2][homework]===null&&savedRecord.students[2].name==='طالب ثالث'&&savedRecord.tasks.length===4,'Record update did not persist');
+await req(recordsPath,{...savedRecord,tasks:savedRecord.tasks.map(t=>t.id===exam?{...t,maxScore:5}:t)},400,auth,'PUT');
 await req(recordsPath,{...createdRecord,title:'تعديل قديم'},409,auth,'PUT');
 assert((await req(recordsPath+'?id='+createdRecord.id,null,200,auth)).record.title===recordPayload.title,'Stale edit overwrote the record');
 const copyRecord=(await req(recordsPath,{...savedRecord,title:'نسخة مستقلة'},201,auth)).record;
@@ -173,6 +174,15 @@ assert((await req(recordsPath,null,200,auth)).records.length===2,'Migration remo
 assert(await studentRecords()===studentRecordsBefore,'Record feature changed lesson student data');
 for(const [path,text] of [['/teacher/records','كشوفك، في مكان واحد'],['/teacher/settings','إعدادات المظهر'],['/teacher/classes','صفوفك الدراسية'],['/teacher?grade=grade-9','الصف الثالث المتوسط']]){const response=await mf.dispatchFetch('https://course.test'+path,{headers:auth});const html=await response.text();assert(response.status===200&&html.includes(text)&&html.includes('قائمة المعلم'),'New teacher page failed '+path);}
 for(const path of ['/teacher/records','/teacher/settings','/teacher/classes']){const response=await mf.dispatchFetch('https://course.test'+path);const html=await response.text();assert((response.status>=300&&response.status<400&&response.headers.get('location')?.endsWith('/teacher'))||(response.status===200&&html.includes('مرحبًا بعودتك')&&!html.includes('كشوفك، في مكان واحد')),'Private teacher page exposed '+path+' '+JSON.stringify({status:response.status,location:response.headers.get('location'),html:html.slice(0,500)}));}
+
+
+for(const [path,text] of [['/tools','أدوات تسهّل يومك'],['/tools/records','كشوفك، في مكان واحد'],['/tools/certificates','لكل مبدع، شهادة']]){const response=await mf.dispatchFetch('https://course.test'+path);const html=await response.text();assert(response.status===200&&html.includes(text)&&html.includes('أدوات متاحة للجميع'),'Anonymous tools page unavailable '+path);assert(!html.includes(recordPayload.title),'Public tools exposed owner records');}
+const ratedId=crypto.randomUUID(),customId=crypto.randomUUID();
+const toolsRecord={...recordPayload,classLabel:'الصف الرابع عام أ',design:'blue',tasks:[{id:ratedId,title:'أداء شفهي',type:'performance-score',maxScore:5},{id:customId,title:'إحضار الكتاب',type:'custom',mode:'check',maxScore:10,positiveLabel:'أحضر',negativeLabel:'لم يحضر'}],marks:{[student1]:{[ratedId]:4,[customId]:'done'}}};
+const toolsSaved=(await req(recordsPath,toolsRecord,201,auth)).record;assert(toolsSaved.classLabel==='الصف الرابع عام أ'&&toolsSaved.design==='blue'&&toolsSaved.marks[student1][ratedId]===4&&toolsSaved.tasks[1].mode==='check','New record options did not persist in D1');
+await req(recordsPath,{...toolsRecord,marks:{[student1]:{[ratedId]:6}}},400,auth);
+await req(recordsPath,{...toolsSaved,tasks:toolsSaved.tasks.map(t=>t.id===customId?{...t,mode:'number'}:t)},400,auth,'PUT');
+await req(recordsPath,null,403);await req('/api/teacher',null,403);
 
 // Recovery revokes existing sessions, expiration denies access, logout revokes.
 const oldAuth={...auth};
