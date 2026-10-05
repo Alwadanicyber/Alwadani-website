@@ -3,6 +3,7 @@ import {grades} from './grades';
 export const MAX_STUDENTS=150;
 export const MAX_TASKS=40;
 export const MAX_COMMENT_OPTIONS=30;
+export const recordFormats={electronic:'كشف إلكتروني',blank:'كشف فارغ للتعبئة اليدوية'};
 export type TaskType='performance'|'performance-score'|'homework'|'exam'|'custom';
 export type CommentChoice={id:string;label:string;tone:'positive'|'negative'|'neutral'};
 export type RecordTask={id:string;title:string;type:TaskType;maxScore:number;mode?:'number'|'check'|'status'|'comments';positiveLabel?:string;negativeLabel?:string;choices?:CommentChoice[]};
@@ -10,9 +11,9 @@ export const isNumberTask=(task:Pick<RecordTask,'type'|'mode'>)=>task.type==='ex
 export type RecordStudent={id:string;name:string};
 export type RecordMark=null|'done'|'missing'|'absent'|number|`choice:${string}`;
 export const recordDesigns={white:'أبيض رسمي',green:'أخضر هادئ',blue:'أزرق أنيق',gold:'إطار ذهبي'};
-export type RecordContent={title:string;grade:string;className:string;classLabel?:string;schoolName?:string;subjectName?:string;design?:keyof typeof recordDesigns;teacherName:string;principalName:string;students:RecordStudent[];tasks:RecordTask[];marks:Record<string,Record<string,RecordMark>>};
+export type RecordContent={title:string;format?:keyof typeof recordFormats;grade:string;className:string;classLabel?:string;schoolName?:string;subjectName?:string;design?:keyof typeof recordDesigns;teacherName:string;principalName:string;students:RecordStudent[];tasks:RecordTask[];marks:Record<string,Record<string,RecordMark>>};
 export type TeacherRecord=RecordContent&{id:string;version:number;created:string;updated:string};
-export type RecordSummary={id:string;title:string;grade:string;className:string;teacherName:string;studentCount:number;taskCount:number;version:number;updated:string};
+export type RecordSummary={id:string;title:string;format?:RecordContent['format'];grade:string;className:string;teacherName:string;studentCount:number;taskCount:number;version:number;updated:string};
 export const taskLabels:Record<TaskType,string>={performance:'مهمة أدائية','performance-score':'مهمة أدائية +',homework:'واجب',exam:'اختبار',custom:'مخصص'};
 export const validRecordId=(id:unknown):id is string=>typeof id==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id);
 
@@ -36,6 +37,7 @@ export function validateRecord(value:unknown):RecordContent{
   if(!plainObject(value))throw new Error('محتوى الكشف غير صالح.');
   const title=text(value.title,'عنوان الكشف',120,true),className=text(value.className,'حرف الفصل',80),classLabel=text(value.classLabel??'','اسم الصف الظاهر',120),teacherName=text(value.teacherName,'اسم المعلم',120),principalName=text(value.principalName,'اسم المدير',120);
   const design=value.design??'white';if(typeof design!=='string'||!Object.hasOwn(recordDesigns,design))throw new Error('اختر خلفية صحيحة.');
+  const format=value.format??'electronic';if(typeof format!=='string'||!Object.hasOwn(recordFormats,format))throw new Error('اختر نوع كشف صحيحًا.');
   if(typeof value.grade!=='string'||!grades.some(g=>g.id===value.grade))throw new Error('اختر صفًا صحيحًا.');
   if(!Array.isArray(value.students)||value.students.length<1||value.students.length>MAX_STUDENTS)throw new Error('عدد الطلاب من 1 إلى '+MAX_STUDENTS+'.');
   if(!Array.isArray(value.tasks)||value.tasks.length<1||value.tasks.length>MAX_TASKS)throw new Error('أضف من 1 إلى '+MAX_TASKS+' عملًا.');
@@ -63,12 +65,24 @@ export function validateRecord(value:unknown):RecordContent{
     marks[studentId]={};
     for(const [taskId,mark] of Object.entries(row)){
       const task=tasks.find(t=>t.id===taskId);if(!task)throw new Error('الرصد لا يطابق الأعمال.');
+      if(format==='blank'&&mark!==null)throw new Error('الكشف الفارغ للتعبئة اليدوية؛ لا يحتوي على نتائج إلكترونية.');
       const valid=mark===null||(task.type==='performance-score'?(typeof mark==='number'&&Number.isInteger(mark)&&mark>=1&&mark<=5):isNumberTask(task)?((task.type==='exam'&&mark==='absent')||(typeof mark==='number'&&Number.isFinite(mark)&&mark>=0&&mark<=task.maxScore)):task.type==='custom'&&task.mode==='comments'?(typeof mark==='string'&&task.choices?.some(choice=>mark==='choice:'+choice.id)):(mark==='done'||mark==='missing'));
       if(!valid)throw new Error('راجع الدرجة أو حالة الرصد في '+task.title+'.');
       marks[studentId][taskId]=mark as RecordMark;
     }
   }
-  return {title,grade:value.grade,className,classLabel,schoolName:text(value.schoolName??'','اسم المدرسة',120),subjectName:text(value.subjectName??'','المادة',120),design:design as RecordContent['design'],teacherName,principalName,students,tasks,marks};
+  return {title,format:format as RecordContent['format'],grade:value.grade,className,classLabel,schoolName:text(value.schoolName??'','اسم المدرسة',120),subjectName:text(value.subjectName??'','المادة',120),design:design as RecordContent['design'],teacherName,principalName,students,tasks,marks};
+}
+// Reserved rows after the last named student keep their IDs and any existing marks.
+export function nextStudentSlot(record:Pick<RecordContent,'students'>){
+  let lastNamed=-1;record.students.forEach((student,index)=>{if(student.name.trim())lastNamed=index;});
+  return lastNamed+1<record.students.length?lastNamed+1:-1;
+}
+export function addRecordStudent(record:RecordContent,name:string,id=crypto.randomUUID()):RecordContent{
+  const clean=text(name,'اسم الطالب',120),candidate=structuredClone(record),slot=clean?nextStudentSlot(record):-1;
+  if(slot>=0)candidate.students[slot].name=clean;
+  else{if(candidate.students.length>=MAX_STUDENTS)throw new Error('بلغ الكشف الحد الأقصى: '+MAX_STUDENTS+' طالبًا. اكتب الاسم في صف فارغ موجود.');candidate.students.push({id,name:clean});}
+  return validateRecord(candidate);
 }
 export function markLabel(task:RecordTask,mark:RecordMark|undefined){
   if(mark===undefined||mark===null)return 'لم يُرصد';

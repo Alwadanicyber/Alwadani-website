@@ -208,6 +208,22 @@ await req(recordsPath,{...updatedComments,marks:{[student1]:{[commentId]:'choice
 await req(recordsPath,{...updatedComments,tasks:[{...updatedComments.tasks[0],choices:[]}]},400,auth,'PUT');
 assert((await req(recordsPath+'?id='+savedComments.id,null,200,auth)).record.version===updatedComments.version,'Invalid comment update changed the saved record');
 
+// Blank paper records persist without scores, with the format visible in summaries.
+const paperPayload={...recordPayload,title:'كشف فارغ تجريبي',format:'blank',marks:{},students:Array.from({length:30},(_,i)=>({id:i===0?student1:i===1?student2:crypto.randomUUID(),name:i===0?'طالب أول':i===1?'طالب ثان':''}))};
+const paperSaved=(await req(recordsPath,paperPayload,201,auth)).record;
+assert(paperSaved.format==='blank'&&paperSaved.students.length===30&&Object.keys(paperSaved.marks).length===0,'Blank record content not retained');
+const paperSummary=(await req(recordsPath,null,200,auth)).records.find(r=>r.id===paperSaved.id);
+assert(paperSummary.format==='blank'&&!('marks' in paperSummary)&&!('students' in paperSummary),'Blank record summary is incorrect');
+const paperUpdated={...paperSaved,students:paperSaved.students.map((r,i)=>i===2?{...r,name:'طالب ثالث'}:r)};
+const paperResult=(await req(recordsPath,paperUpdated,200,auth,'PUT')).record;
+const paperFetched=(await req(recordsPath+'?id='+paperSaved.id,null,200,auth)).record;
+assert(paperResult.format==='blank'&&paperFetched.students[2].id===paperSaved.students[2].id&&paperFetched.students[2].name==='طالب ثالث'&&paperFetched.students.length===30,'Reserved blank row or paper format lost after update');
+await req(recordsPath,{...paperFetched,marks:{[student1]:{[exam]:10}}},400,auth,'PUT');
+await req(recordsPath,{...paperPayload,format:'invalid'},400,auth);
+assert((await req(recordsPath+'?id='+paperSaved.id,null,200,auth)).record.version===paperResult.version,'Invalid paper edit modified record');
+assert(await studentRecords()===studentRecordsBefore,'Paper records changed lesson progress');
+console.log('PASS: blank record format, summary, reserved rows and validation in D1.');
+
 // Recovery revokes existing sessions, expiration denies access, logout revokes.
 const oldAuth={...auth};
 await req('/api/teacher/auth',{action:'recover',username:'alwadani',password:'New-Teacher-Password-456!',setupKey:'wrong'},403,{'cf-connecting-ip':'198.51.100.10'});
