@@ -52,3 +52,25 @@
 .record-add-task h3{font-size:17px;margin:0 0 18px}
 .record-task-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
 @container record-task-fields (max-width:580px){.record-task-fields{grid-template-columns:minmax(0,1fr)}.custom-task-settings{grid-template-columns:minmax(0,1fr)}}
+
+/* Approved comments and optional student names. */
+.comment-options-editor{grid-column:1/-1;min-width:0;container-type:inline-size;container-name:comment-options}
+.comment-options-editor legend{font-size:15px;font-weight:600;padding:0}
+.comment-options-editor .field-help{font-size:13px;line-height:1.9;color:var(--muted-foreground);margin:10px 0 16px}
+.comment-option-rows{display:grid;gap:12px}
+.comment-option-row{display:grid;grid-template-columns:28px minmax(0,1fr) minmax(150px,190px) 36px;gap:12px;align-items:start;padding:14px;border:1px solid var(--border);border-radius:9px;background:var(--card)}
+.comment-option-row>span{font:13px Arial;text-align:center;margin-top:39px;color:var(--muted-foreground)}
+.comment-option-row label{min-width:0}
+.comment-option-row .remove{margin-top:29px;min-width:36px;min-height:36px;justify-content:center}
+.comment-option-row .remove:disabled{opacity:.35}
+.comment-option-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px}
+.comment-option-actions>span{font-size:12px;color:var(--muted-foreground);line-height:1.8}
+.comment-options-error{font-size:13px;color:#a82f35;margin-top:10px}
+.record-add-student{padding:22px;margin-bottom:20px}
+.record-add-student h3{font-size:17px;margin:0 0 18px}
+.record-add-student label{display:block;font-size:14px;color:var(--foreground);max-width:500px}
+.record-add-student input{display:block;width:100%;min-height:46px;border:1px solid var(--input);border-radius:8px;background:var(--card);color:var(--foreground);font:inherit;padding:11px 13px;margin-top:7px}
+.mark-note{background:#fff4d7;color:#765615}
+:root[data-theme=dark] .mark-note{background:#544423;color:#f4e1a4}
+@container comment-options (max-width:580px){.comment-option-row{grid-template-columns:24px minmax(0,1fr) 36px;gap:12px}.comment-option-row>span{grid-column:1;grid-row:1}.comment-option-row>label:not(.comment-option-color){grid-column:2;grid-row:1}.comment-option-row .comment-option-color{grid-column:2;grid-row:2}.comment-option-row .remove{grid-column:3;grid-row:1}}
+@media print{.record-print-pages .mark-note{background:#fff4d7!important;color:#765615!important}}
