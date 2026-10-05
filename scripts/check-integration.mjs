@@ -185,6 +185,20 @@ await req(recordsPath,{...toolsSaved,tasks:toolsSaved.tasks.map(t=>t.id===custom
 await req(recordsPath,null,403);await req('/api/teacher',null,403);
 await req(recordsPath,{id:toolsSaved.id,version:toolsSaved.version+1},409,auth,'DELETE');assert((await req(recordsPath+'?id='+toolsSaved.id,null,200,auth)).record.id===toolsSaved.id,'Stale delete removed a newer record');await req(recordsPath,{id:toolsSaved.id,version:toolsSaved.version},200,auth,'DELETE');await req(recordsPath+'?id='+toolsSaved.id,null,404,auth);assert(await studentRecords()===studentRecordsBefore,'Record deletion changed lesson student data');
 
+// Custom comments and optional blank student rows persist as part of the record JSON.
+const commentId=crypto.randomUUID(),commentChoices=[{id:crypto.randomUUID(),label:'حاضر',tone:'positive'},{id:crypto.randomUUID(),label:'غائب',tone:'negative'},{id:crypto.randomUUID(),label:'متأخر',tone:'neutral'}];
+const commentPayload={...recordPayload,tasks:[{id:commentId,title:'الحضور',type:'custom',mode:'comments',maxScore:10,choices:commentChoices}],marks:{[student1]:{[commentId]:'choice:'+commentChoices[0].id},[student2]:{[commentId]:'choice:'+commentChoices[2].id}}};
+const savedComments=(await req(recordsPath,commentPayload,201,auth)).record;
+const fetchedComments=(await req(recordsPath+'?id='+savedComments.id,null,200,auth)).record;
+assert(fetchedComments.tasks[0].choices.length===3&&fetchedComments.marks[student2][commentId]==='choice:'+commentChoices[2].id,'Custom comment choices or selection lost in D1');
+const revisedComments={...fetchedComments,tasks:[{...fetchedComments.tasks[0],choices:commentChoices.map((c,i)=>i===2?{...c,label:'متأخر بعذر',tone:'positive'}:c)}],students:[...fetchedComments.students,{id:crypto.randomUUID(),name:''},{id:crypto.randomUUID(),name:'طالب إضافي'}]};
+const updatedComments=(await req(recordsPath,revisedComments,200,auth,'PUT')).record;
+assert(updatedComments.students.at(-2).name===''&&updatedComments.students.at(-1).name==='طالب إضافي'&&updatedComments.tasks[0].choices[2].label==='متأخر بعذر'&&updatedComments.marks[student2][commentId]==='choice:'+commentChoices[2].id,'Comment editing or optional student name did not persist');
+await req(recordsPath,{...updatedComments,tasks:[{...updatedComments.tasks[0],choices:commentChoices.slice(0,2)}]},400,auth,'PUT');
+await req(recordsPath,{...updatedComments,marks:{[student1]:{[commentId]:'choice:'+crypto.randomUUID()}}},400,auth,'PUT');
+await req(recordsPath,{...updatedComments,tasks:[{...updatedComments.tasks[0],choices:[]}]},400,auth,'PUT');
+assert((await req(recordsPath+'?id='+savedComments.id,null,200,auth)).record.version===updatedComments.version,'Invalid comment update changed the saved record');
+
 // Recovery revokes existing sessions, expiration denies access, logout revokes.
 const oldAuth={...auth};
 await req('/api/teacher/auth',{action:'recover',username:'alwadani',password:'New-Teacher-Password-456!',setupKey:'wrong'},403,{'cf-connecting-ip':'198.51.100.10'});
