@@ -228,6 +228,15 @@ await req(recordsPath,{...paperPayload,format:'invalid'},400,auth);
 assert((await req(recordsPath+'?id='+paperSaved.id,null,200,auth)).record.version===paperResult.version,'Invalid paper edit modified record');
 assert(await studentRecords()===studentRecordsBefore,'Paper records changed lesson progress');
 console.log('PASS: blank record format, summary, reserved rows and validation in D1.');
+const schoolPayload={...paperPayload,blankLayout:'school',educationArea:'منطقة تعليم',educationOffice:'مكتب التعليم',schoolYear:'1448 هـ',academicTerm:'الأول',tasks:[{id:crypto.randomUUID(),title:'إحضار الكتاب',type:'custom',mode:'number',maxScore:15,manualCells:3,manualGroup:'متابعة مخصصة'}]};
+const schoolSaved=(await req(recordsPath,schoolPayload,201,auth)).record;
+const schoolFetched=(await req(recordsPath+'?id='+schoolSaved.id,null,200,auth)).record;
+assert(schoolFetched.blankLayout==='school'&&schoolFetched.tasks[0].manualCells===3&&schoolFetched.tasks[0].maxScore===15&&schoolFetched.tasks[0].manualGroup==='متابعة مخصصة'&&schoolFetched.educationOffice==='مكتب التعليم'&&schoolFetched.schoolYear==='1448 هـ','School paper configuration lost in D1');
+await req(recordsPath,{...schoolFetched,tasks:[{...schoolFetched.tasks[0],manualCells:21}]},400,auth,'PUT');
+await req(recordsPath,{...schoolFetched,marks:{[student1]:{[schoolFetched.tasks[0].id]:10}}},400,auth,'PUT');
+assert((await req(recordsPath+'?id='+schoolSaved.id,null,200,auth)).record.version===schoolSaved.version,'Invalid school paper edit changed saved data');
+console.log('PASS: school paper template fields and grade/box settings persist in D1; invalid boxes and electronic marks rejected.');
+
 
 // Recovery revokes existing sessions, expiration denies access, logout revokes.
 const oldAuth={...auth};
