@@ -87,3 +87,5 @@
 .record-table .record-blank-cell{height:60px;background:var(--card)}.blank-writing-space{display:block;min-height:38px}
 @media(max-width:620px){.record-format-options{grid-template-columns:minmax(0,1fr)}}
 @media print{.record-print-pages .record-blank-cell{height:36px;background:#fff!important}}
+.manual-task-settings{display:grid;grid-template-columns:minmax(100px,.7fr) minmax(130px,1fr) minmax(180px,1.5fr);gap:16px;margin:16px 0}.manual-task-settings label{display:grid;gap:8px;font-size:13px}.manual-preview-scroll{overflow:auto;padding:10px;background:#edf2f3;border:1px solid var(--border);border-radius:10px}.manual-builder-preview{margin:0 0 26px}.manual-builder-preview>summary,.manual-student-editor>summary{cursor:pointer;font-weight:700;padding:12px 0}.manual-reset{margin-inline-start:12px}.manual-record-preview{margin-bottom:24px}.manual-student-editor{margin-bottom:24px}.manual-student-editor .record-form-grid{margin-top:18px}
+@media(max-width:700px){.manual-task-settings{grid-template-columns:repeat(2,minmax(0,1fr))}.manual-task-settings label:last-child{grid-column:1/-1}.manual-reset{margin-inline-start:0;margin-top:10px}}
