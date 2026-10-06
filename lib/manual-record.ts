@@ -15,7 +15,7 @@ export function defaultManualTasks():Omit<RecordTask,'id'>[]{
 const escape=(value:unknown)=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
 const cells=(task:RecordTask)=>task.manualCells??1;
 export const manualTotal=(tasks:Pick<RecordTask,'maxScore'>[])=>Number(tasks.reduce((sum,task)=>sum+task.maxScore,0).toFixed(6));
-function taskPages(tasks:RecordTask[]){
+export function manualTaskPages(tasks:RecordTask[]){
   const pages:RecordTask[][]=[];let page:RecordTask[]=[],count=0;
   for(const task of tasks){const size=cells(task);if(page.length&&(page.length>=6||count+size>30)){pages.push(page);page=[];count=0;}page.push(task);count+=size;}
   if(page.length)pages.push(page);return pages;
@@ -32,7 +32,7 @@ function header(record:RecordContent){
   return '<header class="manual-header"><div class="manual-school-fields">'+field('الإدارة العامة للتعليم',record.educationArea)+field('مكتب التعليم',record.educationOffice)+field('المدرسة',record.schoolName)+'</div><div class="manual-ministry"><img src="'+ministryReferenceLogo+'" alt="وزارة التعليم"><small>المملكة العربية السعودية · وزارة التعليم</small></div><div class="manual-heading"><img src="'+visionLogo+'" alt="رؤية السعودية 2030"><h1>'+escape(record.title)+'</h1></div></header><div class="manual-meta">'+field('الصف',classroom)+field('المادة',record.subjectName)+field('العام الدراسي',record.schoolYear)+field('الفصل الدراسي',record.academicTerm)+'</div>';
 }
 export function manualRecordBody(record:RecordContent){
-  const pages:string[]=[],columns=taskPages(record.tasks);let taskStart=0;
+  const pages:string[]=[],columns=manualTaskPages(record.tasks);let taskStart=0;
   for(const tasks of columns){
     const units=tasks.reduce((sum,t)=>sum+(cells(t)===1?5:cells(t)),0),colgroup='<colgroup><col style="width:4%"><col style="width:23%">'+tasks.map(task=>Array.from({length:cells(task)},()=>'<col style="width:'+(65*(cells(task)===1?5:1)/units).toFixed(6)+'%">').join('')).join('')+'<col style="width:8%"></colgroup>';
     const total=manualTotal(tasks),groupHeaders=groups(tasks).map(group=>'<th scope="colgroup" class="manual-task-end" colspan="'+group.tasks.reduce((sum,t)=>sum+cells(t),0)+'">'+escape(group.name)+'<small>'+scoreLabel(manualTotal(group.tasks))+'</small></th>').join('');
