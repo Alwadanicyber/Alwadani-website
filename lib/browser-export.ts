@@ -59,7 +59,7 @@ async function capturePages(html:string,selector:string,width:number,progress:Ex
     const {default:html2canvas}=await import('html2canvas'),pages=Array.from(doc.querySelectorAll<HTMLElement>(selector));if(!pages.length)throw new Error('لا توجد صفحات للتنزيل.');
     for(let i=0;i<pages.length;i++){
       progress('جارٍ تجهيز الصفحة '+(i+1)+' من '+pages.length+'…');
-      const canvas=await html2canvas(pages[i],{scale:2,backgroundColor:'#ffffff',logging:false,windowWidth:width,windowHeight:1200,scrollX:0,scrollY:0});
+      const canvas=await html2canvas(pages[i],{scale:2,backgroundColor:'#ffffff',logging:false,foreignObjectRendering:doc.body.classList.contains('record-output'),windowWidth:width,windowHeight:1200,scrollX:0,scrollY:0});
       await onPage({data:canvas.toDataURL('image/png'),width:canvas.width,height:canvas.height},i,pages.length);canvas.width=0;canvas.height=0;await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
     }
   }finally{frame.remove();}
