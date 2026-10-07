@@ -1,7 +1,8 @@
-import {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,ImageRun,AlignmentType,WidthType,TableLayoutType,VerticalAlign,HeightRule,BorderStyle,PageOrientation,SectionType,type ISectionOptions} from 'docx';
+import {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,ImageRun,AlignmentType,WidthType,TableLayoutType,VerticalAlign,HeightRule,BorderStyle,PageOrientation,SectionType,Footer,PageNumber,type ISectionOptions} from 'docx';
+import {portraitRecord,recordRows,recordResult} from './record-layout';
 import {gradeLabel} from './grades';
 import {isSchoolBlank,manualTaskPages,manualTotal} from './manual-record';
-import {markLabel,markClass,isNumberTask,type RecordContent,type RecordTask} from './records';
+import {markClass,isNumberTask,type RecordContent,type RecordTask} from './records';
 
 type Logos={ministry:Uint8Array;vision:Uint8Array};
 const border={style:BorderStyle.SINGLE,size:5,color:'689C98'};
@@ -11,16 +12,16 @@ const noBorders={top:none,bottom:none,left:none,right:none,insideHorizontal:none
 const palette:Record<string,[string,string]>={'mark-done':['DDF1E5','145C38'],'mark-missing':['FBE1DF','952D28'],'mark-score':['EDF3FB','285077'],'mark-note':['FFF4D7','765615']};
 function text(value:string,size=19,bold=false,color='173B35',alignment:typeof AlignmentType[keyof typeof AlignmentType]=AlignmentType.CENTER){return new Paragraph({bidirectional:!/^\d[\d.]*\s*\/\s*\d[\d.]*$/.test(value),alignment,spacing:{before:0,after:0,line:240},children:value.split('\n').map((line,i)=>new TextRun({text:line,break:i?1:undefined,font:'Arial',size,sizeComplexScript:size,bold,boldComplexScript:bold,color,rightToLeft:!/^\d[\d.]*\s*\/\s*\d[\d.]*$/.test(value)}))});}
 function cell(value:string,width:number,options:{fill?:string;color?:string;bold?:boolean;span?:number;rowSpan?:number;size?:number;align?:typeof AlignmentType[keyof typeof AlignmentType]}={}){return new TableCell({width:{size:width,type:WidthType.DXA},columnSpan:options.span,rowSpan:options.rowSpan,verticalAlign:VerticalAlign.CENTER,shading:{fill:options.fill||'FFFFFF'},margins:{top:45,bottom:45,left:45,right:45},children:[text(value,options.size||18,options.bold,options.color||'173B35',options.align)]});}
-function row(children:TableCell[],header=false){return new TableRow({tableHeader:header,cantSplit:true,height:{value:header?430:360,rule:HeightRule.ATLEAST},children});}
+function row(children:TableCell[],header=false){return new TableRow({tableHeader:header,cantSplit:true,height:{value:header?430:320,rule:HeightRule.ATLEAST},children});}
 function table(rows:TableRow[],widths:number[],plain=false){return new Table({visuallyRightToLeft:true,layout:TableLayoutType.FIXED,width:{size:widths.reduce((a,b)=>a+b,0),type:WidthType.DXA},columnWidths:widths,borders:plain?noBorders:borders,rows});}
 function header(record:RecordContent,width:number,logos:Logos){
   const image=(data:Uint8Array,w:number,h:number)=>new Paragraph({alignment:AlignmentType.CENTER,children:[new ImageRun({type:'png',data,transformation:{width:w,height:h}})]});
-  const logoCell=(data:Uint8Array)=>new TableCell({width:{size:1450,type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,children:[image(data,86,44)]});
-  const brand=table([new TableRow({children:[logoCell(logos.ministry),new TableCell({width:{size:width-2900,type:WidthType.DXA},children:[text('المملكة العربية السعودية',20,true),text('وزارة التعليم',20,true,'237763'),text(record.educationArea||'',16),text(record.educationOffice||'',16)]}),logoCell(logos.vision)]})],[1450,width-2900,1450],true);
+  const logoCell=(data:Uint8Array)=>new TableCell({width:{size:2100,type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,shading:{fill:'0A3845'},margins:{top:100,bottom:100,left:60,right:60},children:[image(data,124,64)]});
+  const brand=table([new TableRow({children:[logoCell(logos.ministry),new TableCell({width:{size:width-4200,type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,shading:{fill:'0A3845'},children:[text('المملكة العربية السعودية',20,true,'FFFFFF'),text('وزارة التعليم',24,true,'FFFFFF'),text(record.educationArea||'',16,false,'C1E6DC'),text(record.educationOffice||'',16,false,'C1E6DC')]}),logoCell(logos.vision)]})],[2100,width-4200,2100],true);
   const className=record.classLabel||gradeLabel(record.grade)+(record.className?' '+record.className:'');
   return [brand,new Paragraph({spacing:{after:70},children:[]}),text(record.title,28,true,'173B35'),text('المدرسة: '+(record.schoolName||'________________')+'     الصف: '+className,19,true),text('المادة: '+(record.subjectName||'________________')+'     العام الدراسي: '+(record.schoolYear||'________')+'     الفصل الدراسي: '+(record.academicTerm||'________'),18),new Paragraph({spacing:{after:100},children:[]})];
 }
-function manualTable(record:RecordContent,tasks:RecordTask[],start:number,width:number){
+function manualTable(record:RecordContent,tasks:RecordTask[],start:number,end:number,width:number){
   const weighted=tasks.reduce((total,t)=>total+(t.manualCells===1||!t.manualCells?5:t.manualCells),0);
   const indexWidth=Math.round(width*.04),nameWidth=Math.round(width*.23),totalWidth=Math.round(width*.08),available=width-indexWidth-nameWidth-totalWidth;
   const taskWidths=tasks.flatMap(t=>Array.from({length:t.manualCells||1},()=>Math.round(available/weighted*((t.manualCells||1)===1?5:1))));
@@ -32,21 +33,22 @@ function manualTable(record:RecordContent,tasks:RecordTask[],start:number,width:
   const first=row([cell('م',indexWidth,{...h,rowSpan:2}),cell('اسم الطالب',nameWidth,{...h,rowSpan:2}),...groups.map(g=>cell(g.name,g.width,{...h,span:g.count})),cell('المجموع\n'+manualTotal(tasks),totalWidth,{...h,rowSpan:2})],true);
   offset=0;
   const second=row(tasks.map(t=>{const count=t.manualCells||1,w=taskWidths.slice(offset,offset+count).reduce((a,b)=>a+b,0);offset+=count;return cell(t.title+'\nمن '+t.maxScore,w,{...h,span:count,size:16});}),true);
-  const body=record.students.slice(start,start+25).map((student,i)=>row([cell(String(start+i+1),indexWidth,{size:16}),cell(student.name,nameWidth,{align:AlignmentType.RIGHT}),...taskWidths.map(w=>cell('',w)),cell('',totalWidth)]));
+  const body=record.students.slice(start,end).map((student,i)=>row([cell(String(start+i+1),indexWidth,{size:16}),cell(student.name,nameWidth,{align:AlignmentType.RIGHT}),...taskWidths.map(w=>cell('',w)),cell('',totalWidth)]));
   return table([first,second,...body],widths);
 }
-function electronicTable(record:RecordContent,tasks:RecordTask[],start:number,width:number){
-  const indexWidth=450,nameWidth=2600,taskWidth=Math.floor((width-indexWidth-nameWidth)/tasks.length),widths=[indexWidth,nameWidth,...tasks.map(()=>taskWidth)];widths[widths.length-1]+=width-widths.reduce((a,b)=>a+b,0);
+function electronicTable(record:RecordContent,tasks:RecordTask[],start:number,end:number,width:number){
+  const indexWidth=Math.round(width*.05),nameWidth=Math.round(width*.30),taskWidth=Math.floor((width-indexWidth-nameWidth)/tasks.length),widths=[indexWidth,nameWidth,...tasks.map(()=>taskWidth)];widths[widths.length-1]+=width-widths.reduce((a,b)=>a+b,0);
   const blank=record.format==='blank',h={fill:'E7EFEB',bold:true};
   const heads=row([cell('م',indexWidth,h),cell('اسم الطالب',nameWidth,h),...tasks.map((t,i)=>cell(t.title+((isNumberTask(t)||t.type==='performance-score')?'\nمن '+t.maxScore:''),widths[i+2],h))],true);
-  const rows=record.students.slice(start,start+18).map((s,i)=>row([cell(String(start+i+1),indexWidth),cell(s.name,nameWidth,{align:AlignmentType.RIGHT}),...tasks.map((t,j)=>{const mark=record.marks[s.id]?.[t.id],colors=palette[markClass(mark,t)];return cell(blank?'':markLabel(t,mark),widths[j+2],blank?{}:{fill:colors?.[0],color:colors?.[1]});})]));
+  const rows=record.students.slice(start,end).map((s,i)=>row([cell(String(start+i+1),indexWidth),cell(s.name,nameWidth,{align:AlignmentType.RIGHT}),...tasks.map((t,j)=>{const mark=record.marks[s.id]?.[t.id],colors=palette[markClass(mark,t)];return cell(blank?'':recordResult(t,mark),widths[j+2],blank?{}:{fill:colors?.[0],color:colors?.[1]});})]));
   return table([heads,...rows],widths);
 }
 const page=(portrait:boolean)=>({size:{width:11906,height:16838,orientation:portrait?PageOrientation.PORTRAIT:PageOrientation.LANDSCAPE},margin:{top:567,bottom:567,left:567,right:567}});
 export async function recordWord(record:RecordContent,logos:Logos){
-  const school=isSchoolBlank(record),width=school?10772:15704,sections:ISectionOptions[]=[],pages=school?manualTaskPages(record.tasks):Array.from({length:Math.ceil(record.tasks.length/6)},(_,i)=>record.tasks.slice(i*6,i*6+6));
-  for(const tasks of pages)for(let start=0;start<record.students.length;start+=school?25:18){
-    sections.push({properties:{type:SectionType.NEXT_PAGE,page:page(school)},children:[...header(record,width,logos),school?manualTable(record,tasks,start,width):electronicTable(record,tasks,start,width),new Paragraph({spacing:{before:130,after:0},bidirectional:true,children:[new TextRun({text:'المعلم: '+(record.teacherName||'________________')+'                    مدير المدرسة: '+(record.principalName||'________________'),font:'Arial',size:19,sizeComplexScript:19,rightToLeft:true})]})]});
+  const school=isSchoolBlank(record),portrait=portraitRecord(record),width=portrait?10772:15704,sections:ISectionOptions[]=[],pages=school?manualTaskPages(record.tasks):Array.from({length:Math.ceil(record.tasks.length/6)},(_,i)=>record.tasks.slice(i*6,i*6+6));
+  for(const tasks of pages)for(const {start,end} of recordRows(record)){
+    const signatures=new Footer({children:[new Paragraph({bidirectional:true,alignment:AlignmentType.CENTER,spacing:{after:0},children:[new TextRun({text:'المعلم: '+(record.teacherName||'________________')+'      مدير المدرسة: '+(record.principalName||'________________')+'      صفحة ',font:'Arial',size:16,sizeComplexScript:16,rightToLeft:true}),new TextRun({children:[PageNumber.CURRENT],font:'Arial',size:16})]})]});
+    sections.push({properties:{type:SectionType.NEXT_PAGE,page:page(portrait)},footers:{default:signatures},children:[...(sections.length===0?header(record,width,logos):[text('تتمة الكشف',21,true),new Paragraph({spacing:{after:100},children:[]})]),school?manualTable(record,tasks,start,end,width):electronicTable(record,tasks,start,end,width)]});
   }
   return Packer.toBlob(new Document({creator:'Alwadani Teaching Tools',title:record.title,styles:{default:{document:{run:{font:'Arial',size:18,sizeComplexScript:18},paragraph:{spacing:{before:0,after:0}}}}},sections}));
 }

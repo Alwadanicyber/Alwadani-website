@@ -7,14 +7,14 @@ import assert from 'node:assert/strict';
 import ts from 'typescript';
 const dir=mkdtempSync(join(tmpdir(),'alwadani-record-check-'));
 try{
-  for(const name of ['grades','records','record-export','manual-record','education-brand','certificates','local-records']){const source=readFileSync(new URL('../lib/'+name+'.ts',import.meta.url),'utf8');const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText.replace(/from '\.\/(grades|records|education-brand|manual-record)'/g,"from './$1.mjs'");writeFileSync(join(dir,name+'.mjs'),js);}
+  for(const name of ['grades','records','record-export','record-layout','manual-record','education-brand','certificates','local-records']){const source=readFileSync(new URL('../lib/'+name+'.ts',import.meta.url),'utf8');const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText.replace(/from '\.\/(grades|records|education-brand|manual-record|record-layout)'/g,"from './$1.mjs'");writeFileSync(join(dir,name+'.mjs'),js);}
   const {validateRecord,markLabel,markClass,completionCount,applyRecordTaskSettings,addRecordStudent,nextStudentSlot,MAX_STUDENTS}=await import(pathToFileURL(join(dir,'records.mjs')));
   const {recordHtml,recordCsv}=await import(pathToFileURL(join(dir,'record-export.mjs')));
   const student=randomUUID(),tasks=Array.from({length:7},(_,i)=>({id:randomUUID(),title:i===0?'<script>alert(1)</script>':'عمل '+(i+1),type:i===0?'exam':i===1?'homework':'performance',maxScore:20}));
   const record={title:'كشف <img src=x onerror=alert(1)>',grade:'grade-9',className:'3 / ب',teacherName:'معلم & مدير',principalName:'المدير',students:[{id:student,name:'=HYPERLINK("https://example.test")'}],tasks,marks:{[student]:{[tasks[0].id]:0,[tasks[1].id]:'missing',[tasks[2].id]:'done'}}};
   assert.equal(validateRecord(record).marks[student][tasks[0].id],0);assert.equal(completionCount(record),3);
   assert.equal(markLabel(tasks[0],0),'0 / 20');assert.equal(markLabel(tasks[0],'absent'),'غائب');assert.equal(markClass('absent'),'mark-missing');assert.equal(markLabel(tasks[1],'done'),'حل الواجب');assert.equal(markLabel(tasks[2],'missing'),'لم ينجز');assert.equal(markLabel(tasks[1],null),'لم يُرصد');
-  const html=recordHtml(record);assert(!html.includes('<script>'));assert(!html.includes('<img src=x'));assert(html.includes('رؤية السعودية 2030'));assert(html.includes('&lt;script&gt;'));assert(html.includes('معلم &amp; مدير'));assert(html.includes('0 / 20'));assert.equal((html.match(/<section class="record-print-page record-design-white">/g)||[]).length,2);assert.equal((html.match(/اسم الطالب/g)||[]).length,2);
+  const html=recordHtml(record);assert(!html.includes('<script>'));assert(!html.includes('<img src=x'));assert(html.includes('رؤية السعودية 2030'));assert(html.includes('&lt;script&gt;'));assert(html.includes('معلم &amp; مدير'));assert(html.includes('dir="ltr">0</b>'));assert.equal((html.match(/<section class="record-print-page record-design-white"/g)||[]).length,2);assert.equal((html.match(/اسم الطالب/g)||[]).length,2);
   const csv=recordCsv(record);assert(csv.startsWith('\ufeff'));assert(csv.includes("'="));assert(csv.includes('""https://example.test""'));assert(csv.includes('لم يحل'));
   for(const invalid of [{...record,students:Array.from({length:151},()=>({id:randomUUID(),name:''}))},{...record,tasks:Array.from({length:41},()=>({...tasks[0],id:randomUUID()}))},{...record,tasks:[tasks[0],tasks[0]]},{...record,marks:{[student]:{[tasks[0].id]:NaN}}},{...record,marks:{[student]:{[tasks[0].id]:20.1}}},{...record,marks:{[student]:{[tasks[1].id]:'absent'}}}])assert.throws(()=>validateRecord(invalid));
   const scored={...record,schoolName:'مدرسة <script>',subjectName:'اللغة الإنجليزية',tasks:[{...tasks[0],type:'performance-score',maxScore:5}],marks:{[student]:{[tasks[0].id]:3}},classLabel:'الصف الرابع عام أ',design:'gold'};
@@ -63,7 +63,7 @@ try{
   const {defaultManualTasks,manualTotal}=await import(pathToFileURL(join(dir,'manual-record.mjs')));
   const school=validateRecord({...blank,blankLayout:'school',educationArea:'منطقة <script>',educationOffice:'مكتب & تعليم',schoolYear:'1448 هـ',academicTerm:'الأول',tasks:defaultManualTasks().map(t=>({...t,id:randomUUID()})),students:Array.from({length:30},(_,i)=>({id:randomUUID(),name:i===0?'طالب <script>':''}))});
   assert.equal(manualTotal(school.tasks),60);assert.deepEqual(school.tasks.map(t=>t.maxScore),[10,20,5,5,20]);
-  const schoolHtml=recordHtml(school);
+  const schoolHtml=recordHtml(school);assert.equal((schoolHtml.match(/<header class="manual-header">/g)||[]).length,1);assert(schoolHtml.includes('تتمة الكشف'));
   assert(schoolHtml.includes('المشاركة والتفاعل')&&schoolHtml.includes('colspan="10"')&&schoolHtml.includes('60 درجة')&&schoolHtml.includes('size:A4 portrait'));
   assert(!schoolHtml.includes('<script>')&&!schoolHtml.includes('<input')&&!schoolHtml.includes('لم يُرصد')&&!schoolHtml.includes('0 /'));
   assert(schoolHtml.includes('منطقة &lt;script&gt;')&&schoolHtml.includes('مكتب &amp; تعليم')&&schoolHtml.includes('1448 هـ')&&schoolHtml.includes('الأول'));
@@ -78,6 +78,7 @@ try{
   assert.throws(()=>validateRecord({...school,format:'electronic'}));assert.throws(()=>validateRecord({...school,blankLayout:'unknown'}));
   const widePaper={...school,students:school.students.slice(0,1),tasks:Array.from({length:3},(_,i)=>({...school.tasks[0],id:randomUUID(),manualCells:20,title:'مهمة '+i}))};
   const wideHtml=recordHtml(widePaper);assert.equal((wideHtml.match(/<section class="manual-sheet/g)||[]).length,3);assert(wideHtml.includes('مجموع هذه الصفحة')&&wideHtml.includes('مجموع جميع المهام 30 درجة'));
+  const paginated={...record,students:Array.from({length:40},(_,i)=>({id:randomUUID(),name:'طالب '+(i+1)}))};const paginatedHtml=recordHtml(paginated);assert.equal((paginatedHtml.match(/<header class="record-cliche">/g)||[]).length,1);assert(!paginatedHtml.includes('<button')&&!paginatedHtml.includes('تغيير'));assert(paginatedHtml.includes('record-output'));assert(paginatedHtml.includes('<td>40</td>'));
   console.log('PASS: school manual template defaults, editable grades/groups/boxes, row and column pagination, blank totals, escaping, local and JSON roundtrips.');
 
   // Named additions reuse reserved trailing rows; earlier holes and all marks stay in place.
