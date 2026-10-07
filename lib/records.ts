@@ -1,4 +1,5 @@
 import {grades} from './grades';
+import {audienceWords,validateAudience,type AudienceSettings,type Gender} from './audience';
 
 export const MAX_STUDENTS=150;
 export const MAX_TASKS=40;
@@ -11,9 +12,9 @@ export const isNumberTask=(task:Pick<RecordTask,'type'|'mode'>)=>task.type==='ex
 export type RecordStudent={id:string;name:string};
 export type RecordMark=null|'done'|'missing'|'absent'|number|`choice:${string}`;
 export const recordDesigns={white:'أبيض رسمي',green:'أخضر هادئ',blue:'أزرق أنيق',gold:'إطار ذهبي'};
-export type RecordContent={title:string;format?:keyof typeof recordFormats;blankLayout?:'simple'|'school';grade:string;className:string;classLabel?:string;schoolName?:string;subjectName?:string;design?:keyof typeof recordDesigns;educationArea?:string;educationOffice?:string;schoolYear?:string;academicTerm?:string;teacherName:string;principalName:string;students:RecordStudent[];tasks:RecordTask[];marks:Record<string,Record<string,RecordMark>>};
+export type RecordContent=AudienceSettings&{title:string;format?:keyof typeof recordFormats;blankLayout?:'simple'|'school';grade:string;className:string;classLabel?:string;schoolName?:string;subjectName?:string;design?:keyof typeof recordDesigns;educationArea?:string;educationOffice?:string;schoolYear?:string;academicTerm?:string;teacherName:string;principalName:string;students:RecordStudent[];tasks:RecordTask[];marks:Record<string,Record<string,RecordMark>>};
 export type TeacherRecord=RecordContent&{id:string;version:number;created:string;updated:string};
-export type RecordSummary={id:string;title:string;format?:RecordContent['format'];grade:string;className:string;teacherName:string;studentCount:number;taskCount:number;version:number;updated:string};
+export type RecordSummary=AudienceSettings&{id:string;title:string;format?:RecordContent['format'];grade:string;className:string;teacherName:string;studentCount:number;taskCount:number;version:number;updated:string};
 export const taskLabels:Record<TaskType,string>={performance:'مهمة أدائية','performance-score':'مهمة أدائية +',homework:'واجب',exam:'اختبار',custom:'مخصص'};
 export const validRecordId=(id:unknown):id is string=>typeof id==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id);
 
@@ -40,11 +41,11 @@ export function validateRecord(value:unknown):RecordContent{
   const format=value.format??'electronic';if(typeof format!=='string'||!Object.hasOwn(recordFormats,format))throw new Error('اختر نوع كشف صحيحًا.');
   const blankLayout=value.blankLayout??'simple';if(typeof blankLayout!=='string'||!['simple','school'].includes(blankLayout)||(format!=='blank'&&blankLayout==='school'))throw new Error('اختر نموذج كشف يدوي صحيحًا.');
   if(typeof value.grade!=='string'||!grades.some(g=>g.id===value.grade))throw new Error('اختر صفًا صحيحًا.');
-  if(!Array.isArray(value.students)||value.students.length<1||value.students.length>MAX_STUDENTS)throw new Error('عدد الطلاب من 1 إلى '+MAX_STUDENTS+'.');
+  if(!Array.isArray(value.students)||value.students.length<1||value.students.length>MAX_STUDENTS)throw new Error('عدد الأسماء من 1 إلى '+MAX_STUDENTS+'.');
   if(!Array.isArray(value.tasks)||value.tasks.length<1||value.tasks.length>MAX_TASKS)throw new Error('أضف من 1 إلى '+MAX_TASKS+' عملًا.');
   const studentIds=new Set<string>(),taskIds=new Set<string>();
   const students=value.students.map(item=>{
-    if(!plainObject(item)||!validRecordId(item.id)||studentIds.has(item.id))throw new Error('بيانات الطلاب غير صالحة.');
+    if(!plainObject(item)||!validRecordId(item.id)||studentIds.has(item.id))throw new Error('بيانات الأسماء غير صالحة.');
     studentIds.add(item.id);return {id:item.id,name:text(item.name,'اسم الطالب',120)};
   });
   const tasks=value.tasks.map(item=>{
@@ -65,7 +66,7 @@ export function validateRecord(value:unknown):RecordContent{
   if(!plainObject(value.marks))throw new Error('الرصد غير صالح.');
   const marks:RecordContent['marks']={};
   for(const [studentId,row] of Object.entries(value.marks)){
-    if(!studentIds.has(studentId)||!plainObject(row))throw new Error('الرصد لا يطابق أسماء الطلاب.');
+    if(!studentIds.has(studentId)||!plainObject(row))throw new Error('الرصد لا يطابق الأسماء.');
     marks[studentId]={};
     for(const [taskId,mark] of Object.entries(row)){
       const task=tasks.find(t=>t.id===taskId);if(!task)throw new Error('الرصد لا يطابق الأعمال.');
@@ -75,7 +76,7 @@ export function validateRecord(value:unknown):RecordContent{
       marks[studentId][taskId]=mark as RecordMark;
     }
   }
-  return {title,format:format as RecordContent['format'],...(format==='blank'?{blankLayout:blankLayout as RecordContent['blankLayout']}:{}),grade:value.grade,className,classLabel,schoolName:text(value.schoolName??'','اسم المدرسة',120),subjectName:text(value.subjectName??'','المادة',120),design:design as RecordContent['design'],educationArea:text(value.educationArea??'','منطقة التعليم',120),educationOffice:text(value.educationOffice??'','مكتب التعليم',120),schoolYear:text(value.schoolYear??'','العام الدراسي',60),academicTerm:text(value.academicTerm??'','الفصل الدراسي',60),teacherName,principalName,students,tasks,marks};
+  return {...validateAudience(value),title,format:format as RecordContent['format'],...(format==='blank'?{blankLayout:blankLayout as RecordContent['blankLayout']}:{}),grade:value.grade,className,classLabel,schoolName:text(value.schoolName??'','اسم المدرسة',120),subjectName:text(value.subjectName??'','المادة',120),design:design as RecordContent['design'],educationArea:text(value.educationArea??'','منطقة التعليم',120),educationOffice:text(value.educationOffice??'','مكتب التعليم',120),schoolYear:text(value.schoolYear??'','العام الدراسي',60),academicTerm:text(value.academicTerm??'','الفصل الدراسي',60),teacherName,principalName,students,tasks,marks};
 }
 // Reserved rows after the last named student keep their IDs and any existing marks.
 export function nextStudentSlot(record:Pick<RecordContent,'students'>){
@@ -85,17 +86,18 @@ export function nextStudentSlot(record:Pick<RecordContent,'students'>){
 export function addRecordStudent(record:RecordContent,name:string,id=crypto.randomUUID()):RecordContent{
   const clean=text(name,'اسم الطالب',120),candidate=structuredClone(record),slot=clean?nextStudentSlot(record):-1;
   if(slot>=0)candidate.students[slot].name=clean;
-  else{if(candidate.students.length>=MAX_STUDENTS)throw new Error('بلغ الكشف الحد الأقصى: '+MAX_STUDENTS+' طالبًا. اكتب الاسم في صف فارغ موجود.');candidate.students.push({id,name:clean});}
+  else{if(candidate.students.length>=MAX_STUDENTS)throw new Error('بلغ الكشف الحد الأقصى: '+MAX_STUDENTS+' اسمًا. اكتب الاسم في صف فارغ موجود.');candidate.students.push({id,name:clean});}
   return validateRecord(candidate);
 }
-export function markLabel(task:RecordTask,mark:RecordMark|undefined){
+export function markLabel(task:RecordTask,mark:RecordMark|undefined,studentGender?:Gender){
+  const words=audienceWords({studentGender});
   if(mark===undefined||mark===null)return 'لم يُرصد';
-  if(mark==='absent')return 'غائب';
+  if(mark==='absent')return words.absent;
   if(typeof mark==='number')return String(mark)+' / '+task.maxScore;
   if(task.type==='custom'&&task.mode==='comments')return task.choices?.find(choice=>mark==='choice:'+choice.id)?.label||'لم يُرصد';
   if(task.type==='custom')return mark==='done'?(task.positiveLabel||'أنجز'):(task.negativeLabel||'لم ينجز');
-  if(task.type==='homework')return mark==='done'?'حل الواجب':'لم يحل';
-  return mark==='done'?'أنجز المهمة':'لم ينجز';
+  if(task.type==='homework')return mark==='done'?words.homeworkDone:words.homeworkMissing;
+  return mark==='done'?words.done:words.missing;
 }
 export function markClass(mark:RecordMark|undefined,task?:RecordTask){if(typeof mark==='string'&&mark.startsWith('choice:')){const tone=task?.choices?.find(choice=>mark==='choice:'+choice.id)?.tone;return tone==='positive'?'mark-done':tone==='negative'?'mark-missing':'mark-note';}return mark==='done'?'mark-done':mark==='missing'||mark==='absent'?'mark-missing':typeof mark==='number'?'mark-score':'mark-empty';}
 export function applyRecordTaskSettings(record:RecordContent,taskId:string,patch:Partial<RecordTask>):RecordContent{
