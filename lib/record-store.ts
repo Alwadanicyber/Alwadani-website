@@ -8,7 +8,7 @@ async function ready(){await database().prepare(RECORD_TABLE_SQL).run();return d
 type RecordRow={id:string;content:string;version:number;created:string;updated:string};
 const decode=(row:RecordRow):TeacherRecord=>({...JSON.parse(row.content) as RecordContent,id:row.id,version:row.version,created:row.created,updated:row.updated});
 export async function listRecords():Promise<RecordSummary[]>{
-  const db=await ready();const result=await db.prepare("SELECT id,title,COALESCE(json_extract(content,'$.format'),'electronic') AS format,grade,class_name AS className,teacher_name AS teacherName,student_count AS studentCount,task_count AS taskCount,version,updated FROM teacher_records ORDER BY updated DESC").all<RecordSummary>();return result.results;
+  const db=await ready();const result=await db.prepare("SELECT id,title,COALESCE(json_extract(content,'$.format'),'electronic') AS format,COALESCE(json_extract(content,'$.studentGender'),'male') AS studentGender,COALESCE(json_extract(content,'$.teacherGender'),'male') AS teacherGender,COALESCE(json_extract(content,'$.principalGender'),'male') AS principalGender,grade,class_name AS className,teacher_name AS teacherName,student_count AS studentCount,task_count AS taskCount,version,updated FROM teacher_records ORDER BY updated DESC").all<RecordSummary>();return result.results;
 }
 export async function findRecord(id:string){const db=await ready();const row=await db.prepare('SELECT id,content,version,created,updated FROM teacher_records WHERE id=?').bind(id).first<RecordRow>();return row?decode(row):null;}
 export async function createRecord(content:RecordContent){
