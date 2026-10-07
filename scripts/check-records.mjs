@@ -8,7 +8,7 @@ import ts from 'typescript';
 const dir=mkdtempSync(join(tmpdir(),'alwadani-record-check-'));
 try{
   for(const name of ['audience','grades','records','record-export','record-layout','manual-record','education-brand','certificate-school','certificates','local-records']){const source=readFileSync(new URL('../lib/'+name+'.ts',import.meta.url),'utf8');const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText.replace(/from '\.\/(audience|grades|records|education-brand|certificate-school|manual-record|record-layout)'/g,"from './$1.mjs'");writeFileSync(join(dir,name+'.mjs'),js);}
-  const {validateRecord,markLabel,markClass,completionCount,applyRecordTaskSettings,addRecordStudent,nextStudentSlot,MAX_STUDENTS}=await import(pathToFileURL(join(dir,'records.mjs')));
+  const {validateRecord,markLabel,markClass,completionCount,applyRecordTaskSettings,addRecordStudent,nextStudentSlot,setRecordStudentOrder,renameRecordStudent,moveRecordStudent,studentMatchesSearch,MAX_STUDENTS}=await import(pathToFileURL(join(dir,'records.mjs')));
   const {recordHtml,recordCsv}=await import(pathToFileURL(join(dir,'record-export.mjs')));
   const student=randomUUID(),tasks=Array.from({length:7},(_,i)=>({id:randomUUID(),title:i===0?'<script>alert(1)</script>':'عمل '+(i+1),type:i===0?'exam':i===1?'homework':'performance',maxScore:20}));
   const record={title:'كشف <img src=x onerror=alert(1)>',grade:'grade-9',className:'3 / ب',teacherName:'معلم & مدير',principalName:'المدير',students:[{id:student,name:'=HYPERLINK("https://example.test")'}],tasks,marks:{[student]:{[tasks[0].id]:0,[tasks[1].id]:'missing',[tasks[2].id]:'done'}}};
@@ -116,6 +116,21 @@ try{
   assert.equal(certificateCopy(pack,pack.students[0]).title,'شكراً يا مبدع');assert.equal(certificateCopy(girlPack,girlPack.students[0]).title,'شكراً يا مبدعة');assert(certificatesHtml(girlPack).includes('<title>شهادات الطالبات'));
   assert.equal(markLabel(commentTask,'choice:'+choices[2].id,'female'),choices[2].label);
   console.log('PASS: female class/teacher/principal settings, legacy defaults, unchanged custom text and marks, local/JSON roundtrip and every certificate design.');
+  {
+  const rosterIds=Array.from({length:5},()=>randomUUID()),ordering={...scored,students:['محمد','أحمد','خالد','','أحمد'].map((name,i)=>({id:rosterIds[i],name})),marks:{[rosterIds[0]]:{[tasks[0].id]:0},[rosterIds[1]]:{[tasks[0].id]:'ungraded'},[rosterIds[2]]:{[tasks[0].id]:5},[rosterIds[4]]:{[tasks[0].id]:2}}};
+  assert.equal(validateRecord(ordering).studentOrder,'manual');assert.deepEqual(validateRecord(ordering).students,ordering.students);assert.throws(()=>validateRecord({...ordering,studentOrder:'random'}));
+  const alphabetical=setRecordStudentOrder(ordering,'alphabetical');assert.deepEqual(alphabetical.students.map(s=>s.id),[rosterIds[1],rosterIds[4],rosterIds[2],rosterIds[0],rosterIds[3]]);assert.deepEqual(alphabetical.marks,ordering.marks);assert.equal(completionCount(alphabetical),3);
+  const inserted=addRecordStudent(alphabetical,'بدر');assert.equal(inserted.students.length,5);assert.equal(inserted.students[2].id,rosterIds[3]);assert.equal(inserted.students[2].name,'بدر');assert.equal(inserted.studentOrder,'alphabetical');assert.deepEqual(inserted.marks,ordering.marks);
+  const renamed=renameRecordStudent(inserted,rosterIds[0],'إبراهيم');assert.equal(renamed.students[0].id,rosterIds[0]);assert.equal(renamed.marks[rosterIds[0]][tasks[0].id],0);assert.throws(()=>renameRecordStudent(renamed,randomUUID(),'اسم'));
+  const moved=moveRecordStudent(renamed,rosterIds[0],1);assert.equal(moved.studentOrder,'manual');assert.equal(moved.students[1].id,rosterIds[0]);assert.deepEqual(moved.marks,ordering.marks);assert.deepEqual(moveRecordStudent(moved,moved.students[0].id,-1).students,moved.students);assert.throws(()=>moveRecordStudent(moved,randomUUID(),1));
+  const manualAdded=addRecordStudent(moved,'زياد');assert.equal(manualAdded.students.at(-1).name,'زياد');assert.deepEqual(manualAdded.students.slice(0,-1),moved.students);
+  const blankSorted=setRecordStudentOrder({...ordering,format:'blank',marks:{}},'alphabetical');assert.equal(blankSorted.students.at(-1).name,'');assert.deepEqual(blankSorted.marks,{});
+  assert(studentMatchesSearch({name:'أَحْـمد   محمد'},'احمد محمد'));assert(studentMatchesSearch({name:'إبراهيم أحمد'},'ابر'));assert(studentMatchesSearch({name:'John Smith'},'SMI'));assert(!studentMatchesSearch({name:'خالد'},'أحمد'));assert(studentMatchesSearch({name:''},'   '));
+  const orderBeforeSearch=JSON.stringify(moved);moved.students.filter(s=>studentMatchesSearch(s,'إبراهيم'));assert.equal(JSON.stringify(moved),orderBeforeSearch);
+  const sortedCsv=recordCsv(inserted),sortedHtml=recordHtml(inserted);assert(sortedCsv.indexOf('بدر')<sortedCsv.indexOf('خالد'));assert(sortedHtml.indexOf('بدر')<sortedHtml.indexOf('خالد'));assert(sortedHtml.includes('لم تُرصد درجته'));assert(sortedHtml.includes('dir="ltr">0</b>'));
+  const savedOrder=localSave(inserted),restoredOrder=localFind(savedOrder.id);assert.equal(restoredOrder.studentOrder,'alphabetical');assert.deepEqual(restoredOrder.students,inserted.students);assert.deepEqual(restoredOrder.marks,ordering.marks);const savedMove=localSave(moveRecordStudent(restoredOrder,rosterIds[0],-1),restoredOrder);assert.equal(localFind(savedMove.id).studentOrder,'manual');assert.deepEqual(localFind(savedMove.id).marks,ordering.marks);localDelete(savedMove.id,savedMove.version);
+  console.log('PASS: Arabic alphabetical ordering, stable duplicate/blank rows, insertion/rename/manual moves, unchanged ID-based grades, tolerant search, full exports and persisted order.');
+  }
   console.log('PASS: blank HTML/CSV cells, pagination, local backup format, trailing student slots, stable IDs/marks and maximum-row behavior.');
   console.log('PASS: approved comment choices, colors, HTML/CSV output, local roundtrip, legacy status conversion and referenced-choice deletion guard.');
   console.log('PASS: custom tasks: numbers, checkboxes, editable status labels, incompatible marks rejected.');

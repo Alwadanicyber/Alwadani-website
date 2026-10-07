@@ -10,9 +10,10 @@ export type CommentChoice={id:string;label:string;tone:'positive'|'negative'|'ne
 export type RecordTask={id:string;title:string;type:TaskType;maxScore:number;mode?:'number'|'check'|'status'|'comments';positiveLabel?:string;negativeLabel?:string;choices?:CommentChoice[];manualGroup?:string;manualCells?:number};
 export const isNumberTask=(task:Pick<RecordTask,'type'|'mode'>)=>task.type==='exam'||(task.type==='custom'&&task.mode==='number');
 export type RecordStudent={id:string;name:string};
+export type StudentOrder='manual'|'alphabetical';
 export type RecordMark=null|'done'|'missing'|'absent'|'ungraded'|number|`choice:${string}`;
 export const recordDesigns={white:'أبيض رسمي',green:'أخضر هادئ',blue:'أزرق أنيق',gold:'إطار ذهبي'};
-export type RecordContent=AudienceSettings&{title:string;format?:keyof typeof recordFormats;blankLayout?:'simple'|'school';grade:string;className:string;classLabel?:string;schoolName?:string;subjectName?:string;design?:keyof typeof recordDesigns;educationArea?:string;educationOffice?:string;schoolYear?:string;academicTerm?:string;teacherName:string;principalName:string;students:RecordStudent[];tasks:RecordTask[];marks:Record<string,Record<string,RecordMark>>};
+export type RecordContent=AudienceSettings&{title:string;format?:keyof typeof recordFormats;blankLayout?:'simple'|'school';grade:string;className:string;classLabel?:string;schoolName?:string;subjectName?:string;design?:keyof typeof recordDesigns;educationArea?:string;educationOffice?:string;schoolYear?:string;academicTerm?:string;teacherName:string;principalName:string;studentOrder?:StudentOrder;students:RecordStudent[];tasks:RecordTask[];marks:Record<string,Record<string,RecordMark>>};
 export type TeacherRecord=RecordContent&{id:string;version:number;created:string;updated:string};
 export type RecordSummary=AudienceSettings&{id:string;title:string;format?:RecordContent['format'];grade:string;className:string;teacherName:string;studentCount:number;taskCount:number;version:number;updated:string};
 export const taskLabels:Record<TaskType,string>={performance:'مهمة أدائية','performance-score':'مهمة أدائية +',homework:'واجب',exam:'اختبار',custom:'مخصص'};
@@ -36,6 +37,7 @@ export function validateCommentChoices(value:unknown):CommentChoice[]{
 }
 export function validateRecord(value:unknown):RecordContent{
   if(!plainObject(value))throw new Error('محتوى الكشف غير صالح.');
+  const studentOrder=value.studentOrder??'manual';if(studentOrder!=='manual'&&studentOrder!=='alphabetical')throw new Error('اختر ترتيبًا صحيحًا للأسماء.');
   const title=text(value.title,'عنوان الكشف',120,true),className=text(value.className,'حرف الفصل',80),classLabel=text(value.classLabel??'','اسم الصف الظاهر',120),teacherName=text(value.teacherName,'اسم المعلم',120),principalName=text(value.principalName,'اسم المدير',120);
   const design=value.design??'white';if(typeof design!=='string'||!Object.hasOwn(recordDesigns,design))throw new Error('اختر خلفية صحيحة.');
   const format=value.format??'electronic';if(typeof format!=='string'||!Object.hasOwn(recordFormats,format))throw new Error('اختر نوع كشف صحيحًا.');
@@ -76,7 +78,18 @@ export function validateRecord(value:unknown):RecordContent{
       marks[studentId][taskId]=mark as RecordMark;
     }
   }
-  return {...validateAudience(value),title,format:format as RecordContent['format'],...(format==='blank'?{blankLayout:blankLayout as RecordContent['blankLayout']}:{}),grade:value.grade,className,classLabel,schoolName:text(value.schoolName??'','اسم المدرسة',120),subjectName:text(value.subjectName??'','المادة',120),design:design as RecordContent['design'],educationArea:text(value.educationArea??'','منطقة التعليم',120),educationOffice:text(value.educationOffice??'','مكتب التعليم',120),schoolYear:text(value.schoolYear??'','العام الدراسي',60),academicTerm:text(value.academicTerm??'','الفصل الدراسي',60),teacherName,principalName,students,tasks,marks};
+  return {...validateAudience(value),title,format:format as RecordContent['format'],...(format==='blank'?{blankLayout:blankLayout as RecordContent['blankLayout']}:{}),grade:value.grade,className,classLabel,schoolName:text(value.schoolName??'','اسم المدرسة',120),subjectName:text(value.subjectName??'','المادة',120),design:design as RecordContent['design'],educationArea:text(value.educationArea??'','منطقة التعليم',120),educationOffice:text(value.educationOffice??'','مكتب التعليم',120),schoolYear:text(value.schoolYear??'','العام الدراسي',60),academicTerm:text(value.academicTerm??'','الفصل الدراسي',60),teacherName,principalName,studentOrder,students:studentOrder==='alphabetical'?alphabeticalStudents(students):students,tasks,marks};
+}
+export function normalizeStudentName(name:string){return name.normalize('NFKD').replace(/[\u0300-\u036f\u0610-\u061a\u064b-\u065f\u0670\u06d6-\u06ed\u0640]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').toLocaleLowerCase().replace(/\s+/g,' ').trim();}
+const studentCollator=new Intl.Collator('ar',{sensitivity:'base',numeric:true});
+export function alphabeticalStudents(students:RecordStudent[]){return [...students].sort((a,b)=>{const first=normalizeStudentName(a.name),second=normalizeStudentName(b.name);return !first?(!second?0:1):!second?-1:studentCollator.compare(first,second);});}
+export function studentMatchesSearch(student:RecordStudent,query:string){const name=normalizeStudentName(student.name);return normalizeStudentName(query).split(' ').filter(Boolean).every(part=>name.includes(part));}
+export function setRecordStudentOrder(record:RecordContent,studentOrder:StudentOrder){return validateRecord({...record,studentOrder});}
+export function renameRecordStudent(record:RecordContent,studentId:string,name:string){const candidate=structuredClone(record),student=candidate.students.find(s=>s.id===studentId);if(!student)throw new Error('الاسم غير موجود في الكشف.');student.name=text(name,'اسم الطالب',120);return validateRecord(candidate);}
+export function moveRecordStudent(record:RecordContent,studentId:string,direction:-1|1){
+  const index=record.students.findIndex(s=>s.id===studentId);if(index<0)throw new Error('الاسم غير موجود في الكشف.');
+  const target=index+direction;if(target<0||target>=record.students.length)return validateRecord(record);
+  const candidate=structuredClone(record);[candidate.students[index],candidate.students[target]]=[candidate.students[target],candidate.students[index]];candidate.studentOrder='manual';return validateRecord(candidate);
 }
 // Reserved rows after the last named student keep their IDs and any existing marks.
 export function nextStudentSlot(record:Pick<RecordContent,'students'>){
