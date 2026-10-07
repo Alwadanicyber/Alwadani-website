@@ -34,14 +34,14 @@ function manualTable(record:RecordContent,tasks:RecordTask[],start:number,end:nu
   const first=row([cell('م',indexWidth,{...h,rowSpan:2}),cell('اسم '+audienceWords(record).student,nameWidth,{...h,rowSpan:2}),...groups.map(g=>cell(g.name,g.width,{...h,span:g.count})),cell('المجموع\n'+manualTotal(tasks),totalWidth,{...h,rowSpan:2})],true);
   offset=0;
   const second=row(tasks.map(t=>{const count=t.manualCells||1,w=taskWidths.slice(offset,offset+count).reduce((a,b)=>a+b,0);offset+=count;return cell(t.title+'\nمن '+t.maxScore,w,{...h,span:count,size:16});}),true);
-  const body=record.students.slice(start,end).map((student,i)=>row([cell(String(start+i+1),indexWidth,{size:16}),cell(student.name,nameWidth,{align:AlignmentType.RIGHT}),...taskWidths.map(w=>cell('',w)),cell('',totalWidth)]));
+  const body=record.students.slice(start,end).map((student,i)=>row([cell(String(start+i+1),indexWidth,{size:16}),cell(student.name,nameWidth,{align:AlignmentType.START}),...taskWidths.map(w=>cell('',w)),cell('',totalWidth)]));
   return table([first,second,...body],widths);
 }
 function electronicTable(record:RecordContent,tasks:RecordTask[],start:number,end:number,width:number){
   const indexWidth=Math.round(width*.05),nameWidth=Math.round(width*.30),taskWidth=Math.floor((width-indexWidth-nameWidth)/tasks.length),widths=[indexWidth,nameWidth,...tasks.map(()=>taskWidth)];widths[widths.length-1]+=width-widths.reduce((a,b)=>a+b,0);
   const blank=record.format==='blank',h={fill:'E7EFEB',bold:true};
   const heads=row([cell('م',indexWidth,h),cell('اسم '+audienceWords(record).student,nameWidth,h),...tasks.map((t,i)=>cell(t.title+((isNumberTask(t)||t.type==='performance-score')?'\nمن '+t.maxScore:''),widths[i+2],h))],true);
-  const rows=record.students.slice(start,end).map((s,i)=>row([cell(String(start+i+1),indexWidth),cell(s.name,nameWidth,{align:AlignmentType.RIGHT}),...tasks.map((t,j)=>{const mark=record.marks[s.id]?.[t.id],colors=palette[markClass(mark,t)];return cell(blank?'':recordResult(t,mark,record.studentGender),widths[j+2],blank?{}:{fill:colors?.[0],color:colors?.[1]});})]));
+  const rows=record.students.slice(start,end).map((s,i)=>row([cell(String(start+i+1),indexWidth),cell(s.name,nameWidth,{align:AlignmentType.START}),...tasks.map((t,j)=>{const mark=record.marks[s.id]?.[t.id],colors=palette[markClass(mark,t)];return cell(blank?'':recordResult(t,mark,record.studentGender),widths[j+2],blank?{}:{fill:colors?.[0],color:colors?.[1]});})]));
   return table([heads,...rows],widths);
 }
 const page=(portrait:boolean)=>({size:{width:11906,height:16838,orientation:portrait?PageOrientation.PORTRAIT:PageOrientation.LANDSCAPE},margin:{top:567,bottom:567,left:567,right:567}});

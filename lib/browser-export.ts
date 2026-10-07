@@ -5,6 +5,7 @@ import type {RecordContent} from './records';
 import {ministryReferenceLogo,visionLogo} from './education-brand';
 import {portraitRecord} from './record-layout';
 import {centeredPageImage} from './export-page';
+import {recordNameLines} from './record-name-layout';
 export type ExportProgress=(message:string)=>void;
 export function downloadBlob(blob:Blob,name:string){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
 export type CapturedPage={data:string;width:number;height:number};
@@ -33,6 +34,20 @@ function paginateRecordPages(doc:Document,selector:string){
   }
   initial.forEach((page,i)=>{const counter=page.querySelector('.output-page-number');if(counter)counter.textContent='صفحة '+(i+1)+' من '+initial.length;const rows=page.querySelector('.manual-table tbody'),caption=page.querySelector('.manual-sr-only');if(rows&&caption){const first=rows.firstElementChild?.firstElementChild?.textContent,last=rows.lastElementChild?.firstElementChild?.textContent;caption.textContent=caption.textContent?.replace(/( — (?:الطلاب|الطالبات) ).*$/,'$1'+first+' إلى '+last)||'';}});
 }
+function captureRecordNames(doc:Document){
+  if(!doc.body.classList.contains('record-output'))return;
+  for(const cell of doc.querySelectorAll<HTMLElement>('.record-data-table tbody .student-name,.manual-table tbody .manual-name')){
+    const name=cell.textContent?.trim();if(!name)continue;
+    const style=doc.defaultView!.getComputedStyle(cell),fontSize=parseFloat(style.fontSize),width=Math.max(1,cell.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight));
+    const canvas=doc.createElement('canvas'),context=canvas.getContext('2d');if(!context)throw new Error('تعذّر ضبط أسماء الكشف.');
+    const font=style.fontWeight+' '+fontSize+'px '+style.fontFamily;context.font=font;context.direction='rtl';
+    const lines=recordNameLines(name,width,text=>context.measureText(text).width),lineHeight=Math.max(fontSize*1.55,parseFloat(style.lineHeight)||0),height=lines.length*lineHeight;
+    canvas.width=Math.ceil(width*3);canvas.height=Math.ceil(height*3);canvas.style.cssText='display:block;margin:0 auto;width:'+width+'px;height:'+height+'px';
+    context.scale(3,3);context.font=font;context.fillStyle=style.color;context.direction='rtl';context.textAlign='center';context.textBaseline='alphabetic';
+    lines.forEach((line,index)=>{const metrics=context.measureText(line),ascent=metrics.actualBoundingBoxAscent,descent=metrics.actualBoundingBoxDescent;context.fillText(line,width/2,(index+.5)*lineHeight+(ascent-descent)/2);});
+    cell.replaceChildren(canvas);
+  }
+}
 async function capturePages(html:string,selector:string,width:number,progress:ExportProgress,onPage:(page:CapturedPage,index:number,total:number)=>Promise<void>|void){
   const frame=document.createElement('iframe');frame.title='تجهيز ملف التنزيل';frame.setAttribute('aria-hidden','true');frame.setAttribute('sandbox','allow-same-origin');Object.assign(frame.style,{position:'fixed',left:'-20000px',top:'0',width:width+'px',height:'1200px',border:'0',pointerEvents:'none'});
   const loaded=new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('تعذّر تجهيز المعاينة. أعد المحاولة.')),20000);frame.onload=()=>{clearTimeout(timer);resolve();};});
@@ -40,7 +55,7 @@ async function capturePages(html:string,selector:string,width:number,progress:Ex
     frame.srcdoc=html;document.body.appendChild(frame);await loaded;const doc=frame.contentDocument;if(!doc)throw new Error('تعذّر فتح المعاينة.');await doc.fonts.ready;
     const svgCache=new Map<string,string>();
     await Promise.all(Array.from(doc.images).map(async image=>{await image.decode();const source=image.src;if(source.startsWith('data:image/svg+xml')){let png=svgCache.get(source);if(!png){const canvas=doc.createElement('canvas');canvas.width=Math.max(400,image.naturalWidth*2);canvas.height=Math.round(canvas.width*image.naturalHeight/image.naturalWidth);const ctx=canvas.getContext('2d');if(!ctx)throw new Error('تعذّر تجهيز الرسم.');ctx.drawImage(image,0,0,canvas.width,canvas.height);png=canvas.toDataURL('image/png');svgCache.set(source,png);canvas.width=0;canvas.height=0;}image.src=png;await image.decode();}}));
-    paginateRecordPages(doc,selector);
+    captureRecordNames(doc);paginateRecordPages(doc,selector);
     const {default:html2canvas}=await import('html2canvas'),pages=Array.from(doc.querySelectorAll<HTMLElement>(selector));if(!pages.length)throw new Error('لا توجد صفحات للتنزيل.');
     for(let i=0;i<pages.length;i++){
       progress('جارٍ تجهيز الصفحة '+(i+1)+' من '+pages.length+'…');

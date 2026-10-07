@@ -22,14 +22,15 @@ ${scope} .record-cliche-details{font-size:11px;line-height:1.4;margin:2mm 0 3mm}
 ${scope} .record-cliche-meta{margin:0 0 4mm}${scope} .record-cliche-meta :is(th,td){font-size:11px!important;line-height:1.4!important;padding:4px!important}
 ${scope} .record-range{margin:2mm 0;font-size:10px}${scope} .record-continuation{font-size:12px;font-weight:600;margin:0 0 4mm}
 ${scope} .record-data-table{width:100%;border-collapse:collapse;table-layout:fixed;margin:3mm 0 0}
-${scope} .record-data-table :is(th,td){font-size:11.5px;line-height:1.35;padding:3px 5px;border:1px solid #b8c9bf;overflow-wrap:anywhere;text-align:center;height:auto}
+${scope} .record-data-table :is(th,td){font-size:11.5px;line-height:1.55;padding:4px 6px;border:1px solid #b8c9bf;overflow-wrap:anywhere;text-align:center;vertical-align:middle;height:auto}
 ${scope} .record-data-table thead th{background:#e7efeb;font-weight:700;padding:6px 4px}${scope} .record-data-table tr{break-inside:avoid}${scope} .record-data-table tbody tr{height:6.2mm}
 ${scope} .record-data-table .student-name{width:30%;text-align:right}${scope} .record-data-table .record-index{width:5%}${scope} .record-result{font-weight:600;font-size:12px}
+${scope} .record-data-table tbody .student-name{direction:rtl;text-align:center;font-weight:500;vertical-align:middle}
 ${scope} .record-legend{font-size:9px;line-height:1.4;margin:3mm 0;color:#63736e}
 ${scope} .record-signatures{display:flex;justify-content:space-between;gap:10mm;font-size:11px;border:0;padding:0;margin-top:4mm}${scope} .record-signatures p{min-width:0;max-width:48%}
 ${scope} footer{display:flex!important;justify-content:space-between;font-size:9px;color:#6e8076;padding:0;border:0;margin:4mm 0 0}
 ${scope} .manual-header{min-height:23mm;padding:10px 12px;border-radius:0}${scope} .manual-heading img{width:82px;height:42px}${scope} .manual-heading h1{font-size:16px}${scope} .manual-meta{margin:3mm 0;font-size:10px}
-${scope} .manual-table{margin:2mm 0}${scope} .manual-table tbody tr{height:6.2mm}${scope} .manual-table thead th{font-size:10px;padding:5px 3px}${scope} .manual-table .manual-name{font-size:11px}
+${scope} .manual-table{margin:2mm 0}${scope} .manual-table tbody tr{height:6.2mm}${scope} .manual-table thead th{font-size:10px;padding:5px 3px}${scope} .manual-table .manual-name{font-size:11px;line-height:1.55;direction:rtl;text-align:center;vertical-align:middle;padding:4px 6px}
 ${scope} .manual-signatures{margin-top:4mm;font-size:11px}${scope} .manual-footer{margin-top:4mm}
 `;
   return rules+`@media print{@page{size:A4 ${portrait?'portrait':'landscape'};margin:0}body{padding:0!important;margin:0!important;background:#fff!important}${scope} :is(.record-print-page,.manual-sheet){height:auto;margin:0!important}${scope} .record-data-table thead{display:table-header-group}${scope} :is(.record-print-page,.manual-sheet) *{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;

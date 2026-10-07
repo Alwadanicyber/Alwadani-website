@@ -8,7 +8,7 @@ import ts from 'typescript';
 const dir=mkdtempSync(join(tmpdir(),'alwadani-record-check-'));
 try{
   for(const name of ['audience','grades','records','record-export','record-layout','manual-record','education-brand','certificate-school','certificates','local-records']){const source=readFileSync(new URL('../lib/'+name+'.ts',import.meta.url),'utf8');const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText.replace(/from '\.\/(audience|grades|records|education-brand|certificate-school|manual-record|record-layout)'/g,"from './$1.mjs'");writeFileSync(join(dir,name+'.mjs'),js);}
-  const {validateRecord,markLabel,markClass,completionCount,applyRecordTaskSettings,addRecordStudent,nextStudentSlot,setRecordStudentOrder,renameRecordStudent,moveRecordStudent,studentMatchesSearch,MAX_STUDENTS}=await import(pathToFileURL(join(dir,'records.mjs')));
+  const {validateRecord,markLabel,markClass,completionCount,applyRecordTaskSettings,addRecordStudent,nextStudentSlot,setRecordStudentOrder,renameRecordStudent,moveRecordStudent,studentMatchesSearch,removeRecordStudent,removeRecordTask,MAX_STUDENTS}=await import(pathToFileURL(join(dir,'records.mjs')));
   const {recordHtml,recordCsv}=await import(pathToFileURL(join(dir,'record-export.mjs')));
   const student=randomUUID(),tasks=Array.from({length:7},(_,i)=>({id:randomUUID(),title:i===0?'<script>alert(1)</script>':'عمل '+(i+1),type:i===0?'exam':i===1?'homework':'performance',maxScore:20}));
   const record={title:'كشف <img src=x onerror=alert(1)>',grade:'grade-9',className:'3 / ب',teacherName:'معلم & مدير',principalName:'المدير',students:[{id:student,name:'=HYPERLINK("https://example.test")'}],tasks,marks:{[student]:{[tasks[0].id]:0,[tasks[1].id]:'missing',[tasks[2].id]:'done'}}};
@@ -132,6 +132,14 @@ try{
   console.log('PASS: Arabic alphabetical ordering, stable duplicate/blank rows, insertion/rename/manual moves, unchanged ID-based grades, tolerant search, full exports and persisted order.');
   }
   console.log('PASS: blank HTML/CSV cells, pagination, local backup format, trailing student slots, stable IDs/marks and maximum-row behavior.');
+  {
+    const second=randomUUID(),deletion={...record,students:[{id:student,name:'اسم مكرر'},{id:second,name:'اسم مكرر'}],marks:{...record.marks,[second]:{[tasks[0].id]:'absent',[tasks[1].id]:'done'}}},before=JSON.stringify(deletion);
+    const removedRow=removeRecordStudent(deletion,student);assert.deepEqual(removedRow.students,[deletion.students[1]]);assert.equal(removedRow.marks[student],undefined);assert.deepEqual(removedRow.marks[second],deletion.marks[second]);assert.equal(JSON.stringify(deletion),before);assert.equal(completionCount(removedRow),2);assert.throws(()=>removeRecordStudent(removedRow,second));assert.throws(()=>removeRecordStudent(deletion,randomUUID()));
+    const removedTask=removeRecordTask(deletion,tasks[0].id);assert.equal(removedTask.tasks.length,tasks.length-1);assert(removedTask.tasks.every(task=>task.id!==tasks[0].id));assert(Object.values(removedTask.marks).every(row=>row[tasks[0].id]===undefined));assert.equal(removedTask.marks[student][tasks[1].id],'missing');assert.equal(removedTask.marks[second][tasks[1].id],'done');assert.equal(JSON.stringify(deletion),before);assert.throws(()=>removeRecordTask(scored,tasks[0].id));assert.throws(()=>removeRecordTask(deletion,randomUUID()));
+    const saved=localSave(deletion),deleted=localSave(removeRecordStudent(saved,student),saved);assert.equal(localFind(deleted.id).students.length,1);assert.equal(localFind(deleted.id).marks[student],undefined);const restored=localSave({...deleted,...validateRecord(deletion)},deleted);assert.deepEqual(localFind(restored.id).marks,validateRecord(deletion).marks);assert.deepEqual(localFind(restored.id).students,deletion.students);localDelete(restored.id,restored.version);
+    const paperRemoved=removeRecordTask({...deletion,format:'blank',marks:{}},tasks[0].id);assert.equal(paperRemoved.format,'blank');assert.deepEqual(paperRemoved.marks,{});assert.equal(paperRemoved.tasks.length,tasks.length-1);
+    console.log('PASS: row/column deletion by ID, duplicate-name safety, related-mark cleanup, unchanged remaining grades, last-item guards and saved undo restoration.');
+  }
   console.log('PASS: approved comment choices, colors, HTML/CSV output, local roundtrip, legacy status conversion and referenced-choice deletion guard.');
   console.log('PASS: custom tasks: numbers, checkboxes, editable status labels, incompatible marks rejected.');
   console.log('PASS: scored performance, subject decorations, per-student designs, certificate escaping, local persistence and conflict guard.');
