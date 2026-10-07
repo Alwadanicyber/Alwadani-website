@@ -10,7 +10,7 @@ export type CommentChoice={id:string;label:string;tone:'positive'|'negative'|'ne
 export type RecordTask={id:string;title:string;type:TaskType;maxScore:number;mode?:'number'|'check'|'status'|'comments';positiveLabel?:string;negativeLabel?:string;choices?:CommentChoice[];manualGroup?:string;manualCells?:number};
 export const isNumberTask=(task:Pick<RecordTask,'type'|'mode'>)=>task.type==='exam'||(task.type==='custom'&&task.mode==='number');
 export type RecordStudent={id:string;name:string};
-export type RecordMark=null|'done'|'missing'|'absent'|number|`choice:${string}`;
+export type RecordMark=null|'done'|'missing'|'absent'|'ungraded'|number|`choice:${string}`;
 export const recordDesigns={white:'أبيض رسمي',green:'أخضر هادئ',blue:'أزرق أنيق',gold:'إطار ذهبي'};
 export type RecordContent=AudienceSettings&{title:string;format?:keyof typeof recordFormats;blankLayout?:'simple'|'school';grade:string;className:string;classLabel?:string;schoolName?:string;subjectName?:string;design?:keyof typeof recordDesigns;educationArea?:string;educationOffice?:string;schoolYear?:string;academicTerm?:string;teacherName:string;principalName:string;students:RecordStudent[];tasks:RecordTask[];marks:Record<string,Record<string,RecordMark>>};
 export type TeacherRecord=RecordContent&{id:string;version:number;created:string;updated:string};
@@ -71,7 +71,7 @@ export function validateRecord(value:unknown):RecordContent{
     for(const [taskId,mark] of Object.entries(row)){
       const task=tasks.find(t=>t.id===taskId);if(!task)throw new Error('الرصد لا يطابق الأعمال.');
       if(format==='blank'&&mark!==null)throw new Error('الكشف الفارغ للتعبئة اليدوية؛ لا يحتوي على نتائج إلكترونية.');
-      const valid=mark===null||(task.type==='performance-score'?(typeof mark==='number'&&Number.isInteger(mark)&&mark>=1&&mark<=5):isNumberTask(task)?((task.type==='exam'&&mark==='absent')||(typeof mark==='number'&&Number.isFinite(mark)&&mark>=0&&mark<=task.maxScore)):task.type==='custom'&&task.mode==='comments'?(typeof mark==='string'&&task.choices?.some(choice=>mark==='choice:'+choice.id)):(mark==='done'||mark==='missing'));
+      const valid=mark===null||(task.type==='performance-score'?(mark==='ungraded'||(typeof mark==='number'&&Number.isInteger(mark)&&mark>=0&&mark<=5)):isNumberTask(task)?((task.type==='exam'&&mark==='absent')||(typeof mark==='number'&&Number.isFinite(mark)&&mark>=0&&mark<=task.maxScore)):task.type==='custom'&&task.mode==='comments'?(typeof mark==='string'&&task.choices?.some(choice=>mark==='choice:'+choice.id)):(mark==='done'||mark==='missing'));
       if(!valid)throw new Error('راجع الدرجة أو حالة الرصد في '+task.title+'.');
       marks[studentId][taskId]=mark as RecordMark;
     }
@@ -93,13 +93,14 @@ export function markLabel(task:RecordTask,mark:RecordMark|undefined,studentGende
   const words=audienceWords({studentGender});
   if(mark===undefined||mark===null)return 'لم يُرصد';
   if(mark==='absent')return words.absent;
+  if(mark==='ungraded')return studentGender==='female'?'لم تُرصد درجتها':'لم تُرصد درجته';
   if(typeof mark==='number')return String(mark)+' / '+task.maxScore;
   if(task.type==='custom'&&task.mode==='comments')return task.choices?.find(choice=>mark==='choice:'+choice.id)?.label||'لم يُرصد';
   if(task.type==='custom')return mark==='done'?(task.positiveLabel||'أنجز'):(task.negativeLabel||'لم ينجز');
   if(task.type==='homework')return mark==='done'?words.homeworkDone:words.homeworkMissing;
   return mark==='done'?words.done:words.missing;
 }
-export function markClass(mark:RecordMark|undefined,task?:RecordTask){if(typeof mark==='string'&&mark.startsWith('choice:')){const tone=task?.choices?.find(choice=>mark==='choice:'+choice.id)?.tone;return tone==='positive'?'mark-done':tone==='negative'?'mark-missing':'mark-note';}return mark==='done'?'mark-done':mark==='missing'||mark==='absent'?'mark-missing':typeof mark==='number'?'mark-score':'mark-empty';}
+export function markClass(mark:RecordMark|undefined,task?:RecordTask){if(typeof mark==='string'&&mark.startsWith('choice:')){const tone=task?.choices?.find(choice=>mark==='choice:'+choice.id)?.tone;return tone==='positive'?'mark-done':tone==='negative'?'mark-missing':'mark-note';}return mark==='ungraded'?'mark-ungraded':mark==='done'?'mark-done':mark==='missing'||mark==='absent'?'mark-missing':typeof mark==='number'?'mark-score':'mark-empty';}
 export function applyRecordTaskSettings(record:RecordContent,taskId:string,patch:Partial<RecordTask>):RecordContent{
   const candidate=structuredClone(record),task=candidate.tasks.find(item=>item.id===taskId);if(!task)throw new Error('الخانة غير موجودة.');
   if(patch.mode==='comments'&&task.type==='custom'&&task.mode!=='comments'&&task.mode!=='number'&&patch.choices?.length===2){
@@ -107,4 +108,4 @@ export function applyRecordTaskSettings(record:RecordContent,taskId:string,patch
   }
   Object.assign(task,patch);return validateRecord(candidate);
 }
-export function completionCount(record:RecordContent){return record.students.reduce((total,s)=>total+record.tasks.filter(t=>record.marks[s.id]?.[t.id]!==undefined&&record.marks[s.id]?.[t.id]!==null).length,0);}
+export function completionCount(record:RecordContent){return record.students.reduce((total,s)=>total+record.tasks.filter(t=>record.marks[s.id]?.[t.id]!==undefined&&record.marks[s.id]?.[t.id]!==null&&record.marks[s.id]?.[t.id]!=='ungraded').length,0);}
