@@ -38,7 +38,8 @@ async function capturePages(html:string,selector:string,width:number,progress:Ex
   const loaded=new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('تعذّر تجهيز المعاينة. أعد المحاولة.')),20000);frame.onload=()=>{clearTimeout(timer);resolve();};});
   try{
     frame.srcdoc=html;document.body.appendChild(frame);await loaded;const doc=frame.contentDocument;if(!doc)throw new Error('تعذّر فتح المعاينة.');await doc.fonts.ready;
-    await Promise.all(Array.from(doc.images).map(async image=>{await image.decode();if(image.src.startsWith('data:image/svg+xml')){const canvas=doc.createElement('canvas');canvas.width=Math.max(400,image.naturalWidth*2);canvas.height=Math.round(canvas.width*image.naturalHeight/image.naturalWidth);const ctx=canvas.getContext('2d');if(!ctx)throw new Error('تعذّر تجهيز الشعار.');ctx.drawImage(image,0,0,canvas.width,canvas.height);image.src=canvas.toDataURL('image/png');await image.decode();}}));
+    const svgCache=new Map<string,string>();
+    await Promise.all(Array.from(doc.images).map(async image=>{await image.decode();const source=image.src;if(source.startsWith('data:image/svg+xml')){let png=svgCache.get(source);if(!png){const canvas=doc.createElement('canvas');canvas.width=Math.max(400,image.naturalWidth*2);canvas.height=Math.round(canvas.width*image.naturalHeight/image.naturalWidth);const ctx=canvas.getContext('2d');if(!ctx)throw new Error('تعذّر تجهيز الرسم.');ctx.drawImage(image,0,0,canvas.width,canvas.height);png=canvas.toDataURL('image/png');svgCache.set(source,png);canvas.width=0;canvas.height=0;}image.src=png;await image.decode();}}));
     paginateRecordPages(doc,selector);
     const {default:html2canvas}=await import('html2canvas'),pages=Array.from(doc.querySelectorAll<HTMLElement>(selector));if(!pages.length)throw new Error('لا توجد صفحات للتنزيل.');
     for(let i=0;i<pages.length;i++){
