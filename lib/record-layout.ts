@@ -1,5 +1,5 @@
 import type {Gender} from './audience';
-import {isNumberTask,markLabel,type RecordContent,type RecordTask,type RecordMark} from './records';
+import {isNumberTask,isGradedPerformance,markLabel,type RecordContent,type RecordTask,type RecordMark} from './records';
 export const portraitRecord=(record:RecordContent)=>record.blankLayout==='school'||record.tasks.length<=3;
 export function recordRows(record:RecordContent){
   const ranges:{start:number;end:number}[]=[];
@@ -7,7 +7,7 @@ export function recordRows(record:RecordContent){
   return ranges;
 }
 export const recordResult=(task:RecordTask,mark:RecordMark|undefined,studentGender?:Gender)=>typeof mark==='number'?String(mark):markLabel(task,mark,studentGender);
-export const numericTask=(task:RecordTask)=>isNumberTask(task)||task.type==='performance-score';
+export const numericTask=(task:RecordTask)=>isNumberTask(task)||isGradedPerformance(task);
 export function recordPageStyles(record:RecordContent){
   const portrait=portraitRecord(record),width=portrait?210:297,height=portrait?297:210;
   const scope=':is(.record-output,.record-print-pages)';

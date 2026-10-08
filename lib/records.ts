@@ -9,6 +9,7 @@ export type TaskType='performance'|'performance-score'|'homework'|'exam'|'custom
 export type CommentChoice={id:string;label:string;tone:'positive'|'negative'|'neutral'};
 export type RecordTask={id:string;title:string;type:TaskType;maxScore:number;mode?:'number'|'check'|'status'|'comments';positiveLabel?:string;negativeLabel?:string;choices?:CommentChoice[];manualGroup?:string;manualCells?:number};
 export const isNumberTask=(task:Pick<RecordTask,'type'|'mode'>)=>task.type==='exam'||(task.type==='custom'&&task.mode==='number');
+export const isGradedPerformance=(task:Pick<RecordTask,'type'|'mode'>)=>task.type==='performance-score'||(task.type==='performance'&&task.mode==='number');
 export type RecordStudent={id:string;name:string};
 export type StudentOrder='manual'|'alphabetical';
 export type RecordMark=null|'done'|'missing'|'absent'|'ungraded'|number|`choice:${string}`;
@@ -60,10 +61,12 @@ export function validateRecord(value:unknown):RecordContent{
       custom={mode:mode as RecordTask['mode'],positiveLabel:text(item.positiveLabel??'أنجز','عبارة الإنجاز',60,true),negativeLabel:text(item.negativeLabel??'لم ينجز','عبارة عدم الإنجاز',60,true)};
       if(mode==='comments')custom.choices=validateCommentChoices(item.choices);
     }
+    if(item.type==='performance'){const mode=item.mode??'status';if(mode!=='status'&&mode!=='number')throw new Error('اختر الرصد بالإنجاز أو بالدرجات للمهمة الأدائية.');custom={mode};}
+    if(isGradedPerformance({type:item.type as TaskType,mode:custom.mode})&&!Number.isInteger(item.maxScore))throw new Error('الدرجة الكاملة للمهمة عدد صحيح من 1 إلى 1000.');
     const manual:Pick<RecordTask,'manualGroup'|'manualCells'>={};
     if(item.manualGroup!==undefined)manual.manualGroup=text(item.manualGroup,'اسم مجموعة المهام',120);
     if(item.manualCells!==undefined){if(typeof item.manualCells!=='number'||!Number.isInteger(item.manualCells)||item.manualCells<1||item.manualCells>20)throw new Error('عدد مربعات المهمة من 1 إلى 20.');manual.manualCells=item.manualCells;}
-    return {id:item.id,title:text(item.title,'اسم العمل',120,true),type:item.type as TaskType,maxScore:item.type==='performance-score'?5:item.maxScore,...custom,...manual};
+    return {id:item.id,title:text(item.title,'اسم العمل',120,true),type:item.type as TaskType,maxScore:item.maxScore,...custom,...manual};
   });
   if(!plainObject(value.marks))throw new Error('الرصد غير صالح.');
   const marks:RecordContent['marks']={};
@@ -73,7 +76,7 @@ export function validateRecord(value:unknown):RecordContent{
     for(const [taskId,mark] of Object.entries(row)){
       const task=tasks.find(t=>t.id===taskId);if(!task)throw new Error('الرصد لا يطابق الأعمال.');
       if(format==='blank'&&mark!==null)throw new Error('الكشف الفارغ للتعبئة اليدوية؛ لا يحتوي على نتائج إلكترونية.');
-      const valid=mark===null||(task.type==='performance-score'?(mark==='ungraded'||(typeof mark==='number'&&Number.isInteger(mark)&&mark>=0&&mark<=5)):isNumberTask(task)?((task.type==='exam'&&mark==='absent')||(typeof mark==='number'&&Number.isFinite(mark)&&mark>=0&&mark<=task.maxScore)):task.type==='custom'&&task.mode==='comments'?(typeof mark==='string'&&task.choices?.some(choice=>mark==='choice:'+choice.id)):(mark==='done'||mark==='missing'));
+      const valid=mark===null||(isGradedPerformance(task)?((task.type==='performance'&&(mark==='done'||mark==='missing'))||mark==='ungraded'||(typeof mark==='number'&&Number.isInteger(mark)&&mark>=0&&mark<=task.maxScore)):isNumberTask(task)?((task.type==='exam'&&mark==='absent')||(typeof mark==='number'&&Number.isFinite(mark)&&mark>=0&&mark<=task.maxScore)):task.type==='custom'&&task.mode==='comments'?(typeof mark==='string'&&task.choices?.some(choice=>mark==='choice:'+choice.id)):(mark==='done'||mark==='missing'));
       if(!valid)throw new Error('راجع الدرجة أو حالة الرصد في '+task.title+'.');
       marks[studentId][taskId]=mark as RecordMark;
     }

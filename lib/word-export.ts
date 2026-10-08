@@ -3,7 +3,7 @@ import {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,ImageRun,Alig
 import {portraitRecord,recordResult} from './record-layout';
 import {gradeLabel} from './grades';
 import {isSchoolBlank,manualTaskPages,manualTotal} from './manual-record';
-import {markClass,isNumberTask,type RecordContent,type RecordTask} from './records';
+import {markClass,isGradedPerformance,isNumberTask,type RecordContent,type RecordTask} from './records';
 
 type Logos={ministry:Uint8Array;vision:Uint8Array};
 const border={style:BorderStyle.SINGLE,size:5,color:'689C98'};
@@ -40,7 +40,7 @@ function manualTable(record:RecordContent,tasks:RecordTask[],start:number,end:nu
 function electronicTable(record:RecordContent,tasks:RecordTask[],start:number,end:number,width:number){
   const indexWidth=Math.round(width*.05),nameWidth=Math.round(width*.30),taskWidth=Math.floor((width-indexWidth-nameWidth)/tasks.length),widths=[indexWidth,nameWidth,...tasks.map(()=>taskWidth)];widths[widths.length-1]+=width-widths.reduce((a,b)=>a+b,0);
   const blank=record.format==='blank',h={fill:'E7EFEB',bold:true};
-  const heads=row([cell('م',indexWidth,h),cell('اسم '+audienceWords(record).student,nameWidth,h),...tasks.map((t,i)=>cell(t.title+((isNumberTask(t)||t.type==='performance-score')?'\nمن '+t.maxScore:''),widths[i+2],h))],true);
+  const heads=row([cell('م',indexWidth,h),cell('اسم '+audienceWords(record).student,nameWidth,h),...tasks.map((t,i)=>cell(t.title+((isNumberTask(t)||isGradedPerformance(t))?'\nمن '+t.maxScore:''),widths[i+2],h))],true);
   const rows=record.students.slice(start,end).map((s,i)=>row([cell(String(start+i+1),indexWidth),cell(s.name,nameWidth,{align:AlignmentType.START}),...tasks.map((t,j)=>{const mark=record.marks[s.id]?.[t.id],colors=palette[markClass(mark,t)];return cell(blank?'':recordResult(t,mark,record.studentGender),widths[j+2],blank?{}:{fill:colors?.[0],color:colors?.[1]});})]));
   return table([heads,...rows],widths);
 }
