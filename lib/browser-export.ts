@@ -48,12 +48,12 @@ function captureRecordNames(doc:Document){
     cell.replaceChildren(canvas);
   }
 }
-async function nativeRecordPage(doc:Document,page:HTMLElement){
+async function nativeExportPage(doc:Document,page:HTMLElement){
   const bounds=page.getBoundingClientRect(),width=bounds.width,height=bounds.height;
   const svg=doc.createElementNS('http://www.w3.org/2000/svg','svg');
   svg.setAttribute('width',String(width));svg.setAttribute('height',String(height));svg.setAttribute('viewBox','0 0 '+width+' '+height);
   const foreign=doc.createElementNS('http://www.w3.org/2000/svg','foreignObject');foreign.setAttribute('width',String(width));foreign.setAttribute('height',String(height));
-  const wrapper=doc.createElementNS('http://www.w3.org/1999/xhtml','div');wrapper.setAttribute('class','record-output');wrapper.setAttribute('dir','rtl');
+  const wrapper=doc.createElementNS('http://www.w3.org/1999/xhtml','div');wrapper.setAttribute('class',doc.body.classList.contains('record-output')?'record-output':'certificate-output');wrapper.setAttribute('dir','rtl');
   wrapper.setAttribute('style','width:'+width+'px;height:'+height+'px;margin:0!important;padding:0!important;background:#fff!important;');
   const style=doc.createElementNS('http://www.w3.org/1999/xhtml','style');style.textContent=Array.from(doc.querySelectorAll('style')).map(node=>node.textContent).join('\n');wrapper.appendChild(style);
   const clone=page.cloneNode(true) as HTMLElement;clone.style.setProperty('margin','0','important');
@@ -73,10 +73,11 @@ async function capturePages(html:string,selector:string,width:number,progress:Ex
     const svgCache=new Map<string,string>();
     await Promise.all(Array.from(doc.images).map(async image=>{await image.decode();const source=image.src;if(source.startsWith('data:image/svg+xml')){let png=svgCache.get(source);if(!png){const canvas=doc.createElement('canvas');canvas.width=Math.max(400,image.naturalWidth*2);canvas.height=Math.round(canvas.width*image.naturalHeight/image.naturalWidth);const ctx=canvas.getContext('2d');if(!ctx)throw new Error('تعذّر تجهيز الرسم.');ctx.drawImage(image,0,0,canvas.width,canvas.height);png=canvas.toDataURL('image/png');svgCache.set(source,png);canvas.width=0;canvas.height=0;}image.src=png;await image.decode();}}));
     captureRecordNames(doc);paginateRecordPages(doc,selector);
-    const {default:html2canvas}=await import('html2canvas'),pages=Array.from(doc.querySelectorAll<HTMLElement>(selector));if(!pages.length)throw new Error('لا توجد صفحات للتنزيل.');
+    const pages=Array.from(doc.querySelectorAll<HTMLElement>(selector));if(!pages.length)throw new Error('لا توجد صفحات للتنزيل.');
     for(let i=0;i<pages.length;i++){
       progress('جارٍ تجهيز الصفحة '+(i+1)+' من '+pages.length+'…');
-      const canvas=doc.body.classList.contains('record-output')?await nativeRecordPage(doc,pages[i]):await html2canvas(pages[i],{scale:2,backgroundColor:'#ffffff',logging:false,windowWidth:width,windowHeight:1200,scrollX:0,scrollY:0});
+      // Native text shaping keeps Arabic names and seal labels aligned with the preview.
+      const canvas=await nativeExportPage(doc,pages[i]);
       await onPage({data:canvas.toDataURL('image/png'),width:canvas.width,height:canvas.height},i,pages.length);canvas.width=0;canvas.height=0;await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
     }
   }finally{frame.remove();}
