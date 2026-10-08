@@ -54,6 +54,7 @@
 @container record-task-fields (max-width:580px){.record-task-fields{grid-template-columns:minmax(0,1fr)}.custom-task-settings{grid-template-columns:minmax(0,1fr)}}
 
 /* Approved comments and optional student names. */
+.cert-names-count{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:14px 0;color:var(--muted-foreground);font-size:13px;line-height:1.8}.cert-names-count strong{color:var(--primary);background:var(--secondary);border-radius:8px;padding:6px 12px;font-size:14px}.cert-count-options{border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin:14px 0}.cert-count-options summary{cursor:pointer;font-size:14px;color:var(--foreground)}.cert-count-options[open] summary{margin-bottom:14px}.cert-count-options label{max-width:300px}.cert-count-options .field-help{margin-top:12px;font-size:13px;color:var(--muted-foreground);line-height:1.8}.cert-count-options input[aria-invalid=true]{border-color:var(--destructive)}
 .comment-options-editor{grid-column:1/-1;min-width:0;container-type:inline-size;container-name:comment-options}
 .comment-options-editor legend{font-size:15px;font-weight:600;padding:0}
 .comment-options-editor .field-help{font-size:13px;line-height:1.9;color:var(--muted-foreground);margin:10px 0 16px}
