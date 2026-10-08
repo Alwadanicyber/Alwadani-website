@@ -1,6 +1,6 @@
 import {audienceWords} from './audience';
 import {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,ImageRun,AlignmentType,WidthType,TableLayoutType,VerticalAlign,HeightRule,BorderStyle,PageOrientation,SectionType,Footer,PageNumber,type ISectionOptions} from 'docx';
-import {portraitRecord,recordRows,recordResult} from './record-layout';
+import {portraitRecord,recordResult} from './record-layout';
 import {gradeLabel} from './grades';
 import {isSchoolBlank,manualTaskPages,manualTotal} from './manual-record';
 import {markClass,isNumberTask,type RecordContent,type RecordTask} from './records';
@@ -47,9 +47,11 @@ function electronicTable(record:RecordContent,tasks:RecordTask[],start:number,en
 const page=(portrait:boolean)=>({size:{width:11906,height:16838,orientation:portrait?PageOrientation.PORTRAIT:PageOrientation.LANDSCAPE},margin:{top:567,bottom:567,left:567,right:567}});
 export async function recordWord(record:RecordContent,logos:Logos){
   const school=isSchoolBlank(record),portrait=portraitRecord(record),width=portrait?10772:15704,sections:ISectionOptions[]=[],pages=school?manualTaskPages(record.tasks):Array.from({length:Math.ceil(record.tasks.length/6)},(_,i)=>record.tasks.slice(i*6,i*6+6));
-  for(const tasks of pages)for(const {start,end} of recordRows(record)){
+  // Word paginates editable rows itself. Fixed HTML page ranges can create a
+  // nearly empty extra page when a long name wraps before a forced section break.
+  for(const tasks of pages){
     const signatures=new Footer({children:[new Paragraph({bidirectional:true,alignment:AlignmentType.CENTER,spacing:{after:0},children:[new TextRun({text:audienceWords(record).teacher+': '+(record.teacherName||'________________')+'      '+audienceWords(record).principalRole+': '+(record.principalName||'________________')+'      صفحة ',font:'Arial',size:16,sizeComplexScript:16,rightToLeft:true}),new TextRun({children:[PageNumber.CURRENT],font:'Arial',size:16})]})]});
-    sections.push({properties:{type:SectionType.NEXT_PAGE,page:page(portrait)},footers:{default:signatures},children:[...(sections.length===0?header(record,width,logos):[text('تتمة الكشف',21,true),new Paragraph({spacing:{after:100},children:[]})]),school?manualTable(record,tasks,start,end,width):electronicTable(record,tasks,start,end,width)]});
+    sections.push({properties:{type:SectionType.NEXT_PAGE,page:page(portrait)},footers:{default:signatures},children:[...(sections.length===0?header(record,width,logos):[text('تتمة الكشف',21,true),new Paragraph({spacing:{after:100},children:[]})]),school?manualTable(record,tasks,0,record.students.length,width):electronicTable(record,tasks,0,record.students.length,width)]});
   }
   return Packer.toBlob(new Document({creator:'Alwadani Teaching Tools',title:record.title,styles:{default:{document:{run:{font:'Arial',size:18,sizeComplexScript:18},paragraph:{spacing:{before:0,after:0}}}}},sections}));
 }
