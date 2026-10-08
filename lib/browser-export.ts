@@ -48,6 +48,23 @@ function captureRecordNames(doc:Document){
     cell.replaceChildren(canvas);
   }
 }
+async function nativeRecordPage(doc:Document,page:HTMLElement){
+  const bounds=page.getBoundingClientRect(),width=bounds.width,height=bounds.height;
+  const svg=doc.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width',String(width));svg.setAttribute('height',String(height));svg.setAttribute('viewBox','0 0 '+width+' '+height);
+  const foreign=doc.createElementNS('http://www.w3.org/2000/svg','foreignObject');foreign.setAttribute('width',String(width));foreign.setAttribute('height',String(height));
+  const wrapper=doc.createElementNS('http://www.w3.org/1999/xhtml','div');wrapper.setAttribute('class','record-output');wrapper.setAttribute('dir','rtl');
+  wrapper.setAttribute('style','width:'+width+'px;height:'+height+'px;margin:0!important;padding:0!important;background:#fff!important;');
+  const style=doc.createElementNS('http://www.w3.org/1999/xhtml','style');style.textContent=Array.from(doc.querySelectorAll('style')).map(node=>node.textContent).join('\n');wrapper.appendChild(style);
+  const clone=page.cloneNode(true) as HTMLElement;clone.style.setProperty('margin','0','important');
+  // Canvas pixels are not included in XML. Embed each name image before serializing.
+  const sources=Array.from(page.querySelectorAll('canvas'));
+  clone.querySelectorAll('canvas').forEach((node,index)=>{const image=doc.createElement('img');image.src=sources[index].toDataURL('image/png');image.style.cssText=node.style.cssText;node.replaceWith(image);});
+  wrapper.appendChild(clone);foreign.appendChild(wrapper);svg.appendChild(foreign);
+  const image=new Image();image.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(svg));await image.decode();
+  const canvas=doc.createElement('canvas');canvas.width=Math.ceil(width*2);canvas.height=Math.ceil(height*2);const context=canvas.getContext('2d');if(!context)throw new Error('تعذّر تجهيز صفحة الكشف.');
+  context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);context.scale(2,2);context.drawImage(image,0,0,width,height);return canvas;
+}
 async function capturePages(html:string,selector:string,width:number,progress:ExportProgress,onPage:(page:CapturedPage,index:number,total:number)=>Promise<void>|void){
   const frame=document.createElement('iframe');frame.title='تجهيز ملف التنزيل';frame.setAttribute('aria-hidden','true');frame.setAttribute('sandbox','allow-same-origin');Object.assign(frame.style,{position:'fixed',left:'-20000px',top:'0',width:width+'px',height:'1200px',border:'0',pointerEvents:'none'});
   const loaded=new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('تعذّر تجهيز المعاينة. أعد المحاولة.')),20000);frame.onload=()=>{clearTimeout(timer);resolve();};});
@@ -59,7 +76,7 @@ async function capturePages(html:string,selector:string,width:number,progress:Ex
     const {default:html2canvas}=await import('html2canvas'),pages=Array.from(doc.querySelectorAll<HTMLElement>(selector));if(!pages.length)throw new Error('لا توجد صفحات للتنزيل.');
     for(let i=0;i<pages.length;i++){
       progress('جارٍ تجهيز الصفحة '+(i+1)+' من '+pages.length+'…');
-      const canvas=await html2canvas(pages[i],{scale:2,backgroundColor:'#ffffff',logging:false,foreignObjectRendering:doc.body.classList.contains('record-output'),onclone:doc.body.classList.contains('record-output')?(clone,page)=>{const pageWidth=page.getBoundingClientRect().width;clone.body.replaceChildren(page);clone.documentElement.style.width=pageWidth+'px';Object.assign(clone.body.style,{width:pageWidth+'px',margin:'0',padding:'0'});page.style.setProperty('margin','0','important');}:undefined,windowWidth:width,windowHeight:1200,scrollX:0,scrollY:0});
+      const canvas=doc.body.classList.contains('record-output')?await nativeRecordPage(doc,pages[i]):await html2canvas(pages[i],{scale:2,backgroundColor:'#ffffff',logging:false,windowWidth:width,windowHeight:1200,scrollX:0,scrollY:0});
       await onPage({data:canvas.toDataURL('image/png'),width:canvas.width,height:canvas.height},i,pages.length);canvas.width=0;canvas.height=0;await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
     }
   }finally{frame.remove();}
