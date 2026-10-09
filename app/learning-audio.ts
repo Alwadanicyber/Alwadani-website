@@ -20,15 +20,12 @@ export function useLearningAudio(){
   frequencies.forEach((f,i)=>{const o=c.createOscillator(),gain=c.createGain(),start=c.currentTime+i*.1;o.frequency.setValueAtTime(f,start);o.type=name==='pop'?'triangle':'sine';gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.22,start+.008);gain.gain.exponentialRampToValueAtTime(.001,start+.17);o.connect(gain).connect(c.destination);o.start(start);o.stop(start+.18);o.onended=()=>{o.disconnect();gain.disconnect();};});
  }
  function popSound(correct:boolean){playEffect('pop');playEffect(correct?'correct':'wrong');}
- function speak(lines:{text:string;lang:string}[]){
+ function pronounce(text:string){
   if(!('speechSynthesis' in window)||!('SpeechSynthesisUtterance' in window)){setAudioNotice('النطق غير متاح في هذا المتصفح.');return;}
   const id=++speechId.current,synthesis=window.speechSynthesis;synthesis.cancel();const voices=synthesis.getVoices();setAudioNotice('');
-  lines.forEach((line,i)=>{const u=new SpeechSynthesisUtterance(line.text);u.lang=line.lang;u.rate=line.lang.startsWith('en')?.8:.95;u.volume=1;u.voice=voices.find(v=>v.lang===line.lang)||voices.find(v=>v.lang.startsWith(line.lang.slice(0,2)))||null;
-   u.onstart=()=>{if(id===speechId.current)setSpeaking(lines[0].text);};u.onend=()=>{if(id===speechId.current&&i===lines.length-1)setSpeaking('');};u.onerror=e=>{if(id===speechId.current){setSpeaking('');if(e.error!=='interrupted'&&e.error!=='canceled')setAudioNotice('تعذّر النطق. تحقق من صوت الجهاز وحاول مجددًا.');}};synthesis.speak(u);});
+  const u=new SpeechSynthesisUtterance(text);u.lang='en-US';u.rate=.8;u.volume=1;u.voice=voices.find(v=>v.lang==='en-US')||voices.find(v=>v.lang.startsWith('en'))||null;
+  u.onstart=()=>{if(id===speechId.current)setSpeaking(text);};u.onend=()=>{if(id===speechId.current)setSpeaking('');};u.onerror=e=>{if(id===speechId.current){setSpeaking('');if(e.error!=='interrupted'&&e.error!=='canceled')setAudioNotice('تعذّر النطق. تحقق من صوت الجهاز وحاول مجددًا.');}};synthesis.speak(u);
  }
- function pronounce(text:string){speak([{text,lang:'en-US'}]);}
- function narrate(en:string,ar:string){speak([{text:en,lang:'en-US'},{text:ar,lang:'ar-SA'}]);}
- function explain(ar:string){speak([{text:ar,lang:'ar-SA'}]);}
  function stopSpeaking(){speechId.current++;window.speechSynthesis?.cancel();setSpeaking('');}
- return {sound,toggleSound,unlock,playEffect,popSound,pronounce,narrate,explain,stopSpeaking,speaking,audioNotice,audioState};
+ return {sound,toggleSound,unlock,playEffect,popSound,pronounce,stopSpeaking,speaking,audioNotice,audioState};
 }

@@ -88,7 +88,7 @@ assert(sourceChores?.grade==='grade-4'&&sourceChores.definition.lessons.length==
 assert((await req('/api/courses?grade=grade-4')).courses.some(c=>c.id===choresId),'Fourth-grade lesson is not catalogued');
 assert((await (await mf.dispatchFetch('https://course.test/sitemap.xml')).text()).includes('course='+choresId),'Chores lesson missing from sitemap');
 const choresPage=await(await mf.dispatchFetch('https://course.test/?course='+choresId)).text();
-assert(choresPage.includes('لعبة البالونات')&&choresPage.includes('شاهد الكلمة واسمع معناها')&&choresPage.includes('wake up')&&choresPage.includes('get up'),'Chores learning page missing study/game controls');
+assert(choresPage.includes('لعبة البالونات')&&choresPage.includes('شاهد الكلمة واسمع نطقها')&&choresPage.includes('wake up')&&choresPage.includes('get up'),'Chores learning page missing study/game controls');
 let choresState=await req('/api/classroom',{action:'start',course:choresId,name:'اختبار درس الصف الرابع'});
 assert(choresState.course.questions.every(q=>q.audio&&q.kind==='picture-choice'&&!('answer' in q)&&!('reason' in q)),'Chores answer keys leaked before solving');
 await req('/api/classroom',{action:'complete',course:choresId},400);
