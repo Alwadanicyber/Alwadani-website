@@ -13,8 +13,8 @@ try{
  }
  const {makeBalloonRounds,popBalloon,initialBalloonRun,balloonWords,choresWords,balloonLevels,wordScenes,sceneDescriptions,extraChoresWords}=await import(pathToFileURL(join(dir,'chores-learning.mjs')));
  const {choresCourse}=await import(pathToFileURL(join(dir,'chores-course.mjs')));
- assert.equal(choresCourse.grade,'grade-4');assert.equal(choresCourse.definition.lessons.length,4);assert.equal(choresCourse.definition.questions.length,16);
- for(const question of choresCourse.definition.questions){assert(choresCourse.definition.lessons[question.lesson]);assert(question.reason.length>30);assert(sceneDescriptions[question.picture]);assert(question.options[question.answer]);assert.equal(new Set(question.options).size,question.options.length);}
+ assert.equal(choresCourse.grade,'grade-4');assert.equal(choresCourse.definition.lessons.length,3);assert.equal(choresCourse.definition.questions.length,12);
+ for(const question of choresCourse.definition.questions){assert(choresCourse.definition.lessons[question.lesson]);assert(question.reason.length>30);assert.equal(question.kind,'picture-choice');assert(question.audio);assert(question.options.every(o=>sceneDescriptions[wordScenes[o]]));assert(question.options[question.answer]);assert.equal(new Set(question.options).size,question.options.length);}
  assert.notEqual(choresWords.find(w=>w.en==='wake up').ar,choresWords.find(w=>w.en==='get up').ar);
  assert(choresWords.every(w=>sceneDescriptions[wordScenes[w.en]]));assert(extraChoresWords.length>=50);
  assert(balloonLevels.easy.seconds>balloonLevels.medium.seconds&&balloonLevels.medium.seconds>balloonLevels.hard.seconds);
@@ -34,5 +34,5 @@ try{
   assert.equal(popBalloon(failed,first,first.word.en,rounds.length),failed,'A failed game requires a restart');
  }
  assert.equal(initialBalloonRun.lives,3);assert.equal(initialBalloonRun.score,0);assert.deepEqual(initialBalloonRun.popped,[]);
- console.log('PASS: grade-four lesson, 4 stations, 16 illustrated exercises, all translated words, 3 speed levels, 12 distinct balloon rounds, 3 shared lives, no duplicate clicks, failure and victory.');
+ console.log('PASS: grade-four lesson, 3 scenes, 12 audio/picture-choice exercises, all translated words, 3 speed levels, 12 distinct balloon rounds, 3 shared lives, no duplicate clicks, failure and victory.');
 }finally{rmSync(dir,{recursive:true,force:true});}

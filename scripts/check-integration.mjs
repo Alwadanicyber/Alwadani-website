@@ -15,13 +15,15 @@ const ownerKey='test-owner-key-never-use-in-production-123456789';
 const password='Teacher-Test-Only-123!';
 const forged={'oai-authenticated-user-id':'test-owner','oai-authenticated-user-email':'teacher@test.example'};
 let cookies={};
-async function req(path,body,expected=200,headers={},method=body?'POST':'GET'){const r=await mf.dispatchFetch('https://course.test'+path,{method,headers:{'Content-Type':'application/json',origin:'https://course.test',cookie:Object.entries(cookies).map(([k,v])=>k+'='+v).join('; '),...headers},...(body?{body:JSON.stringify(body)}:{})});if(r.headers.get('set-cookie')){const c=r.headers.get('set-cookie').split(';')[0];const i=c.indexOf('=');cookies[c.slice(0,i)]=c.slice(i+1);}const d=await r.json();if(r.status!==expected)throw new Error(JSON.stringify({path,status:r.status,expected,d,body}));return d;}
+const courseAttempts={};
+async function req(path,body,expected=200,headers={},method=body?'POST':'GET'){if(body&&path==='/api/classroom'&&body.action!=='start'&&body.attempt===undefined&&courseAttempts[body.course||'life-stories'])body={...body,attempt:courseAttempts[body.course||'life-stories']};const r=await mf.dispatchFetch('https://course.test'+path,{method,headers:{'Content-Type':'application/json',origin:'https://course.test',cookie:Object.entries(cookies).map(([k,v])=>k+'='+v).join('; '),...headers},...(body?{body:JSON.stringify(body)}:{})});if(r.headers.get('set-cookie')){const c=r.headers.get('set-cookie').split(';')[0];const i=c.indexOf('=');cookies[c.slice(0,i)]=c.slice(i+1);}const d=await r.json();if(r.status===200&&d.student&&d.course)courseAttempts[d.course.id]=d.student.attempt;if(r.status!==expected)throw new Error(JSON.stringify({path,status:r.status,expected,d,body}));return d;}
 function assert(v,m){if(!v)throw new Error(m);}
 try{const db=await mf.getD1Database('DB');for(const file of readdirSync(project+'drizzle').filter(x=>x.endsWith('.sql')&&!x.startsWith('0005_')).sort()){for(const s of readFileSync(project+'drizzle/'+file,'utf8').split('--> statement-breakpoint'))await db.prepare(s.trim()).run();}
 // Public search metadata, sitemap and crawler guidance work without a login.
 const siteOrigin='https://alwadani-website.jubranii45.workers.dev';
 const canonicalOf=html=>html.match(/<link\b(?=[^>]*\brel="canonical")(?=[^>]*\bhref="([^"]+)")[^>]*>/)?.[1];
 const homeResponse=await mf.dispatchFetch('https://course.test/'),homeHtml=await homeResponse.text();
+assert(homeResponse.headers.get('cache-control')?.includes('no-store'),'The lesson/catalog HTML can retain stale bundles');
 const initialHead=homeHtml.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i)?.[1]||'';
 assert(initialHead.includes('name="google-site-verification"')&&initialHead.includes('content="t8elB2NwK-beAeD6IJvhWhMjwuoiHr4BnSeZtWctFmg"'),'Google verification must be in the initial HTML head before JavaScript');
 assert(/<meta\b(?=[^>]*property="og:site_name")(?=[^>]*content="الودعاني")[^>]*>/.test(initialHead),'Preferred site name must be in the initial HTML head');
@@ -82,13 +84,13 @@ const orders=new Set();for(let n=0;n<6;n++){const session=await req('/api/classr
 assert(orders.size>1,'Different students have identical full option order');
 // Grade-four source lesson is editable, exportable, and keeps progress in D1.
 const choresId='chores-grade-4',sourceChores=admin.courses.find(c=>c.id===choresId);
-assert(sourceChores?.grade==='grade-4'&&sourceChores.definition.lessons.length===4&&sourceChores.definition.questions.length===16,'Chores source content missing');
+assert(sourceChores?.grade==='grade-4'&&sourceChores.definition.lessons.length===3&&sourceChores.definition.questions.length===12,'Chores source content missing');
 assert((await req('/api/courses?grade=grade-4')).courses.some(c=>c.id===choresId),'Fourth-grade lesson is not catalogued');
 assert((await (await mf.dispatchFetch('https://course.test/sitemap.xml')).text()).includes('course='+choresId),'Chores lesson missing from sitemap');
 const choresPage=await(await mf.dispatchFetch('https://course.test/?course='+choresId)).text();
-assert(choresPage.includes('لعبة البالونات')&&choresPage.includes('كلمات أفهمها وأستخدمها')&&choresPage.includes('wake up')&&choresPage.includes('get up'),'Chores learning page missing study/game controls');
+assert(choresPage.includes('لعبة البالونات')&&choresPage.includes('شاهد الكلمة واسمع معناها')&&choresPage.includes('wake up')&&choresPage.includes('get up'),'Chores learning page missing study/game controls');
 let choresState=await req('/api/classroom',{action:'start',course:choresId,name:'اختبار درس الصف الرابع'});
-assert(choresState.course.questions.every(q=>q.picture&&!('answer' in q)&&!('reason' in q)),'Chores answer keys leaked before solving');
+assert(choresState.course.questions.every(q=>q.audio&&q.kind==='picture-choice'&&!('answer' in q)&&!('reason' in q)),'Chores answer keys leaked before solving');
 await req('/api/classroom',{action:'complete',course:choresId},400);
 let readStation=-1;
 for(const q of sourceChores.definition.questions){
@@ -99,14 +101,14 @@ for(const q of sourceChores.definition.questions){
  if(q.id===1){assert(choresState.answers[0].correct===0&&choresState.answers[0].reason.includes('wake up')&&choresState.answers[0].answerText==='wake up','Chores mistake lacks its explanation');choresState=await req('/api/classroom',{action:'answer',course:choresId,question:q.id,choice:display.options.indexOf(answerText)});assert(choresState.answers.length===1&&choresState.answers[0].correct===0,'Repeated answer changed first-attempt grade');}
 }
 choresState=await req('/api/classroom',{action:'complete',course:choresId});
-assert(choresState.answers.length===16&&choresState.reads.length===4&&choresState.student.completed,'Chores certificate did not unlock');
-assert(choresState.leaderboard.some(x=>x.id===choresState.student.id&&x.score===15),'Chores leaderboard grade incorrect');
+assert(choresState.answers.length===12&&choresState.reads.length===3&&choresState.student.completed,'Chores certificate did not unlock');
+assert(choresState.leaderboard.some(x=>x.id===choresState.student.id&&x.score===11),'Chores leaderboard grade incorrect');
 const choresProgress=(await req('/api/courses?grade=grade-4')).courses.find(c=>c.id===choresId).progress;
-assert(choresProgress.answered===16&&choresProgress.score===15&&choresProgress.percent===100&&choresProgress.completed,'Chores grade progress missing');
+assert(choresProgress.answered===12&&choresProgress.score===11&&choresProgress.percent===100&&choresProgress.completed,'Chores grade progress missing');
 const editedChores=structuredClone(sourceChores);editedChores.definition.questions[0].reason='سبب جديد للطلاب الجدد';
 await req('/api/teacher',editedChores,200,auth);
 assert((await db.prepare('SELECT id FROM courses WHERE id=?').bind(choresId).first()).id===choresId,'Owner edit did not persist source lesson');
-assert((await req('/api/teacher',undefined,200,auth)).courses.find(c=>c.id===choresId).definition.questions.every(q=>q.picture),'Saving the lesson stripped its illustrations');
+assert((await req('/api/teacher',undefined,200,auth)).courses.find(c=>c.id===choresId).definition.questions.every(q=>q.kind==='picture-choice'&&q.audio),'Saving the lesson stripped its illustrations');
 assert((await req('/api/classroom?course='+choresId)).answers[0].reason===sourceChores.definition.questions[0].reason,'Owner edit changed an existing student snapshot');
 await req('/api/teacher',sourceChores,200,auth);
 const choresDeleted=await req('/api/teacher',{id:choresId},200,auth,'DELETE');
@@ -115,33 +117,56 @@ const restoredChores=await req('/api/teacher',{id:choresId,action:'restore'},200
 assert(restoredChores.courses.find(c=>c.id===choresId).published===0,'Chores recovery must stay a draft');
 await req('/api/teacher',sourceChores,200,auth);
 assert((await req('/api/classroom?course='+choresId)).student.completed,'Chores restoration lost completion');
-// A student who began the old 7-station / 42-question version keeps that snapshot
-// after the owner publishes the shorter illustrated lesson.
+// Retakes reuse the identity, preserve the certificate and improve only the best score.
+const firstId=choresState.student.id,firstAttempt=choresState.student.attempt,firstOrders=choresState.course.questions.map(q=>q.options.join('|')).join(';');
+let retake=await req('/api/classroom',{action:'retry',course:choresId});
+assert(retake.student.id===firstId&&retake.student.attempt===firstAttempt+1&&retake.answers.length===0&&retake.reads.length===3,'Retry lost the student or reintroduced mandatory reading');
+assert(retake.bestResult.score===11&&retake.certificate.score===11,'Retry removed the previous score/certificate');
+assert(retake.course.questions.map(q=>q.options.join('|')).join(';')!==firstOrders,'Retry did not reshuffle options');
+await req('/api/classroom',{action:'answer',course:choresId,question:1,choice:0,attempt:firstAttempt},409);
+await req('/api/classroom',{action:'retry',course:choresId,attempt:firstAttempt},409);
+for(const q of sourceChores.definition.questions){const display=retake.course.questions.find(x=>x.id===q.id);retake=await req('/api/classroom',{action:'answer',course:choresId,question:q.id,choice:display.options.indexOf(q.options[q.answer])});}
+retake=await req('/api/classroom',{action:'complete',course:choresId});
+assert(retake.bestResult.score===12&&retake.bestResult.total===12&&retake.certificate.score===12&&retake.leaderboard.filter(r=>r.id===firstId).length===1,'A better retry did not replace the rank or duplicated the student');
+retake=await req('/api/classroom',{action:'retry',course:choresId});
+for(const q of sourceChores.definition.questions){const display=retake.course.questions.find(x=>x.id===q.id);retake=await req('/api/classroom',{action:'answer',course:choresId,question:q.id,choice:display.options.findIndex(x=>x!==q.options[q.answer])});}
+retake=await req('/api/classroom',{action:'complete',course:choresId});
+assert(retake.answers.every(a=>a.correct===0)&&retake.bestResult.score===12&&retake.certificate.score===12,'A lower retry overwrote the best score/certificate');
+assert((await req('/api/classroom',{action:'start',course:choresId,name:retake.student.name})).student.id===firstId,'Entering the same current name duplicated the profile');
+console.log('PASS: better/worse retakes, identity, saved certificates, new option orders and stale-attempt rejection.');
+
+// Realistic old data is archived before replacing 7 stations / 42 answers with 3 scenes.
 const currentCookies={...cookies},legacyChores=structuredClone(sourceChores);
-legacyChores.definition.lessons=Array.from({length:7},(_,i)=>({...sourceChores.definition.lessons[i%4],tag:String(i+1).padStart(2,'0')}));
-legacyChores.definition.questions=Array.from({length:42},(_,i)=>{const {picture,...q}=sourceChores.definition.questions[i%16];return {...q,id:i+1,lesson:Math.floor(i/6)};});
+legacyChores.definition.lessons=Array.from({length:7},(_,i)=>({...sourceChores.definition.lessons[i%3],tag:String(i+1).padStart(2,'0')}));
+legacyChores.definition.questions=Array.from({length:42},(_,i)=>{const {audio,kind,...q}=sourceChores.definition.questions[i%12];return {...q,id:i+1,lesson:Math.floor(i/6)};});
 await req('/api/teacher',legacyChores,200,auth);
-let legacyState=await req('/api/classroom',{action:'start',course:choresId,name:'اختبار متابعة النسخة السابقة'});
-assert(legacyState.course.questions.length===42&&legacyState.course.lessons.length===7,'Legacy test did not start the long version');
-await req('/api/classroom',{action:'read',course:choresId,lesson:0});
-legacyState=await req('/api/classroom',{action:'answer',course:choresId,question:1,choice:legacyState.course.questions[0].options.indexOf(legacyChores.definition.questions[0].options[legacyChores.definition.questions[0].answer])});
-await req('/api/teacher',sourceChores,200,auth);
+assert((await req('/api/courses?grade=grade-4')).courses.find(c=>c.id===choresId).lessons===3,'A saved old course still shows seven stations');
+let legacyState=await req('/api/classroom',{action:'start',course:choresId,name:'اختبار ترقية النسخة السابقة'});
+const legacyId=legacyState.student.id,oldCompleted='2026-10-09T19:00:00.000Z';
+await db.prepare('UPDATE students SET snapshot=?,completed=? WHERE id=?').bind(JSON.stringify(legacyChores),oldCompleted,legacyId).run();
+await db.batch(legacyChores.definition.questions.map(q=>db.prepare('INSERT INTO answers(student,question,choice,correct) VALUES(?,?,?,?)').bind(legacyId,q.id,q.answer,q.id<=3?0:1)));
+await db.batch(legacyChores.definition.lessons.map((_,i)=>db.prepare('INSERT INTO reads(student,lesson) VALUES(?,?)').bind(legacyId,i)));
 legacyState=await req('/api/classroom?course='+choresId);
-assert(legacyState.course.questions.length===42&&legacyState.course.lessons.length===7&&legacyState.answers.length===1,'Shortening reset the old student progress');
-for(const q of legacyChores.definition.questions.slice(1)){
- if(q.lesson!==0&&q.id%6===1)await req('/api/classroom',{action:'read',course:choresId,lesson:q.lesson});
- const display=legacyState.course.questions.find(x=>x.id===q.id);
- legacyState=await req('/api/classroom',{action:'answer',course:choresId,question:q.id,choice:display.options.indexOf(q.options[q.answer])});
-}
+assert(legacyState.course.lessons.length===3&&legacyState.course.questions.length===12&&legacyState.answers.length===0&&legacyState.reads.length===0&&legacyState.student.attempt===2,'The seven-station session was not upgraded');
+assert(legacyState.bestResult.score===39&&legacyState.bestResult.total===42&&legacyState.certificate.completed===oldCompleted,'Upgrade lost the old earned grade/certificate');
+const archived=await db.prepare('SELECT * FROM student_attempts WHERE student=?').bind(legacyId).first();
+assert(JSON.parse(archived.answers).length===42&&JSON.parse(archived.reads).length===7,'The old answers/reads were not preserved in history');
+await req('/api/classroom?course='+choresId);
+assert((await db.prepare('SELECT COUNT(*) AS n FROM student_attempts WHERE student=?').bind(legacyId).first()).n===1,'Reload archived the old session again');
+await req('/api/classroom',{action:'answer',course:choresId,question:1,choice:0,attempt:1},409);
+await req('/api/teacher',sourceChores,200,auth);
+let station=-1;
+for(const q of sourceChores.definition.questions){if(station!==q.lesson){await req('/api/classroom',{action:'read',course:choresId,lesson:q.lesson});station=q.lesson;}const display=legacyState.course.questions.find(x=>x.id===q.id);legacyState=await req('/api/classroom',{action:'answer',course:choresId,question:q.id,choice:display.options.indexOf(q.options[q.answer])});}
 legacyState=await req('/api/classroom',{action:'complete',course:choresId});
-assert(legacyState.student.completed&&legacyState.answers.length===42&&legacyState.leaderboard.some(x=>x.id===legacyState.student.id&&x.score===42),'Legacy certificate/grade lost after shortening');
-await req('/api/classroom',{action:'start',course:choresId,name:'اختبار النسخة المختصرة'});
-const shortState=await req('/api/classroom?course='+choresId);
-assert(shortState.course.questions.length===16&&shortState.course.lessons.length===4,'A new student did not receive the shorter lesson');
-cookies=currentCookies;
-assert((await req('/api/classroom?course='+choresId)).answers.length===16,'The completed short version changed during legacy checks');
-console.log('PASS: old 7-station/42-question snapshots finish correctly; new students receive 4 stations/16 illustrated questions.');
-console.log('PASS: chores grade, private answer keys, 16 persisted answers, correction, leaderboard, certificate, snapshots, owner edits and delete/restore.');
+assert(legacyState.bestResult.score===12&&legacyState.bestResult.total===12&&legacyState.bestResult.percentage===100,'A better new-format score did not replace the old percentage');
+// More than the previous 50-row cap, including every registered student.
+const extraIds=Array.from({length:55},(_,i)=>'roster-extra-'+i);
+await db.batch(extraIds.map((id,i)=>db.prepare('INSERT INTO students(id,name,created,course,snapshot) VALUES(?,?,?,?,?)').bind(id,'اختبار القائمة '+i,'2026-10-10T00:00:00Z',choresId,JSON.stringify(sourceChores))));
+const roster=await req('/api/classroom?course='+choresId);
+assert(extraIds.every(id=>roster.leaderboard.some(r=>r.id===id))&&roster.leaderboard.length>50,'The full leaderboard still has a hidden cap');
+cookies=currentCookies;await req('/api/classroom?course='+choresId);
+console.log('PASS: old saved courses/sessions upgrade to 3 scenes, archived answers/reads/certificate, fair best percentages, all students beyond 50 and reload idempotence.');
+console.log('PASS: chores grade, 12 picture-choice answers, correction, leaderboard, certificate, owner edits and delete/restore.');
 
 // Deletion is private, reversible, and preserves every student record.
 const mutateCourse=(method,body,expected=200,headers=auth)=>req('/api/teacher',body,expected,headers,method);
