@@ -1,10 +1,10 @@
 import {teacherAccess} from '@/lib/teacher';
-import {listCourses,validateCourse,originalCourse} from '@/lib/courses';
+import {listCourses,validateCourse,builtInCourse} from '@/lib/courses';
 import {COURSE_TRASHED} from '@/lib/course-types';
 import {database} from '@/lib/database';
 export const dynamic='force-dynamic';
 const reply=(d:unknown,s=200)=>Response.json(d,{status:s,headers:{'Cache-Control':'no-store'}});
-const validId=(id:unknown):id is string=>typeof id==='string'&&(id==='life-stories'||/^[a-f0-9-]{36}$/.test(id));
+const validId=(id:unknown):id is string=>typeof id==='string'&&(!!builtInCourse(id)||/^[a-f0-9-]{36}$/.test(id));
 async function courseLists(){
   const all=await listCourses(true,true);
   return {courses:all.filter(c=>c.published!==COURSE_TRASHED),deletedCourses:all.filter(c=>c.published===COURSE_TRASHED)};
@@ -43,8 +43,9 @@ export async function DELETE(req:Request){
     const db=database(),updated=new Date().toISOString();
     // Store a tombstone for the built-in lesson too, so its fallback never reappears.
     // Existing content and all student records are retained; repeated deletion is safe.
-    if(body.id===originalCourse.id){
-      await db.prepare('INSERT INTO courses(id,title,description,definition,published,updated,grade) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET published=excluded.published,updated=excluded.updated').bind(body.id,originalCourse.title,originalCourse.description,JSON.stringify(originalCourse.definition),COURSE_TRASHED,updated,originalCourse.grade||'general').run();
+    const source=builtInCourse(body.id);
+    if(source){
+      await db.prepare('INSERT INTO courses(id,title,description,definition,published,updated,grade) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET published=excluded.published,updated=excluded.updated').bind(body.id,source.title,source.description,JSON.stringify(source.definition),COURSE_TRASHED,updated,source.grade||'general').run();
     }else{
       const changed=await db.prepare('UPDATE courses SET published=?,updated=? WHERE id=? RETURNING id').bind(COURSE_TRASHED,updated,body.id).first();
       if(!changed)return reply({error:'الدرس غير موجود.'},404);

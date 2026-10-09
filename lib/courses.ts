@@ -2,13 +2,16 @@ import {database} from './database';
 import {grades} from './grades';
 import {lessons,questions} from './course';
 import {grading} from './grading';
+import {choresCourse} from './chores-course';
 import type {TeacherCourse,Definition,PublicCourse} from './course-types';
 import {COURSE_TRASHED} from './course-types';
 export const originalDefinition:Definition={lessons,questions:questions.map(q=>({...q,...grading[q.id]}))};
 export const originalCourse:TeacherCourse={id:'life-stories',grade:'grade-9',title:'حكايات الماضي · Life Stories',description:'الماضي البسيط، الحديث عن الميلاد، المبني للمجهول في الماضي، وعادات الماضي.',published:1,definition:originalDefinition,updated:'2026-10-03'};
+export const builtInCourses:TeacherCourse[]=[originalCourse,choresCourse];
+export const builtInCourse=(id:string)=>builtInCourses.find(c=>c.id===id);
 function parse(row:any):TeacherCourse{return {...row,definition:JSON.parse(row.definition)};}
-export async function getCourse(id:string,teacher=false){const row=await database().prepare('SELECT * FROM courses WHERE id=?').bind(id).first();const course=row?parse(row):id==='life-stories'?originalCourse:null;return course&&course.published!==COURSE_TRASHED&&(teacher||course.published===1)?course:null;}
-export async function listCourses(teacher=false,includeDeleted=false){const rows=(await database().prepare('SELECT c.*, (SELECT COUNT(*) FROM students s WHERE s.course=c.id) AS students FROM courses c ORDER BY updated DESC').all()).results;const items=rows.map(parse);if(!items.some(c=>c.id==='life-stories')){const count=await database().prepare("SELECT COUNT(*) AS n FROM students WHERE course='life-stories'").first<{n:number}>();items.unshift({...originalCourse,students:count?.n||0});}return teacher?items.filter(c=>includeDeleted||c.published!==COURSE_TRASHED):items.filter(c=>c.published===1);}
+export async function getCourse(id:string,teacher=false){const row=await database().prepare('SELECT * FROM courses WHERE id=?').bind(id).first();const course=row?parse(row):builtInCourse(id);return course&&course.published!==COURSE_TRASHED&&(teacher||course.published===1)?course:null;}
+export async function listCourses(teacher=false,includeDeleted=false){const rows=(await database().prepare('SELECT c.*, (SELECT COUNT(*) FROM students s WHERE s.course=c.id) AS students FROM courses c ORDER BY updated DESC').all()).results;const items=rows.map(parse);for(const course of builtInCourses){if(!items.some(c=>c.id===course.id)){const count=await database().prepare('SELECT COUNT(*) AS n FROM students WHERE course=?').bind(course.id).first<{n:number}>();items.push({...course,students:count?.n||0});}}return teacher?items.filter(c=>includeDeleted||c.published!==COURSE_TRASHED):items.filter(c=>c.published===1);}
 export function publicCourse(c:TeacherCourse):PublicCourse{return {id:c.id,grade:c.grade||'general',title:c.title,description:c.description,lessons:c.definition.lessons,questions:c.definition.questions.map(({answer,reason,...q})=>q)};}
 export function validateCourse(raw:any):Pick<TeacherCourse,'title'|'description'|'definition'|'published'|'grade'>{
 function string(v:unknown,label:string,max=3000){if(typeof v!=='string'||v.trim().length>max)throw new Error(`راجع ${label}.`);return v.trim();}
