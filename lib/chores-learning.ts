@@ -1,5 +1,7 @@
 // Public study material. Graded exercise answers stay in the server course definition.
 export const CHORES_COURSE_ID='chores-grade-4';
+export const wordScenes:Record<string,string>={'wake up':'sun-bed','get up':'leave-bed','get dressed':'shirt','get undressed':'laundry','catch the bus':'run-bus','get on the bus':'board-bus','ride on the bus':'seated-bus','get off the bus':'leave-bus','comic book':'book','grandparents':'family','leaves':'garden','trash can':'bin','flowers':'flower','chores':'house'};
+export const sceneDescriptions:Record<string,string>={'sun-bed':'طفل فتح عينيه وما زال في السرير','leave-bed':'طفل ترك السرير ووقف على الأرض','shirt':'قميص جاهز للارتداء','laundry':'ملابس توضع في سلة بعد خلعها','run-bus':'طفل يسرع ليلحق بالحافلة','board-bus':'سهم نحو الحافلة للصعود إليها','seated-bus':'طفل جالس داخل الحافلة أثناء الرحلة','leave-bus':'سهم يبتعد عن الحافلة عند النزول','book':'كتاب مفتوح فيه قصة بالصور','family':'الجد والجدة معًا','garden':'أوراق شجر متناثرة على الأرض','bin':'سلة للنفايات وأوراق الشجر','flower':'أزهار في الحديقة','house':'منزل وأدوات للمساعدة في تنظيفه','clock':'ساعة تذكّرنا بما يحدث الآن'};
 export type ChoresWord={en:string;ar:string;icon:string;group:'morning'|'bus'|'home';example:string;translation:string;tip:string};
 export const choresWords:ChoresWord[]=[
  {en:'wake up',ar:'أستيقظ',icon:'☀️',group:'morning',example:'I wake up at five o’clock.',translation:'أستيقظ الساعة الخامسة.',tip:'أفتح عيني بعد النوم. يمكن أن أبقى في السرير.'},
@@ -45,10 +47,12 @@ export const perfectSchoolDay=[
 ];
 export const balloonWords=choresWords.slice(0,12);
 export type BalloonRound={word:ChoresWord;options:ChoresWord[]};
+export type BalloonDifficulty='easy'|'medium'|'hard';
+export const balloonLevels:Record<BalloonDifficulty,{label:string;description:string;seconds:number;options:number}>={easy:{label:'سهل',description:'4 بالونات · حركة هادئة',seconds:10,options:4},medium:{label:'متوسط',description:'5 بالونات · أسرع قليلًا',seconds:7,options:5},hard:{label:'صعب',description:'6 بالونات · الأسرع',seconds:4.5,options:6}};
 export type BalloonRun={lives:number;score:number;popped:string[];feedback:'correct'|'wrong'|null;status:'playing'|'lost'|'won'};
 export const initialBalloonRun:BalloonRun={lives:3,score:0,popped:[],feedback:null,status:'playing'};
 export function shuffleItems<T>(items:readonly T[],random= Math.random):T[]{const result=[...items];for(let i=result.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}return result;}
-export function makeBalloonRounds(random=Math.random):BalloonRound[]{return shuffleItems(balloonWords,random).map(word=>({word,options:shuffleItems([word,...shuffleItems(balloonWords.filter(w=>w.en!==word.en),random).slice(0,3)],random)}));}
+export function makeBalloonRounds(random=Math.random,difficulty:BalloonDifficulty='easy'):BalloonRound[]{return shuffleItems(balloonWords,random).map(word=>({word,options:shuffleItems([word,...shuffleItems(balloonWords.filter(w=>w.en!==word.en),random).slice(0,balloonLevels[difficulty].options-1)],random)}));}
 export function popBalloon(state:BalloonRun,round:BalloonRound,selected:string,total:number):BalloonRun{
  if(state.status!=='playing'||state.feedback==='correct'||state.popped.includes(selected)||!round.options.some(w=>w.en===selected))return state;
  const popped=[...state.popped,selected];
