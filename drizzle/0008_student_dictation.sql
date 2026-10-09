@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS student_dictation_answers(student TEXT NOT NULL REFERENCES students(id),attempt INTEGER NOT NULL,question INTEGER NOT NULL,text TEXT NOT NULL,correct INTEGER NOT NULL,created TEXT NOT NULL,PRIMARY KEY(student,attempt,question));
