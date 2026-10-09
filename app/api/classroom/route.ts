@@ -32,7 +32,7 @@ async function snapshot(student:any,course:TeacherCourse,grade='general',migrate
 export async function GET(req:Request){try{const {student,course,grade,migrated}=await context(req,new URL(req.url).searchParams.get('course')||'life-stories');return reply(await snapshot(student,course,grade,migrated));}catch(e){console.error(e);return reply({error:'تعذّر تحميل الدرس والنتائج. حاول مجددًا.'},503);}}
 export async function POST(req:Request){try{
  if(req.headers.get('origin')&&new URL(req.headers.get('origin')!).origin!==new URL(req.url).origin)return reply({error:'طلب غير صالح.'},403);
- const body=await req.json() as {course?:string;action?:string;name?:string;lesson:number;question:number;choice:number;attempt?:number;difficulty?:string;restart?:boolean;run?:string;revision?:number;selection?:string;text?:string};
+ const body=await req.json() as {course?:string;action?:string;name?:string;lesson:number;question:number;choice:number;attempt?:number;difficulty?:string;restart?:boolean;run?:string;revision?:number;selection?:string;text?:string;advance?:boolean;gameUpdate?:boolean};
  const courseId=body.course||'life-stories',db=database();let {id,student,course,latest,grade,migrated}=await context(req,courseId);
  if(body.action==='start'){
   const name=typeof body.name==='string'?body.name.trim():'';if(name.length<2||name.length>60||/[<>\x00-\x1f]/.test(name))return reply({error:'أدخل اسمًا من حرفين إلى ٦٠ حرفًا.'},400);
@@ -55,10 +55,11 @@ export async function POST(req:Request){try{
   await answerDictation(id,attempt,body.question,body.text);
  }else if(body.action?.startsWith('game-')){
   if(courseId!==CHORES_COURSE_ID)return reply({error:'اللعبة غير متاحة لهذا الدرس.'},400);
-  const counts=await db.prepare('SELECT (SELECT COUNT(*) FROM answers WHERE student=?) AS answers,(SELECT COUNT(*) FROM reads WHERE student=?) AS reads').bind(id,id).first<{answers:number;reads:number}>();
+  const counts=await db.prepare('SELECT (SELECT COUNT(*) FROM answers WHERE student=?) AS answers,(SELECT COUNT(*) FROM reads WHERE student=?) AS reads,(SELECT COUNT(*) FROM student_dictation_answers WHERE student=? AND attempt=?) AS dictation').bind(id,id,id,attempt).first<{answers:number;reads:number;dictation:number}>();
   if(counts?.answers!==questions.length||counts?.reads!==lessons.length)return reply({error:'أكمل المشاهد الثلاثة وتدريباتها بالترتيب قبل اللعبة النهائية.'},400);
-  if(!(await dictationSnapshot(id,attempt)).completed)return reply({error:'أكمل محطة الإملاء قبل لعبة البالونات النهائية.'},400);
-  if(body.action==='game-start')await startGame(id,attempt,body.difficulty,body.restart===true);else await gameStep(id,attempt,body,questions.length,lessons.length,DICTATION_POINTS);
+  if(counts.dictation!==DICTATION_POINTS)return reply({error:'أكمل محطة الإملاء قبل لعبة البالونات النهائية.'},400);
+  const game=body.action==='game-start'?await startGame(id,attempt,body.difficulty,body.restart===true):await gameStep(id,attempt,body,questions.length,lessons.length,DICTATION_POINTS);
+  if(body.gameUpdate===true&&game.status!=='won')return reply({kind:'game-update',game});
   const current=await context(req,courseId);return reply(await snapshot(current.student,current.course,current.grade));
  }else if(body.action==='read'){
   if(!Number.isInteger(body.lesson)||!lessons[body.lesson])return reply({error:'درس غير صالح.'},400);

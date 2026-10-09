@@ -107,18 +107,19 @@ async function finishDictation(state,{mistakes=0,verify=false}={}){
  }
  assert(state.dictation.completed&&state.gameReady&&!state.student.completed,'Dictation did not unlock only the final game');return state;
 }
-async function playRequiredGame(state,{mistakes=0,difficulty='easy',verify=false}={}){
+async function playRequiredGame(state,{mistakes=0,difficulty='easy',verify=false,fast=false}={}){
  if(!state.dictation.completed)state=await finishDictation(state);
- state=await req('/api/classroom',{action:'game-start',course:'chores-grade-4',difficulty,restart:!!state.game});
+ state=await req('/api/classroom',{action:'game-start',course:'chores-grade-4',difficulty,restart:!!state.game,gameUpdate:fast});
  let used=0,checked=false;
  while(state.game.status==='playing'){
   const g=state.game;
-  if(g.feedback==='wrong'){state=await req('/api/classroom',{action:'game-resume',course:'chores-grade-4',run:g.id,revision:g.revision});continue;}
-  if(g.feedback==='correct'){state=await req('/api/classroom',{action:'game-next',course:'chores-grade-4',run:g.id,revision:g.revision});continue;}
+  if(g.feedback==='wrong'){state=await req('/api/classroom',{action:'game-resume',course:'chores-grade-4',run:g.id,revision:g.revision,gameUpdate:fast});continue;}
+  if(g.feedback==='correct'){assert(!fast,'Fast mode still needs a second next request');state=await req('/api/classroom',{action:'game-next',course:'chores-grade-4',run:g.id,revision:g.revision,gameUpdate:fast});continue;}
   assert(!g.word.ar&&!('rounds' in g)&&!('state' in g),'Unsolved game exposes its answer/private trace');
   if(verify&&!checked){await req('/api/classroom',{action:'game-next',course:'chores-grade-4',run:g.id,revision:g.revision},400);await req('/api/classroom',{action:'game-pop',course:'chores-grade-4',run:g.id,revision:g.revision,selection:'not-an-option'},400);}
   const wrong=used<mistakes&&g.popped.length===0,selection=wrong?g.options.find(o=>o.en!==g.word.en).en:g.word.en;if(wrong)used++;
-  state=await req('/api/classroom',{action:'game-pop',course:'chores-grade-4',run:g.id,revision:g.revision,selection,score:999999});
+  state=await req('/api/classroom',{action:'game-pop',course:'chores-grade-4',run:g.id,revision:g.revision,selection,score:999999,advance:fast,gameUpdate:fast});
+  if(fast&&state.game.status!=='won'){assert(state.kind==='game-update'&&!('course' in state)&&!('leaderboard' in state)&&!('student' in state),'Every pop still reloads all classroom data');if(!wrong)assert(state.game.roundIndex===g.roundIndex+1&&!state.game.feedback,'Correct answer did not advance in the same saved request');else assert(state.game.roundIndex===g.roundIndex&&state.game.feedback==='wrong','Wrong answer skipped its correction');}
   if(verify&&!checked){checked=true;await req('/api/classroom',{action:'game-pop',course:'chores-grade-4',run:g.id,revision:g.revision,selection},409);const restored=await req('/api/classroom?course=chores-grade-4');assert(JSON.stringify(restored.game)===JSON.stringify(state.game),'Reload changed saved lives/points/word');if(state.game.feedback==='wrong')await req('/api/classroom',{action:'game-pop',course:'chores-grade-4',run:g.id,revision:state.game.revision,selection:g.word.en},400);}
  }
  assert(state.game.status==='won'&&state.game.solved===12&&state.game.score===12-mistakes&&state.student.completed,'Completed game did not save its real points/unlock certificate');return state;
@@ -154,11 +155,11 @@ assert(choresState.answers.length===12&&choresState.reads.length===3&&choresStat
 assert(choresState.leaderboard.some(x=>x.id===choresState.student.id&&x.score===26&&x.total===30&&x.dictationScore===5&&x.gameScore===10),'Chores leaderboard grade incorrect');
 const choresProgress=(await req('/api/courses?grade=grade-4')).courses.find(c=>c.id===choresId).progress;
 assert(choresProgress.answered===12&&choresProgress.score===11&&choresProgress.gameScore===10&&choresProgress.dictationScore===5&&choresProgress.dictationTotal===6&&choresProgress.totalScore===26&&choresProgress.totalPoints===30&&choresProgress.percent===100&&choresProgress.completed,'Chores grade progress missing');
-choresState=await playRequiredGame(choresState,{mistakes:1});assert(choresState.gameBest.score===11&&choresState.certificate.score===27,'A better game replay did not improve the combined grade');
-choresState=await playRequiredGame(choresState,{mistakes:2});assert(choresState.game.score===10&&choresState.gameBest.score===11&&choresState.certificate.score===27,'A lower game replay reduced the grade');
+choresState=await playRequiredGame(choresState,{mistakes:1,fast:true,verify:true});assert(choresState.gameBest.score===11&&choresState.certificate.score===27,'A better game replay did not improve the combined grade');
+choresState=await playRequiredGame(choresState,{mistakes:2,fast:true});assert(choresState.game.score===10&&choresState.gameBest.score===11&&choresState.certificate.score===27,'A lower game replay reduced the grade');
 const gameHistory=await db.prepare('SELECT state FROM student_game_runs WHERE id=?').bind(choresState.game.id).first();assert(JSON.parse(gameHistory.state).log.length===14,'Canonical game interaction trace was not saved');
 const anonGame=await(await mf.dispatchFetch('https://course.test/api/classroom?course='+choresId)).json();assert(!anonGame.student&&!anonGame.game&&!JSON.stringify(anonGame).includes(choresState.game.id),'The private game session leaked to another browser');
-console.log('PASS: ordered scene gates, required server-scored game, 3-life failure, correction acknowledgment, reload continuity, invalid and duplicate request rejection, private trace, 30-point certificate, mandatory pictured/audio dictation, normalized English spelling and first-answer scoring and better/worse game replays.');
+console.log('PASS: ordered scene gates, required server-scored game, 3-life failure, correction acknowledgment, reload continuity, invalid and duplicate request rejection, private trace, 30-point certificate, mandatory pictured/audio dictation, normalized English spelling and first-answer scoring and better/worse game replays, compact game responses and one-request correct-answer advancement.');
 const editedChores=structuredClone(sourceChores);editedChores.definition.questions[0].reason='سبب جديد للطلاب الجدد';
 await req('/api/teacher',editedChores,200,auth);
 assert((await db.prepare('SELECT id FROM courses WHERE id=?').bind(choresId).first()).id===choresId,'Owner edit did not persist source lesson');
@@ -180,7 +181,7 @@ assert(retake.course.questions.map(q=>q.options.join('|')).join(';')!==firstOrde
 await req('/api/classroom',{action:'answer',course:choresId,question:1,choice:0,attempt:firstAttempt},409);
 await req('/api/classroom',{action:'dictation-answer',course:choresId,question:1,text:'wake up',attempt:firstAttempt},409);await req('/api/classroom',{action:'retry',course:choresId,attempt:firstAttempt},409);await req('/api/classroom',{action:'game-pop',course:choresId,run:choresState.game.id,revision:choresState.game.revision,selection:choresState.game.word.en,attempt:firstAttempt},409);
 for(const q of sourceChores.definition.questions){const display=retake.course.questions.find(x=>x.id===q.id);retake=await req('/api/classroom',{action:'answer',course:choresId,question:q.id,choice:display.options.indexOf(q.options[q.answer])});}
-await req('/api/classroom',{action:'complete',course:choresId},400);retake=await playRequiredGame(retake,{difficulty:'hard'});
+await req('/api/classroom',{action:'complete',course:choresId},400);retake=await playRequiredGame(retake,{difficulty:'hard',fast:true});
 retake=await req('/api/classroom',{action:'complete',course:choresId});
 assert(retake.bestResult.score===30&&retake.bestResult.total===30&&retake.certificate.score===30&&retake.leaderboard.filter(r=>r.id===firstId).length===1,'A better retry did not replace the rank or duplicated the student');
 retake=await req('/api/classroom',{action:'retry',course:choresId});

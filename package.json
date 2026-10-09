@@ -18,6 +18,7 @@
     "deploy": "node scripts/deploy.mjs",
     "test:integration": "node scripts/check-integration.mjs",
     "test:chores": "node scripts/check-chores.mjs",
+    "test:balloon-feedback": "node scripts/check-balloon-feedback.mjs",
     "test:records": "node scripts/check-records.mjs",
     "test:exports": "node scripts/check-exports.mjs"
   },

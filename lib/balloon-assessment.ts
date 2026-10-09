@@ -11,12 +11,14 @@ function visible(g:SavedGame):AssessedGame{const state=JSON.parse(g.state) as Sa
 export async function gameSnapshot(student:string,attempt:number){const db=database();const [latest,best]=await Promise.all([db.prepare('SELECT * FROM student_game_runs WHERE student=? AND attempt=? ORDER BY created DESC,id DESC LIMIT 1').bind(student,attempt).first<SavedGame>(),db.prepare("SELECT score,completed,difficulty FROM student_game_runs WHERE student=? AND attempt=? AND status='won' ORDER BY score DESC,completed ASC LIMIT 1").bind(student,attempt).first<{score:number;completed:string;difficulty:BalloonDifficulty}>()]);return {game:latest?visible(latest):null,gameBest:best?{...best,total:BALLOON_POINTS}:null};}
 export async function startGame(student:string,attempt:number,difficulty:unknown,restart=false){
  if(typeof difficulty!=='string'||!Object.hasOwn(balloonLevels,difficulty))throw new GameError('اختر مستوى صعوبة صالحًا.');
- const db=database(),current=await gameSnapshot(student,attempt);if(!restart&&current.game&&current.game.difficulty===difficulty)return;
+ const db=database(),current=await gameSnapshot(student,attempt);if(!restart&&current.game&&current.game.difficulty===difficulty)return current.game;
  const id=crypto.randomUUID(),now=new Date().toISOString(),state:SavedState={run:{...initialBalloonRun,popped:[]},roundIndex:0,points:0,answered:0,log:[]};
- const changed=await db.prepare('INSERT INTO student_game_runs(id,student,attempt,difficulty,rounds,state,created) SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?)').bind(id,student,attempt,difficulty,JSON.stringify(makeBalloonRounds(Math.random,difficulty as BalloonDifficulty)),JSON.stringify(state),now,student,attempt).run();
+ const rounds=JSON.stringify(makeBalloonRounds(Math.random,difficulty as BalloonDifficulty)),saved=JSON.stringify(state);
+ const changed=await db.prepare('INSERT INTO student_game_runs(id,student,attempt,difficulty,rounds,state,created) SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?)').bind(id,student,attempt,difficulty,rounds,saved,now,student,attempt).run();
  if(!changed.meta.changes)throw new GameError('تغيّرت المحاولة. أعد تحميل تقدمك.',409);
+ return visible({id,student,attempt,difficulty:difficulty as BalloonDifficulty,rounds,state:saved,revision:0,completed:null});
 }
-export async function gameStep(student:string,attempt:number,body:{action?:string;run?:string;revision?:number;selection?:string},questionCount:number,lessonCount:number,dictationCount:number){
+export async function gameStep(student:string,attempt:number,body:{action?:string;run?:string;revision?:number;selection?:string;advance?:boolean},questionCount:number,lessonCount:number,dictationCount:number){
  if(typeof body.run!=='string'||!Number.isInteger(body.revision))throw new GameError('أعد تحميل جولة اللعبة قبل المتابعة.',409);
  const db=database(),g=await db.prepare('SELECT * FROM student_game_runs WHERE id=? AND student=? AND attempt=?').bind(body.run,student,attempt).first<SavedGame>();
  if(!g||g.revision!==body.revision)throw new GameError('تقدّمت اللعبة. أعد تحميل الجولة.',409);
@@ -27,6 +29,7 @@ export async function gameStep(student:string,attempt:number,body:{action?:strin
   if(typeof body.selection!=='string')throw new GameError('بالونة غير صالحة.');
   const next=popBalloon(state.run,r,body.selection,rounds.length);if(next===state.run)throw new GameError('بالونة غير صالحة أو تم اختيارها بالفعل.');
   const first=state.run.popped.length===0,correct=body.selection===r.word.en;if(first){state.answered++;if(correct)state.points++;}state.log.push({round:state.roundIndex,choice:body.selection,correct,first});state.run=next;
+  if(body.advance===true&&correct&&state.run.status==='playing'){state.roundIndex++;state.run={...state.run,feedback:null,popped:[]};}
  }else if(body.action==='game-next'){
   if(state.run.feedback!=='correct'||state.roundIndex>=rounds.length-1)throw new GameError('أجب عن الكلمة الحالية أولًا.');
   state.roundIndex++;state.run={...state.run,feedback:null,popped:[]};
@@ -37,5 +40,6 @@ export async function gameStep(student:string,attempt:number,body:{action?:strin
  const updates=[db.prepare('UPDATE student_game_runs SET state=?,revision=revision+1,score=?,answered=?,solved=?,status=?,completed=? WHERE id=? AND student=? AND attempt=? AND revision=? AND EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?)').bind(JSON.stringify(state),state.points,state.answered,state.run.score,state.run.status,now,g.id,student,attempt,g.revision,student,attempt)];
  if(now)updates.push(db.prepare("UPDATE students SET completed=? WHERE id=? AND EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?) AND EXISTS(SELECT 1 FROM student_game_runs WHERE id=? AND revision=? AND status='won') AND (SELECT COUNT(*) FROM answers WHERE student=?)=? AND (SELECT COUNT(*) FROM reads WHERE student=?)=? AND (SELECT COUNT(*) FROM student_dictation_answers WHERE student=? AND attempt=?)=?").bind(now,student,student,attempt,g.id,g.revision+1,student,questionCount,student,lessonCount,student,attempt,dictationCount));
  const results=await db.batch(updates);if(!results[0].meta.changes)throw new GameError('تقدّمت اللعبة. أعد تحميل الجولة.',409);
+ return visible({...g,state:JSON.stringify(state),revision:g.revision+1,completed:now});
 }
 export async function allGameResults(){return (await database().prepare("SELECT g.student,g.attempt,b.score,b.completed,g.solved FROM (SELECT student,attempt,MAX(solved) AS solved FROM student_game_runs GROUP BY student,attempt) g LEFT JOIN student_game_runs b ON b.id=(SELECT id FROM student_game_runs WHERE student=g.student AND attempt=g.attempt AND status='won' ORDER BY score DESC,completed ASC,id ASC LIMIT 1)").all()).results as unknown as {student:string;attempt:number;score:number|null;completed:string|null;solved:number}[];}
