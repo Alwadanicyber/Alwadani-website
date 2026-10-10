@@ -1,4 +1,4 @@
-export type Result={score:number;total:number;answered:number;completed:string|null;attempt:number;created:string;solveMs?:number|null;title?:string;quizScore?:number;quizTotal?:number;gameScore?:number;gameTotal?:number;gameCompleted?:string|null;dictationScore?:number;dictationTotal?:number};
+export type Result={score:number;total:number;answered:number;completed:string|null;attempt:number;created:string;solveMs?:number|null;estimatedSolveMs?:number|null;title?:string;quizScore?:number;quizTotal?:number;gameScore?:number;gameTotal?:number;gameCompleted?:string|null;dictationScore?:number;dictationTotal?:number};
 export type Rank=Result&{id:string;name:string;percentage:number;position:number;attempts:number};
 export const resultPercent=(r:Result)=>r.total>0?r.score/r.total*100:0;
 export function compareResults(a:Result,b:Result){
@@ -7,7 +7,8 @@ export function compareResults(a:Result,b:Result){
   const grade=resultPercent(b)-resultPercent(a);
   if(grade)return grade;
   if(a.completed&&b.completed){
-    const timeA=typeof a.solveMs==='number'&&a.solveMs>0?a.solveMs:null,timeB=typeof b.solveMs==='number'&&b.solveMs>0?b.solveMs:null;
+    const time=(r:Result)=>typeof r.solveMs==='number'&&r.solveMs>0?r.solveMs:typeof r.estimatedSolveMs==='number'&&r.estimatedSolveMs>0?r.estimatedSolveMs:null;
+    const timeA=time(a),timeB=time(b);
     if(timeA!==null&&timeB!==null)return timeA-timeB;
     if(timeA!==null)return -1;
     if(timeB!==null)return 1;

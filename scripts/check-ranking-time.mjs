@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {readFileSync,readdirSync} from 'node:fs';
 import {ActiveSolveTimer,parseSolveMs,formatSolveTime} from '../lib/solve-time.ts';
 import {compareResults,betterResult} from '../lib/result-ranking.ts';
+import {withLeaderboardBaseline} from '../lib/leaderboard-baselines.ts';
 
 let now=0;
 const timer=new ActiveSolveTimer(0,()=>now);
@@ -22,6 +23,20 @@ assert(compareResults(result(30,40_000),result(29,1000))<0,'Speed outranks grade
 assert(compareResults(result(30,40_000),result(30,50_000))<0,'Equal grades ignore speed');
 assert(compareResults(result(30,null),result(30,40_000))>0,'Unknown time treated as zero');
 assert(!betterResult(result(30,1,null),result(29,40_000)),'Incomplete attempt replaces final result');
+const oldRank=(name,solveMs=null)=>({...result(30,solveMs),id:'legacy',name,percentage:100,position:0,attempts:1});
+const estimate=(name,solveMs=null,joined='2026-10-09T10:00:00Z',course='chores-grade-4')=>withLeaderboardBaseline(course,oldRank(name,solveMs),joined);
+const teacher=estimate('المعلم'),yusuf=estimate('يوسف سيف الدين يوسف محمد عثمان'),fahad=estimate('فهد يحيى المرحبي');
+assert.equal(teacher.solveMs,null,'Estimate stored as a measured duration');
+assert.equal(teacher.estimatedSolveMs,120_000);assert.equal(yusuf.estimatedSolveMs,240_000);assert.equal(fahad.estimatedSolveMs,240_000);
+assert(compareResults(result(30,119_000),teacher)<0,'Faster perfect result cannot beat teacher benchmark');
+assert(compareResults(result(30,180_000),teacher)>0,'Slower perfect result beats teacher benchmark');
+assert(compareResults(result(30,180_000),yusuf)<0,'Faster result cannot beat medium benchmark');
+assert(compareResults(result(29,1000),teacher)>0,'Speed beats a better grade with a benchmark');
+assert.equal(estimate('المعلم',300_000).estimatedSolveMs,undefined,'Actual slow time did not replace estimate');
+assert.equal(estimate('المعلم',null,'2026-10-10T10:00:00Z').estimatedSolveMs,undefined,'New student with the same name inherited benchmark');
+assert.equal(estimate('المعلم',null,undefined,'life-stories').estimatedSolveMs,undefined,'Benchmark leaked into another lesson');
+assert.equal(estimate('طالب آخر').estimatedSolveMs,undefined,'Unrelated student inherited benchmark');
+assert.equal(withLeaderboardBaseline('chores-grade-4',{...oldRank('المعلم'),completed:null},'2026-10-09').estimatedSolveMs,undefined,'Unfinished student received a benchmark');
 
 const require=createRequire(import.meta.url),wranglerRequire=createRequire(require.resolve('wrangler/package.json'));
 const {Miniflare}=wranglerRequire('miniflare'),project=fileURLToPath(new URL('../',import.meta.url)),root=project+'dist/server';
@@ -96,4 +111,28 @@ try{
   for(const item of state.dictation.items)state=await req(chores,{action:'dictation-answer',question:item.id,text:item.audio,elapsedMs:1000});
   state=await game(chores,state,400);assert.equal(state.certificate.solveMs,14_800,'Archived attempt time changed after a replay');
   console.log('PASS: full journey timing, faster tied balloon replay, wrong-choice time, same-run game selection and archived journey duration.');
+  const oldTeacher=client('chores-grade-4'),oldYusuf=client('chores-grade-4'),oldFahad=client('chores-grade-4');
+  for(const [c,name] of [[oldTeacher,'المعلم'],[oldYusuf,'يوسف سيف الدين يوسف محمد عثمان'],[oldFahad,'فهد يحيى المرحبي']]){
+    const opened=await start(c,name);c.id=opened.student.id;
+    await db.prepare('UPDATE students SET created=? WHERE id=?').bind('2026-10-09T10:00:00Z',c.id).run();
+    state=await finishQuiz(c,null);
+    for(const item of state.dictation.items)state=await req(c,{action:'dictation-answer',question:item.id,text:item.audio});
+    state=await game(c,state,undefined);
+    assert.equal(state.certificate.solveMs,null,'Benchmark fabricated certificate timing');
+    assert.equal(state.certificate.estimatedSolveMs,undefined,'Benchmark added to completion certificate');
+    assert.equal(state.bestResult.estimatedSolveMs,name==='المعلم'?120_000:240_000);
+  }
+  state=await req(oldTeacher);
+  assert(state.leaderboard.find(r=>r.id===oldTeacher.id).position<state.leaderboard.find(r=>r.id===oldYusuf.id).position,'Teacher benchmark was not faster');
+  const measuredFirst=state.leaderboard.find(r=>r.name==='وقت الرحلة');
+  assert(measuredFirst.position<state.leaderboard.find(r=>r.id===oldTeacher.id).position,'New faster completed score did not beat benchmark');
+  await req(oldTeacher,{action:'retry'});
+  state=await finishQuiz(oldTeacher,[60_000,60_000]);
+  for(const item of state.dictation.items)state=await req(oldTeacher,{action:'dictation-answer',question:item.id,text:item.audio,elapsedMs:20_000});
+  state=await game(oldTeacher,state,20_000);
+  assert.equal(state.bestResult.solveMs,480_000,'Actual slow retry did not replace starting estimate');
+  assert.equal(state.bestResult.estimatedSolveMs,undefined,'Starting estimate survived measured completion');
+  assert.equal(state.certificate.solveMs,480_000);
+  assert(state.leaderboard.find(r=>r.id===oldYusuf.id).position<state.bestResult.position,'Leaderboard still ranked using old teacher estimate');
+  console.log('PASS: owner starting benchmarks, visible estimate metadata, grade-first comparisons, new same-name exclusion, certificate isolation and measured retry replacement.');
 }finally{await mf.dispose();}
