@@ -21,7 +21,8 @@
     "test:balloon-feedback": "node scripts/check-balloon-feedback.mjs",
     "test:records": "node scripts/check-records.mjs",
     "test:exports": "node scripts/check-exports.mjs",
-    "test:ranking": "node --experimental-strip-types scripts/check-ranking-time.mjs"
+    "test:ranking": "node --experimental-strip-types scripts/check-ranking-time.mjs",
+    "test:audience": "node scripts/check-lesson-audience.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

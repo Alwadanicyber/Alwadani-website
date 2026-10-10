@@ -1,4 +1,6 @@
+import {audienceWords,type Gender} from './audience';
 export type LessonCertificate={
+  studentGender?:Gender;
   name:string;
   id:string;
   title:string;
@@ -19,6 +21,7 @@ export function certificateDate(completed:string){
 // The same renderer supplies downloads and shared images. Direction is explicit
 // for every line; numeric values never share a bidi run with their Arabic label.
 export function drawLessonCertificate(x:CanvasRenderingContext2D,data:LessonCertificate){
+  const words=audienceWords({studentGender:data.studentGender});
   const center=900,ink='#102f2c',muted='#607671';
   x.fillStyle='#fcfdfc';x.fillRect(0,0,1800,1250);
   x.strokeStyle='#bf963e';x.lineWidth=6;x.strokeRect(35,35,1730,1180);
@@ -39,9 +42,9 @@ export function drawLessonCertificate(x:CanvasRenderingContext2D,data:LessonCert
   line('ALWADANI · LEARNING STUDIO',150,45,{direction:'ltr',color:'#f4cf82',bold:true,family:'Georgia'});
   line('شهادة إتمام',330,72,{bold:true});
   // Isolate the English site name inside the right-to-left Arabic sentence.
-  line('يشهد موقع \u2066Learning Studio\u2069 بأن الطالب / الطالبة',440,32);
+  line(`يشهد موقع \u2066Learning Studio\u2069 بأن ${words.student}`,440,32);
   fitted(data.name,565,76,1500,true);
-  line(data.chores?'قد أتمّ / أتمّت المشاهد والتدريبات والإملاء ولعبة البالونات':'قد أتمّ / أتمّت شرح وتدريبات الدرس',665,32,{color:muted});
+  line(`${words.completed} ${data.chores?'المشاهد والتدريبات والإملاء ولعبة البالونات':'شرح وتدريبات الدرس'}`,665,32,{color:muted});
   fitted(data.title,725,32,1500);
   line('النتيجة',795,28,{color:muted});
   const percentage=data.total>0?Math.round(data.score/data.total*100):0;

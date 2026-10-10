@@ -152,3 +152,7 @@
 @media print{.record-mobile-roster,.workspace-nav-backdrop,.record-rename-dialog{display:none!important}}
 
 @media(max-width:760px){.export-options{position:fixed;top:auto;right:16px;left:16px;bottom:16px;width:auto;max-width:none;max-height:70dvh;overflow:auto;z-index:71}.export-dismiss{z-index:70;background:#122e3460;backdrop-filter:blur(3px)}.record-toolbar .export-menu{width:100%}}
+/* Owner-only competition guidance. */
+.teacher-competition-help{margin:20px 0;padding:16px 20px;border:1px solid var(--border);border-radius:12px;background:var(--card);color:var(--foreground)}
+.teacher-competition-help summary{cursor:pointer;font-weight:600;line-height:1.7}
+.teacher-competition-help p{font-size:14px;line-height:1.9;margin:12px 0 0}

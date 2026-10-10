@@ -10,7 +10,7 @@ import {gameSnapshot,startGame,gameStep,GameError,BALLOON_POINTS} from '@/lib/ba
 import {dictationSnapshot,answerDictation,DICTATION_POINTS} from '@/lib/chores-dictation';
 export const dynamic='force-dynamic';
 const reply=(data:unknown,status=200,headers:Record<string,string>={})=>Response.json(data,{status,headers:{'Cache-Control':'no-store',...headers}});
-const stableCourse=(c:TeacherCourse):TeacherCourse=>({id:c.id,title:c.title,description:c.description,published:1,definition:c.definition,updated:''});
+const stableCourse=(c:TeacherCourse):TeacherCourse=>({id:c.id,title:c.title,description:c.description,studentGender:c.studentGender||c.definition.studentGender||'male',published:1,definition:c.definition,updated:''});
 async function context(req:Request,courseId:string){
  await ensureClassroomResults();const db=database(),latest=await getCourse(courseId);if(!latest)throw new Error('الدرس غير منشور أو غير موجود.');
  const id=await identity(req,courseId);
@@ -19,7 +19,9 @@ async function context(req:Request,courseId:string){
  if(student&&courseId===CHORES_COURSE_ID&&[4,7].includes(course.definition.lessons.length)&&latest.definition.lessons.length===3){
   await archiveAndRestart(student.id,student.attempt,stableCourse(latest),student.snapshot);student=await readStudent();course=JSON.parse(student.snapshot);migrated=true;
  }
- return {id,student,course:stableCourse(course),latest:stableCourse(latest),grade:latest.grade||'general',migrated};
+ // Wording follows the teacher's latest setting; saved questions and grades stay intact.
+ const presentation:TeacherCourse={...stableCourse(course),studentGender:publicCourse(latest).studentGender};
+ return {id,student,course:presentation,latest:stableCourse(latest),grade:latest.grade||'general',migrated};
 }
 async function snapshot(student:any,course:TeacherCourse,grade='general',migrated=false){
  const db=database(),id=student?.id;let answers:any[]=[],reads:any[]=[];

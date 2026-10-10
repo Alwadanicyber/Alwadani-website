@@ -67,6 +67,31 @@ const a=await req('/api/classroom',{action:'answer',course:draft.id,question:1,c
 const updated=structuredClone(payload);updated.definition.questions[0].answer=0;updated.definition.questions[0].reason='شرح جديد';await req('/api/teacher',{...updated,id:draft.id,published:1},200,auth);
 const saved=await req('/api/classroom?course='+draft.id);assert(saved.answers[0].answerText==='works'&&saved.course.questions[0].options[saved.answers[0].answer]==='works','Existing student content changed');assert(JSON.stringify(before.course.questions[0].options)===JSON.stringify(saved.course.questions[0].options),'Option order unstable');
 const completion=await req('/api/classroom',{action:'complete',course:draft.id});assert(completion.student.completed,'Certificate gating failed');
+// Lesson wording can be changed after completion without mutating saved work.
+assert(initial.courses.every(c=>c.studentGender==='male')&&completion.course.studentGender==='male','Legacy lessons should default to male wording');
+const audienceStudentBefore=await db.prepare('SELECT snapshot,completed FROM students WHERE id=?').bind(completion.student.id).first();
+await req('/api/teacher',{...updated,id:draft.id,published:1,studentGender:'female'},403,forged);
+await req('/api/teacher',{...updated,id:draft.id,published:1,studentGender:'invalid'},400,auth);
+for(const studentGender of ['female','male','female']){
+ await req('/api/teacher',{...updated,id:draft.id,published:1,studentGender},200,auth);
+ const restored=await req('/api/classroom?course='+draft.id);
+ assert(restored.course.studentGender===studentGender&&restored.student.completed===completion.student.completed&&restored.student.attempt===completion.student.attempt,'Changing audience changed completion or did not update existing students');
+ assert(JSON.stringify(restored.answers)===JSON.stringify(completion.answers)&&JSON.stringify(restored.reads)===JSON.stringify(completion.reads)&&JSON.stringify(restored.course.questions)===JSON.stringify(completion.course.questions),'Changing audience modified saved answers, order or progress');
+}
+const audienceStudentAfter=await db.prepare('SELECT snapshot,completed FROM students WHERE id=?').bind(completion.student.id).first();
+assert(JSON.stringify(audienceStudentBefore)===JSON.stringify(audienceStudentAfter),'Changing wording rewrote the student snapshot');
+const audienceOwner=await req('/api/teacher',null,200,auth),audienceCourse=audienceOwner.courses.find(c=>c.id===draft.id);
+assert(audienceCourse.studentGender==='female'&&audienceCourse.definition.studentGender==='female','Teacher selection was not stored');
+const audienceCatalog=await req('/api/courses');
+assert(audienceCatalog.courses.find(c=>c.id===draft.id).studentGender==='female'&&audienceCatalog.courses.find(c=>c.id==='life-stories').studentGender==='male','Audience setting leaked between lessons');
+const privateHelp='الأوقات التقديرية قيم مبدئية أضافها المعلم',medalHelp='الميداليات بعد إكمال الرحلة';
+const privateTeacherHtml=await(await mf.dispatchFetch('https://course.test/teacher',{headers:auth})).text();
+assert(privateTeacherHtml.includes(privateHelp)&&privateTeacherHtml.includes(medalHelp),'Competition explanation is missing from the private teacher page');
+for(const path of ['/?course='+draft.id,'/?course=chores-grade-4','/teacher']){
+ const publicHtml=await(await mf.dispatchFetch('https://course.test'+path)).text();
+ assert(!publicHtml.includes(privateHelp)&&!publicHtml.includes(medalHelp),'Private competition guidance is visible to visitors');
+}
+console.log('PASS: per-lesson male/female wording persists; existing answers, reads, attempts and certificates are preserved; competition guidance is owner-only.');
 const progress=await req('/api/courses?grade=grade-4');assert(progress.courses.find(c=>c.id===draft.id).progress.answered===1&&progress.courses.find(c=>c.id===draft.id).progress.percent===100&&progress.courses.find(c=>c.id===draft.id).progress.completed,'Grade progress not restored');assert(completion.course.grade==='grade-4','Grade metadata missing');const anonymous=await mf.dispatchFetch('https://course.test/api/courses?grade=grade-4');const anon=await anonymous.json();assert(anon.courses.every(c=>c.progress===null),'Progress leaked to another browser');
 const originalStart=await req('/api/classroom',{action:'start',name:'طالب القصة'});const originalDefinition=admin.courses.find(c=>c.id==='life-stories').definition;const keys=[0,1,2,1,2,1,1,2,1,0,1,2,1,0,2,1,0,2,0,1,1,2,0,1,2,0,1,2];
 for(let i=1;i<=28;i++){const l=i<=3?0:i<=6?1:i<=9?2:i<=12?3:4;if([1,4,7,10,13].includes(i))await req('/api/classroom',{action:'read',lesson:l});await req('/api/classroom',{action:'answer',question:i,choice:originalStart.course.questions[i-1].options.indexOf(originalDefinition.questions[i-1].options[keys[i-1]])});}
@@ -77,6 +102,7 @@ const supportPage=await mf.dispatchFetch('https://course.test/?course=life-stori
 
 const exported=await mf.dispatchFetch('https://course.test/api/teacher/export',{headers:auth});const backup=await exported.json();assert(exported.status===200&&exported.headers.get('content-disposition').includes('attachment'),'Owner cannot download backup');assert(backup.format==='alwadani-lessons'&&backup.courses.length===3&&backup.courses.find(c=>c.id===draft.id).definition.questions[0].reason==='شرح جديد','Backup content incomplete');assert(!JSON.stringify(backup).includes('طالب بدون حساب'),'Backup leaked students');assert(!('students' in backup.courses[0]),'Student stats exported');for(const headers of [{},{'oai-authenticated-user-id':'other','oai-authenticated-user-email':'other@test.example'}])assert((await mf.dispatchFetch('https://course.test/api/teacher/export',{headers})).status===403,'Backup authorization failed');
 const stored=await db.prepare('SELECT choice,correct FROM answers WHERE student=? AND question=1').bind(end.student.id).first();assert(stored.choice===keys[0]&&stored.correct===1,'Stored choice is not canonical');
+assert(backup.courses.find(c=>c.id===draft.id).studentGender==='female'&&backup.courses.find(c=>c.id===draft.id).definition.studentGender==='female','Lesson export lost the audience choice');
 // Recheck a pre-update canonical saved answer with the new display mapping.
 await db.prepare('INSERT INTO students(id,name,created,course,snapshot) VALUES(?,?,?,?,?)').bind('legacy-id','قديم','2026-01-01','life-stories',JSON.stringify({id:'life-stories',title:admin.courses.find(c=>c.id==='life-stories').title,description:admin.courses.find(c=>c.id==='life-stories').description,published:1,definition:originalDefinition,updated:''})).run();await db.prepare('INSERT INTO answers(student,question,choice,correct) VALUES(?,?,?,?)').bind('legacy-id',1,keys[0],1).run();
 assert((await req('/api/classroom')).leaderboard.some(x=>x.name==='قديم'&&x.score===1),'Legacy leaderboard excluded');
@@ -170,11 +196,12 @@ const choresDeleted=await req('/api/teacher',{id:choresId},200,auth,'DELETE');
 assert(choresDeleted.deletedCourses.some(c=>c.id===choresId)&&!(await req('/api/courses')).courses.some(c=>c.id===choresId),'Chores fallback reappeared after deletion');
 const restoredChores=await req('/api/teacher',{id:choresId,action:'restore'},200,auth,'PATCH');
 assert(restoredChores.courses.find(c=>c.id===choresId).published===0,'Chores recovery must stay a draft');
-await req('/api/teacher',sourceChores,200,auth);
+await req('/api/teacher',{...sourceChores,studentGender:'female'},200,auth);
 assert((await req('/api/classroom?course='+choresId)).student.completed,'Chores restoration lost completion');
 // Retakes reuse the identity, preserve the certificate and improve only the best score.
 const firstId=choresState.student.id,firstAttempt=choresState.student.attempt,firstOrders=choresState.course.questions.map(q=>q.options.join('|')).join(';');
 let retake=await req('/api/classroom',{action:'retry',course:choresId});
+assert(retake.course.studentGender==='female','Retry did not use the latest wording');
 assert(retake.student.id===firstId&&retake.student.attempt===firstAttempt+1&&retake.answers.length===0&&retake.dictation.answers.length===0&&!retake.gameReady&&!retake.game&&retake.reads.length===3,'Retry lost the student or reintroduced mandatory reading');
 assert(retake.bestResult.score===27&&retake.certificate.score===27,'Retry removed the previous score/certificate');
 assert(retake.course.questions.map(q=>q.options.join('|')).join(';')!==firstOrders,'Retry did not reshuffle options');
@@ -193,10 +220,12 @@ console.log('PASS: better/worse retakes, identity, saved certificates, new optio
 
 // Realistic old data is archived before replacing 7 stations / 42 answers with 3 scenes.
 const currentCookies={...cookies},legacyChores=structuredClone(sourceChores);
+legacyChores.studentGender='female';
 legacyChores.definition.lessons=Array.from({length:7},(_,i)=>({...sourceChores.definition.lessons[i%3],tag:String(i+1).padStart(2,'0')}));
 legacyChores.definition.questions=Array.from({length:42},(_,i)=>{const {audio,kind,...q}=sourceChores.definition.questions[i%12];return {...q,id:i+1,lesson:Math.floor(i/6)};});
 await req('/api/teacher',legacyChores,200,auth);
 assert((await req('/api/courses?grade=grade-4')).courses.find(c=>c.id===choresId).lessons===3,'A saved old course still shows seven stations');
+assert((await req('/api/classroom?course='+choresId)).course.studentGender==='female','Upgrading old Chores content lost the teacher audience setting');
 let legacyState=await req('/api/classroom',{action:'start',course:choresId,name:'اختبار ترقية النسخة السابقة'});
 const legacyId=legacyState.student.id,oldCompleted='2026-10-09T19:00:00.000Z';
 await db.prepare('UPDATE students SET snapshot=?,completed=? WHERE id=?').bind(JSON.stringify(legacyChores),oldCompleted,legacyId).run();
