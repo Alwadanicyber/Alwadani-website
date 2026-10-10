@@ -4,7 +4,7 @@ import {CHORES_COURSE_ID} from './chores-learning';
 import {gameSchema,allGameResults,BALLOON_POINTS} from './balloon-assessment';
 import {dictationSchema,allDictationResults,DICTATION_POINTS} from './chores-dictation';
 import {answerTimingSchema,allAnswerTimes} from './answer-timing';
-import {withLeaderboardBaseline} from './leaderboard-baselines';
+import {withLeaderboardBaseline,excludedTeacherEntry} from './leaderboard-baselines';
 import {compareResults,betterResult,resultPercent,type Result,type Rank} from './result-ranking';
 export {betterResult,resultPercent} from './result-ranking';
 export type {Result,Rank} from './result-ranking';
@@ -44,6 +44,6 @@ export async function classroomResults(course:TeacherCourse,studentId?:string){
  for(const raw of live.results){const source=raw as unknown as Rank,r={...source,...combined(source,source.id)};rows.set(r.id,{...r,percentage:resultPercent(r),position:0,attempts:r.attempt});if(r.id===studentId&&source.completed)previousCertificate=source;if(r.id===studentId&&r.completed)certificate=r;}
  for(const raw of history.results){const source=raw as unknown as Result&{student:string},r=combined(source,source.student),current=rows.get(source.student);if(current&&betterResult(r,current))rows.set(source.student,{...current,...r,id:source.student,percentage:resultPercent(r)});if(source.student===studentId&&source.completed&&(!previousCertificate||betterResult(source,previousCertificate)))previousCertificate=source;if(source.student===studentId&&r.completed&&(!certificate||betterResult(r,certificate)))certificate=r;}
  const joined=new Map(live.results.map(r=>[String(r.id),String(r.created)]));
- const leaderboard=[...rows.values()].map(r=>withLeaderboardBaseline(course.id,r,joined.get(r.id)||'')).sort((a,b)=>compareResults(a,b)||(a.completed||a.created).localeCompare(b.completed||b.created)||a.id.localeCompare(b.id)).map((r,i)=>({...r,position:i+1}));
- return {leaderboard,bestResult:studentId?leaderboard.find(r=>r.id===studentId)||null:null,certificate,...(required?{previousCertificate}: {})};
+ const leaderboard=[...rows.values()].filter(r=>!excludedTeacherEntry(course.id,r,joined.get(r.id)||'')).map(r=>withLeaderboardBaseline(course.id,r,joined.get(r.id)||'')).sort((a,b)=>compareResults(a,b)||(a.completed||a.created).localeCompare(b.completed||b.created)||a.id.localeCompare(b.id)).map((r,i)=>({...r,position:i+1}));
+ return {leaderboard,bestResult:studentId?leaderboard.find(r=>r.id===studentId)||rows.get(studentId)||null:null,certificate,...(required?{previousCertificate}: {})};
 }
