@@ -1,9 +1,7 @@
 'use client';
 
-import {useEffect,useRef,useState,type CSSProperties} from 'react';
-import {Pause,Sparkles} from 'lucide-react';
+import {useEffect,useRef,type CSSProperties} from 'react';
 
-const preferenceKey='alwadani-site-effects';
 const words=[
   {text:'Learn',x:5,y:15,size:36,tilt:-12,time:19},
   {text:'Discover',x:77,y:21,size:25,tilt:9,time:24},
@@ -21,24 +19,23 @@ const words=[
   {text:'Share',x:63,y:59,size:21,tilt:9,time:22},
   {text:'Believe',x:19,y:94,size:23,tilt:-9,time:28},
   {text:'Play',x:88,y:96,size:26,tilt:8,time:20},
+  {text:'Focus',x:33,y:23,size:24,tilt:6,time:20},
+  {text:'Smile',x:18,y:8,size:26,tilt:-8,time:22},
+  {text:'Practice',x:79,y:64,size:24,tilt:9,time:23},
+  {text:'Success',x:21,y:81,size:25,tilt:-6,time:19},
+  {text:'Journey',x:59,y:17,size:23,tilt:10,time:24},
+  {text:'Together',x:45,y:79,size:25,tilt:-9,time:21},
 ];
 
 export default function SiteAtmosphere(){
-  const [enabled,setEnabled]=useState(true);
   const bursts=useRef<HTMLDivElement>(null);
   const active=useRef(true);
 
   useEffect(()=>{
     const query=window.matchMedia('(prefers-reduced-motion: reduce)');
-    const readPreference=()=>{
-      let stored:string|null=null;
-      try{stored=localStorage.getItem(preferenceKey);}catch{}
-      return stored==='on'||(stored!=='off'&&!query.matches);
-    };
     const applyPreference=()=>{
-      const next=readPreference();
+      const next=!query.matches;
       active.current=next;
-      setEnabled(next);
       document.documentElement.dataset.siteEffects=next?'on':'off';
       if(!next)bursts.current?.replaceChildren();
     };
@@ -94,15 +91,6 @@ export default function SiteAtmosphere(){
     };
   },[]);
 
-  function toggle(){
-    const next=!active.current;
-    active.current=next;
-    setEnabled(next);
-    document.documentElement.dataset.siteEffects=next?'on':'off';
-    try{localStorage.setItem(preferenceKey,next?'on':'off');}catch{}
-    if(!next)bursts.current?.replaceChildren();
-  }
-
   return <>
     <div className="site-atmosphere" aria-hidden="true" dir="ltr">
       <div className="site-atmosphere-wash"/>
@@ -118,11 +106,5 @@ export default function SiteAtmosphere(){
       <span className="site-atmosphere-spark site-atmosphere-spark-three">✧</span>
     </div>
     <div className="site-interaction-effects" ref={bursts} aria-hidden="true"/>
-    <button type="button" className="site-effects-toggle" onClick={toggle}
-      aria-label={enabled?'إيقاف المؤثرات والحركة الخلفية':'تشغيل المؤثرات والحركة الخلفية'}
-      aria-pressed={enabled} title={enabled?'إيقاف المؤثرات والحركة الخلفية':'تشغيل المؤثرات والحركة الخلفية'}>
-      {enabled?<Pause size={15}/>:<Sparkles size={16}/>}
-      <span>{enabled?'إيقاف الحركة':'تشغيل الحركة'}</span>
-    </button>
   </>;
 }
