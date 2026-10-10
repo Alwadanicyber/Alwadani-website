@@ -5,27 +5,29 @@ import {balloonLevels,wordScenes,type BalloonDifficulty} from '@/lib/chores-lear
 import type {AssessedGame,GameBest} from '@/lib/balloon-assessment';
 import ChoresPicture from './chores-picture';
 import {useLearningAudio} from './learning-audio';
-export default function BalloonGame({game:savedGame,gameBest,busy,onAction,onFinish,quizTotal,dictationTotal}:{quizTotal:number;dictationTotal:number;game:AssessedGame|null;gameBest:GameBest|null;busy:boolean;onAction:(body:Record<string,unknown>)=>Promise<unknown>;onFinish:()=>void}){
+import {useSolveTimer} from './use-solve-timer';
+export default function BalloonGame({game:savedGame,gameBest,busy,onAction,onFinish,quizTotal,dictationTotal,timingScope,active}:{timingScope:string;active:boolean;quizTotal:number;dictationTotal:number;game:AssessedGame|null;gameBest:GameBest|null;busy:boolean;onAction:(body:Record<string,unknown>)=>Promise<unknown>;onFinish:()=>void}){
  const [difficulty,setDifficulty]=useState<BalloonDifficulty>(savedGame?.difficulty||'easy'),[lastCorrect,setLastCorrect]=useState(''),[feedback,setFeedback]=useState<AssessedGame|null>(null),[saving,setSaving]=useState(false);
  const game=feedback?.id===savedGame?.id?feedback:savedGame,commandLock=useRef(false),lastAdvance=useRef<AssessedGame|null>(null);
  const audio=useLearningAudio(),level=balloonLevels[game?.difficulty||difficulty],playArea=useRef<HTMLDivElement>(null),continueButton=useRef<HTMLButtonElement>(null);
  const run=game?{lives:game.lives,score:game.solved,popped:game.popped,feedback:game.feedback,status:game.status}:null,round=game?{word:game.word,options:game.options}:null,roundIndex=game?.roundIndex||0;
+ const captureTime=useSolveTimer(timingScope+':game:'+savedGame?.id+':'+savedGame?.roundIndex+':'+savedGame?.popped.length,active&&!!savedGame&&savedGame.status==='playing'&&!savedGame.feedback&&!busy&&!saving);
  useEffect(()=>{if(game)setDifficulty(game.difficulty);},[game?.id]);
  useEffect(()=>{if(game)playArea.current?.scrollIntoView({block:'start',behavior:'auto'});},[game?.id]);
  useEffect(()=>{if(game?.feedback==='wrong'&&!saving)continueButton.current?.focus({preventScroll:true});},[game?.feedback,saving]);
  useEffect(()=>{if(savedGame?.feedback!=='correct'||savedGame.status!=='playing'||busy||saving||lastAdvance.current===savedGame)return;const timer=window.setTimeout(()=>{void advanceSaved();},180);return()=>window.clearTimeout(timer);},[savedGame,busy,saving]);
  useEffect(()=>{if(game?.word.en&&game.status==='playing'&&!game.feedback)audio.pronounce(game.word.en);},[game?.id,game?.roundIndex,game?.feedback]);
- async function step(action:string,selection?:string,advance=false){if(!savedGame)return null;return await onAction({action,run:savedGame.id,revision:savedGame.revision,gameUpdate:true,...(selection?{selection,advance}:{})});}
+ async function step(action:string,selection?:string,advance=false,elapsedMs?:number){if(!savedGame)return null;return await onAction({action,run:savedGame.id,revision:savedGame.revision,gameUpdate:true,...(selection?{selection,advance,elapsedMs}:{})});}
  async function start(nextLevel=difficulty){if(commandLock.current||busy)return;commandLock.current=true;setSaving(true);setFeedback(null);audio.unlock();setDifficulty(nextLevel);setLastCorrect('');try{await onAction({action:'game-start',difficulty:nextLevel,restart:!!savedGame,gameUpdate:true});}finally{commandLock.current=false;setSaving(false);}}
  async function pop(en:string){
   if(!savedGame||busy||commandLock.current||savedGame.feedback||savedGame.status!=='playing'||savedGame.popped.includes(en))return;
   const selected=savedGame.options.find(o=>o.en===en),target=savedGame.options.find(o=>o.en===savedGame.word.en);if(!selected||!target)return;
-  commandLock.current=true;setSaving(true);audio.unlock();
+  const elapsedMs=captureTime();commandLock.current=true;setSaving(true);audio.unlock();
   const correct=en===savedGame.word.en,solved=savedGame.solved+(correct?1:0),lives=savedGame.lives-(correct?0:1),started=performance.now();
   // Only the visual response is immediate. The server still saves and grades every choice.
   setFeedback({...savedGame,popped:[...savedGame.popped,en],feedback:correct?'correct':'wrong',lives,solved,score:savedGame.score+(correct&&!savedGame.popped.length?1:0),status:lives===0?'lost':solved===savedGame.total?'won':'playing',word:{...savedGame.word,ar:target.ar,tip:target.tip}});
   audio.popSound(correct);if(correct)setLastCorrect(savedGame.word.en+' = '+selected.ar);else{setLastCorrect('');audio.pronounce(savedGame.word.en);}
-  try{const result=await step('game-pop',en,true);if(result){const remaining=220-(performance.now()-started);if(remaining>0)await new Promise(resolve=>window.setTimeout(resolve,remaining));}}
+  try{const result=await step('game-pop',en,true,elapsedMs);if(result){const remaining=220-(performance.now()-started);if(remaining>0)await new Promise(resolve=>window.setTimeout(resolve,remaining));}}
   finally{setFeedback(null);commandLock.current=false;setSaving(false);}
  }
  async function resume(){if(!savedGame||busy||commandLock.current)return;commandLock.current=true;setSaving(true);setFeedback({...savedGame,feedback:null});audio.playEffect('tap');try{await step('game-resume');}finally{setFeedback(null);commandLock.current=false;setSaving(false);}}

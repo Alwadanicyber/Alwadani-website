@@ -1,0 +1,3 @@
+import {database} from './database';
+export const answerTimingSchema="CREATE TABLE IF NOT EXISTS student_answer_times(student TEXT NOT NULL REFERENCES students(id),attempt INTEGER NOT NULL,stage TEXT NOT NULL CHECK(stage IN ('quiz','dictation')),question INTEGER NOT NULL,elapsed_ms INTEGER NOT NULL CHECK(elapsed_ms BETWEEN 1 AND 86400000),PRIMARY KEY(student,attempt,stage,question))";
+export async function allAnswerTimes(){return (await database().prepare('SELECT student,attempt,stage,COUNT(*) AS samples,SUM(elapsed_ms) AS elapsed FROM student_answer_times GROUP BY student,attempt,stage').all()).results as unknown as {student:string;attempt:number;stage:string;samples:number;elapsed:number}[];}

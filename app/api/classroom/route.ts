@@ -1,4 +1,5 @@
 import {database} from '@/lib/database';
+import {parseSolveMs,SolveTimeError} from '@/lib/solve-time';
 import {hashToken,cookieName,identity} from '@/lib/student-session';
 import {getCourse,originalCourse,publicCourse} from '@/lib/courses';
 import type {TeacherCourse} from '@/lib/course-types';
@@ -32,7 +33,7 @@ async function snapshot(student:any,course:TeacherCourse,grade='general',migrate
 export async function GET(req:Request){try{const {student,course,grade,migrated}=await context(req,new URL(req.url).searchParams.get('course')||'life-stories');return reply(await snapshot(student,course,grade,migrated));}catch(e){console.error(e);return reply({error:'تعذّر تحميل الدرس والنتائج. حاول مجددًا.'},503);}}
 export async function POST(req:Request){try{
  if(req.headers.get('origin')&&new URL(req.headers.get('origin')!).origin!==new URL(req.url).origin)return reply({error:'طلب غير صالح.'},403);
- const body=await req.json() as {course?:string;action?:string;name?:string;lesson:number;question:number;choice:number;attempt?:number;difficulty?:string;restart?:boolean;run?:string;revision?:number;selection?:string;text?:string;advance?:boolean;gameUpdate?:boolean};
+ const body=await req.json() as {course?:string;action?:string;name?:string;lesson:number;question:number;choice:number;attempt?:number;difficulty?:string;restart?:boolean;run?:string;revision?:number;selection?:string;text?:string;advance?:boolean;gameUpdate?:boolean;elapsedMs?:unknown};
  const courseId=body.course||'life-stories',db=database();let {id,student,course,latest,grade,migrated}=await context(req,courseId);
  if(body.action==='start'){
   const name=typeof body.name==='string'?body.name.trim():'';if(name.length<2||name.length>60||/[<>\x00-\x1f]/.test(name))return reply({error:'أدخل اسمًا من حرفين إلى ٦٠ حرفًا.'},400);
@@ -52,7 +53,7 @@ export async function POST(req:Request){try{
   if(courseId!==CHORES_COURSE_ID)return reply({error:'محطة الإملاء غير متاحة لهذا الدرس.'},400);
   const counts=await db.prepare('SELECT (SELECT COUNT(*) FROM answers WHERE student=?) AS answers,(SELECT COUNT(*) FROM reads WHERE student=?) AS reads').bind(id,id).first<{answers:number;reads:number}>();
   if(counts?.answers!==questions.length||counts?.reads!==lessons.length)return reply({error:'أكمل المشاهد وتدريباتها قبل الإملاء.'},400);
-  await answerDictation(id,attempt,body.question,body.text);
+  await answerDictation(id,attempt,body.question,body.text,parseSolveMs(body.elapsedMs));
  }else if(body.action?.startsWith('game-')){
   if(courseId!==CHORES_COURSE_ID)return reply({error:'اللعبة غير متاحة لهذا الدرس.'},400);
   const counts=await db.prepare('SELECT (SELECT COUNT(*) FROM answers WHERE student=?) AS answers,(SELECT COUNT(*) FROM reads WHERE student=?) AS reads,(SELECT COUNT(*) FROM student_dictation_answers WHERE student=? AND attempt=?) AS dictation').bind(id,id,id,attempt).first<{answers:number;reads:number;dictation:number}>();
@@ -70,7 +71,11 @@ export async function POST(req:Request){try{
   if(!await db.prepare('SELECT lesson FROM reads WHERE student=? AND lesson=?').bind(id,q.lesson).first())return reply({error:'أكمل مشاهدة شرح الدرس أولًا.'},400);
   const count=await db.prepare('SELECT COUNT(*) AS n FROM answers WHERE student=? AND question<?').bind(id,q.id).first<{n:number}>();if(count?.n!==questions.filter(x=>x.id<q.id).length)return reply({error:'أكمل الأسئلة بالترتيب.'},400);
   const order=await answerOrder(student.attempt>1?id+':attempt:'+student.attempt:id,course.id,q.id,q.options.length),choice=order[body.choice];
-  await db.prepare('INSERT OR IGNORE INTO answers(student,question,choice,correct) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?)').bind(id,q.id,choice,choice===q.answer?1:0,id,attempt).run();
+  const elapsed=parseSolveMs(body.elapsedMs);
+  await db.batch([
+   ...(elapsed===null?[]:[db.prepare("INSERT OR IGNORE INTO student_answer_times(student,attempt,stage,question,elapsed_ms) SELECT ?,?,'quiz',?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?) AND NOT EXISTS(SELECT 1 FROM answers WHERE student=? AND question=?)").bind(id,attempt,q.id,elapsed,id,attempt,id,q.id)]),
+   db.prepare('INSERT OR IGNORE INTO answers(student,question,choice,correct) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?)').bind(id,q.id,choice,choice===q.answer?1:0,id,attempt)
+  ]);
  }else if(body.action==='complete'){
   if(courseId===CHORES_COURSE_ID&&(!(await gameSnapshot(id,attempt)).gameBest||!(await dictationSnapshot(id,attempt)).completed))return reply({error:'أكمل الإملاء ولعبة البالونات النهائية للحصول على الشهادة.'},400);
   const now=new Date().toISOString(),changed=await db.prepare('UPDATE students SET completed=COALESCE(completed,?) WHERE id=? AND EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?) AND (SELECT COUNT(*) FROM answers WHERE student=?)=? AND (SELECT COUNT(*) FROM reads WHERE student=?)=?').bind(now,id,id,attempt,id,questions.length,id,lessons.length).run();
@@ -80,4 +85,4 @@ export async function POST(req:Request){try{
  const currentAttempt=await db.prepare('SELECT attempt FROM student_sessions WHERE student=?').bind(id).first<{attempt:number}>();
  if(currentAttempt?.attempt!==attempt)return reply({error:'تغيّرت المحاولة. أعد تحميل تقدمك قبل الإجابة.'},409);
  return reply(await snapshot(student,course,grade,migrated));
-}catch(e){if(e instanceof GameError)return reply({error:e.message},e.status);console.error(e);return reply({error:'تعذّر حفظ التقدم. حاول مجددًا.'},503);}}
+}catch(e){if(e instanceof SolveTimeError)return reply({error:e.message},400);if(e instanceof GameError)return reply({error:e.message},e.status);console.error(e);return reply({error:'تعذّر حفظ التقدم. حاول مجددًا.'},503);}}

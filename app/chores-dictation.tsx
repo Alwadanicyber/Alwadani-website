@@ -5,15 +5,17 @@ import {Progress} from '@/components/ui/progress';
 import type {DictationState} from '@/lib/chores-dictation';
 import ChoresPicture from './chores-picture';
 import {useLearningAudio} from './learning-audio';
+import {useSolveTimer} from './use-solve-timer';
 
-export default function ChoresDictation({state,busy,onAction,onFinish}:{state:DictationState;busy:boolean;onAction:(body:Record<string,unknown>)=>Promise<{dictation?:DictationState|null}|null>;onFinish:()=>void}){
+export default function ChoresDictation({state,busy,onAction,onFinish,timingScope,active}:{timingScope:string;active:boolean;state:DictationState;busy:boolean;onAction:(body:Record<string,unknown>)=>Promise<{dictation?:DictationState|null}|null>;onFinish:()=>void}){
  const [index,setIndex]=useState(()=>{const first=state.items.findIndex(w=>!state.answers.some(a=>a.question===w.id));return first<0?state.items.length-1:first;}),[text,setText]=useState('');
  const input=useRef<HTMLInputElement>(null),justSubmitted=useRef<number|null>(null),audio=useLearningAudio();
  const word=state.items[index],answer=state.answers.find(a=>a.question===word.id),score=state.answers.reduce((n,a)=>n+a.correct,0);
+ const captureTime=useSolveTimer(timingScope+':dictation:'+word.id,active&&!busy&&!answer);
  function next(){justSubmitted.current=null;if(index<state.items.length-1){setIndex(index+1);setText('');}else onFinish();}
  useEffect(()=>{if(!answer){input.current?.focus({preventScroll:true});audio.pronounce(word.audio);}},[word.id]);
  useEffect(()=>{if(!answer?.correct||justSubmitted.current!==word.id)return;const timer=window.setTimeout(next,1400);return()=>window.clearTimeout(timer);},[answer?.question,answer?.correct]);
- async function submit(e:React.FormEvent){e.preventDefault();if(busy||answer||!text.trim())return;audio.unlock();justSubmitted.current=word.id;const result=await onAction({action:'dictation-answer',question:word.id,text});const checked=result?.dictation?.answers.find(a=>a.question===word.id);if(checked){audio.playEffect(checked.correct?'correct':'wrong');if(!checked.correct)audio.pronounce(word.audio);}}
+ async function submit(e:React.FormEvent){e.preventDefault();if(busy||answer||!text.trim())return;const elapsedMs=captureTime();audio.unlock();justSubmitted.current=word.id;const result=await onAction({action:'dictation-answer',question:word.id,text,elapsedMs});const checked=result?.dictation?.answers.find(a=>a.question===word.id);if(checked){audio.playEffect(checked.correct?'correct':'wrong');if(!checked.correct)audio.pronounce(word.audio);}}
  return <section className="dictation-station" aria-label="محطة إملاء الكلمات"><div className="dictation-heading"><div><span className="chores-kicker">LISTEN & WRITE</span><h2>شاهد، اسمع، واكتب<span>!</span></h2><p>6 كلمات قصيرة. انظر إلى الصورة، واسمع النطق بالإنجليزية، ثم اكتب ما سمعت.</p></div><span className="dictation-heading-icon" aria-hidden="true"><Keyboard size={36}/></span></div>
  <div className="dictation-progress"><span>الكلمة {index+1} / {state.total}</span><b>نقاط الإملاء {score} / {state.total}</b></div><Progress value={state.answers.length/state.total*100} aria-label="تقدم محطة الإملاء"/>
  <div className="dictation-card"><div className="dictation-image"><ChoresPicture scene={word.scene}/><button className={'dictation-listen'+(audio.speaking?' is-speaking':'')} type="button" onClick={()=>{audio.unlock();audio.pronounce(word.audio);}} aria-label="اسمع كلمة الإملاء بالإنجليزية"><Volume2 size={24}/>{audio.speaking?'استمع…':'اسمع الكلمة'}<small>يمكنك سماعها أكثر من مرة</small></button></div>
