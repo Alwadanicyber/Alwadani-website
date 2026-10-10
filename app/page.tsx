@@ -6,7 +6,7 @@ import {getCourse,publicCourse} from '@/lib/courses';
 export const dynamic='force-dynamic';
 export async function generateMetadata({searchParams}:{searchParams:Promise<{course?:string;grade?:string}>}):Promise<Metadata>{
   const params=await searchParams;
-  if(params.course){try{const course=await getCourse(params.course);if(course)return pageMetadata(course.title+' | الودعاني',course.description,'/?course='+encodeURIComponent(course.id));}catch{}return {title:'الدرس غير متاح | الودعاني',robots:{index:false,follow:true}};}
+  if(params.course){try{const course=await getCourse(params.course);if(course)return pageMetadata(course.title+' | TeachCraft',course.description,'/?course='+encodeURIComponent(course.id));}catch{}return {title:'الدرس غير متاح | TeachCraft',robots:{index:false,follow:true}};}
   return pageMetadata(SITE_TITLE,SITE_DESCRIPTION,'/');
 }
 

@@ -53,10 +53,10 @@ export async function recordWord(record:RecordContent,logos:Logos){
     const signatures=new Footer({children:[new Paragraph({bidirectional:true,alignment:AlignmentType.CENTER,spacing:{after:0},children:[new TextRun({text:audienceWords(record).teacher+': '+(record.teacherName||'________________')+'      '+audienceWords(record).principalRole+': '+(record.principalName||'________________')+'      صفحة ',font:'Arial',size:16,sizeComplexScript:16,rightToLeft:true}),new TextRun({children:[PageNumber.CURRENT],font:'Arial',size:16})]})]});
     sections.push({properties:{type:SectionType.NEXT_PAGE,page:page(portrait)},footers:{default:signatures},children:[...(sections.length===0?header(record,width,logos):[text('تتمة الكشف',21,true),new Paragraph({spacing:{after:100},children:[]})]),school?manualTable(record,tasks,0,record.students.length,width):electronicTable(record,tasks,0,record.students.length,width)]});
   }
-  return Packer.toBlob(new Document({creator:'Alwadani Teaching Tools',title:record.title,styles:{default:{document:{run:{font:'Arial',size:18,sizeComplexScript:18},paragraph:{spacing:{before:0,after:0}}}}},sections}));
+  return Packer.toBlob(new Document({creator:'TeachCraft Teaching Tools',title:record.title,styles:{default:{document:{run:{font:'Arial',size:18,sizeComplexScript:18},paragraph:{spacing:{before:0,after:0}}}}},sections}));
 }
 // Each certificate remains a complete page with its selected artwork and Arabic text.
 export async function certificatesWord(images:{data:Uint8Array;width:number;height:number}[]){
   const sections:ISectionOptions[]=images.map(image=>{const scale=Math.min(1040/image.width,695/image.height);return {properties:{type:SectionType.NEXT_PAGE,page:page(false)},children:[new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:0},children:[new ImageRun({type:'png',data:image.data,transformation:{width:Math.round(image.width*scale),height:Math.round(image.height*scale)}})]})]};});
-  return Packer.toBlob(new Document({creator:'Alwadani Teaching Tools',title:'شهادات الطلاب',sections}));
+  return Packer.toBlob(new Document({creator:'TeachCraft Teaching Tools',title:'شهادات الطلاب',sections}));
 }

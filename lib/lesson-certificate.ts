@@ -39,10 +39,10 @@ export function drawLessonCertificate(x:CanvasRenderingContext2D,data:LessonCert
     while(size>24){x.font=`${bold?'bold ':''}${size}px Arial`;if(x.measureText(text).width<=width)break;size-=2;}
     x.font=`${bold?'bold ':''}${size}px Arial`;x.fillText(text,center,y,width);
   };
-  line('ALWADANI · LEARNING STUDIO',150,45,{direction:'ltr',color:'#f4cf82',bold:true,family:'Georgia'});
+  line('TEACHCRAFT · TEACHING TOOLS',150,45,{direction:'ltr',color:'#f4cf82',bold:true,family:'Georgia'});
   line('شهادة إتمام',330,72,{bold:true});
   // Isolate the English site name inside the right-to-left Arabic sentence.
-  line(`يشهد موقع \u2066Learning Studio\u2069 بأن ${words.student}`,440,32);
+  line(`يشهد موقع \u2066TeachCraft\u2069 بأن ${words.student}`,440,32);
   fitted(data.name,565,76,1500,true);
   line(`${words.completed} ${data.chores?'المشاهد والتدريبات والإملاء ولعبة البالونات':'شرح وتدريبات الدرس'}`,665,32,{color:muted});
   fitted(data.title,725,32,1500);
