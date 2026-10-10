@@ -18,3 +18,5 @@ export const studentGameRuns=sqliteTable('student_game_runs',{id:text('id').prim
 export const studentDictationAnswers=sqliteTable('student_dictation_answers',{student:text('student').notNull().references(()=>students.id),attempt:integer('attempt').notNull(),question:integer('question').notNull(),text:text('text').notNull(),correct:integer('correct').notNull(),created:text('created').notNull()},t=>[primaryKey({columns:[t.student,t.attempt,t.question]})]);
 
 export const studentAnswerTimes=sqliteTable('student_answer_times',{student:text('student').notNull().references(()=>students.id),attempt:integer('attempt').notNull(),stage:text('stage').notNull(),question:integer('question').notNull(),elapsedMs:integer('elapsed_ms').notNull()},t=>[primaryKey({columns:[t.student,t.attempt,t.stage,t.question]})]);
+
+export const studentModeration=sqliteTable('student_moderation',{student:text('student').primaryKey().references(()=>students.id),removed:text('removed').notNull()});

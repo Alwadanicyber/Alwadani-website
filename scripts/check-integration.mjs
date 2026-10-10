@@ -18,7 +18,8 @@ let cookies={};
 const courseAttempts={};
 async function req(path,body,expected=200,headers={},method=body?'POST':'GET'){if(body&&path==='/api/classroom'&&body.action!=='start'&&body.attempt===undefined&&courseAttempts[body.course||'life-stories'])body={...body,attempt:courseAttempts[body.course||'life-stories']};const r=await mf.dispatchFetch('https://course.test'+path,{method,headers:{'Content-Type':'application/json',origin:'https://course.test',cookie:Object.entries(cookies).map(([k,v])=>k+'='+v).join('; '),...headers},...(body?{body:JSON.stringify(body)}:{})});if(r.headers.get('set-cookie')){const c=r.headers.get('set-cookie').split(';')[0];const i=c.indexOf('=');cookies[c.slice(0,i)]=c.slice(i+1);}const d=await r.json();if(r.status===200&&d.student&&d.course)courseAttempts[d.course.id]=d.student.attempt;if(r.status!==expected)throw new Error(JSON.stringify({path,status:r.status,expected,d,body}));return d;}
 function assert(v,m){if(!v)throw new Error(m);}
-try{const db=await mf.getD1Database('DB');for(const file of readdirSync(project+'drizzle').filter(x=>x.endsWith('.sql')&&!x.startsWith('0005_')).sort()){for(const s of readFileSync(project+'drizzle/'+file,'utf8').split('--> statement-breakpoint'))await db.prepare(s.trim()).run();}
+try{const db=await mf.getD1Database('DB');for(const file of readdirSync(project+'drizzle').filter(x=>x.endsWith('.sql')&&!x.startsWith('0005_')&&!x.startsWith('0010_')).sort()){for(const s of readFileSync(project+'drizzle/'+file,'utf8').split('--> statement-breakpoint'))await db.prepare(s.trim()).run();}
+assert(!(await db.prepare("SELECT name FROM sqlite_master WHERE name='student_moderation'").first()),'Test should begin without the new moderation table');
 // Public search metadata, sitemap and crawler guidance work without a login.
 const siteOrigin='https://alwadani-website.jubranii45.workers.dev';
 const canonicalOf=html=>html.match(/<link\b(?=[^>]*\brel="canonical")(?=[^>]*\bhref="([^"]+)")[^>]*>/)?.[1];
@@ -252,6 +253,58 @@ assert(extraIds.every(id=>roster.leaderboard.some(r=>r.id===id))&&roster.leaderb
 cookies=currentCookies;await req('/api/classroom?course='+choresId);
 console.log('PASS: old saved courses/sessions upgrade to 3 scenes, archived answers/reads/certificate, fair best percentages, all students beyond 50 and reload idempotence.');
 console.log('PASS: chores grade, 12 picture-choice answers, correction, leaderboard, certificate, owner edits and delete/restore.');
+
+// Owner moderation removes every attempt of a profile, keeps places consecutive,
+// and preserves the work for recovery. The new table is also created on older D1s.
+const participantsPath='/api/teacher/students',participantsQuery=participantsPath+'?course='+choresId;
+assert(await db.prepare("SELECT name FROM sqlite_master WHERE name='student_moderation'").first(),'Additive moderation table was not created on an existing database');
+await db.prepare(readFileSync(project+'drizzle/0010_student_moderation.sql','utf8')).run();
+for(const headers of [{},forged])await req(participantsQuery,null,403,headers);
+await req(participantsPath,null,400,auth);await req(participantsPath+'?course=missing-course',null,404,auth);
+const moderationBody={course:choresId,id:firstId};
+for(const method of ['DELETE','PATCH']){
+ const body={...moderationBody,...(method==='PATCH'?{action:'restore'}:{})};
+ for(const headers of [{},forged,{...auth,origin:'https://evil.test'},{...auth,origin:''}])await req(participantsPath,body,403,headers,method);
+ await req(participantsPath,{...body,id:'invalid!'},400,auth,method);
+ await req(participantsPath,{...body,id:'missing-profile'},404,auth,method);
+ await req(participantsPath,{...body,course:'life-stories'},404,auth,method);
+ const malformed=await mf.dispatchFetch('https://course.test'+participantsPath,{method,headers:{...auth,origin:'https://course.test'},body:'{'});assert(malformed.status===400,'Malformed moderation request accepted');
+ const oversized=await mf.dispatchFetch('https://course.test'+participantsPath,{method,headers:{...auth,origin:'https://course.test'},body:' '.repeat(4097)});assert(oversized.status===400,'Oversized moderation request accepted');
+}
+await req(participantsPath,{...moderationBody,action:'delete'},400,auth,'PATCH');
+const participantList=await req(participantsQuery,null,200,auth);
+assert(participantList.participants.find(r=>r.id===firstId).score===30&&participantList.participants.length>50,'Owner list omitted best attempts or capped students');
+async function publicBoard(id){return (await(await mf.dispatchFetch('https://course.test/api/classroom?course='+id)).json());}
+async function savedLearning(){
+ const data={};for(const table of ['students','answers','reads','student_sessions','student_attempts','student_game_runs','student_dictation_answers','student_answer_times'])data[table]=(await db.prepare('SELECT * FROM '+table+' ORDER BY rowid').all()).results;
+ return JSON.stringify(data);
+}
+const workBeforeModeration=await savedLearning(),boardBeforeModeration=(await publicBoard(choresId)).leaderboard,otherBoardBefore=(await publicBoard('life-stories')).leaderboard;
+const participantPage=await mf.dispatchFetch('https://course.test/teacher/students?course='+choresId,{headers:auth}),participantHtml=await participantPage.text();
+assert(participantPage.status===200&&participantHtml.includes('المشاركون والنتائج')&&participantHtml.includes(retake.student.name)&&participantHtml.includes('حذف المشاركة')&&participantHtml.includes('aria-label="ابحث باسم الطالب"'),'Private participant UI or male search is missing');
+await req('/api/teacher',{...sourceChores,studentGender:'female'},200,auth);
+const femaleParticipantHtml=await(await mf.dispatchFetch('https://course.test/teacher/students?course='+choresId,{headers:auth})).text();
+assert(femaleParticipantHtml.includes('aria-label="ابحث باسم الطالبة"')&&femaleParticipantHtml.includes('أكملت الرحلة'),'Private participant wording did not follow the female lesson setting');
+await req('/api/teacher',sourceChores,200,auth);
+const anonymousParticipantPage=await mf.dispatchFetch('https://course.test/teacher/students?course='+choresId);
+const anonymousParticipantHtml=await anonymousParticipantPage.text();
+assert(anonymousParticipantPage.status===200&&anonymousParticipantHtml.includes('مرحبًا بعودتك')&&!anonymousParticipantHtml.includes('حذف المشاركة')&&!anonymousParticipantHtml.includes(retake.student.name),'Anonymous browser saw participant data instead of the teacher login');
+const removedParticipation=await req(participantsPath,moderationBody,200,auth,'DELETE');
+assert(removedParticipation.participants.find(r=>r.id===firstId).removedAt&&!removedParticipation.participants.find(r=>r.id===firstId).competing,'Deleted participation was not moved to trash');
+const moderationTime=removedParticipation.participants.find(r=>r.id===firstId).removedAt;
+assert((await req(participantsPath,moderationBody,200,auth,'DELETE')).participants.find(r=>r.id===firstId).removedAt===moderationTime,'Repeated removal changed its saved time');
+const boardAfterModeration=await publicBoard(choresId),expectedRemaining=boardBeforeModeration.filter(r=>r.id!==firstId);
+assert(!boardAfterModeration.leaderboard.some(r=>r.id===firstId)&&!('participants' in boardAfterModeration)&&!JSON.stringify(boardAfterModeration).includes('removedAt'),'Public board leaked removed profiles or private moderation metadata');
+assert(JSON.stringify(boardAfterModeration.leaderboard.map(r=>r.id))===JSON.stringify(expectedRemaining.map(r=>r.id))&&boardAfterModeration.leaderboard.every((r,i)=>r.position===i+1),'Removal left rank gaps or changed score/time ordering');
+assert(JSON.stringify(boardAfterModeration.leaderboard.slice(0,5).map(r=>r.id))===JSON.stringify(expectedRemaining.slice(0,5).map(r=>r.id)),'Top-five medals were not reassigned after removal');
+assert(JSON.stringify((await publicBoard('life-stories')).leaderboard)===JSON.stringify(otherBoardBefore),'Moderation changed another lesson');
+assert(await savedLearning()===workBeforeModeration,'Moderation destroyed or changed learning data');
+assert((await req('/api/classroom?course='+choresId)).certificate.score===30,'Moderation destroyed the recoverable private certificate');
+await req(participantsPath,{...moderationBody,action:'restore'},200,auth,'PATCH');await req(participantsPath,{...moderationBody,action:'restore'},200,auth,'PATCH');
+const restoredParticipation=await publicBoard(choresId);
+assert(JSON.stringify(restoredParticipation.leaderboard)===JSON.stringify(boardBeforeModeration)&&restoredParticipation.leaderboard.find(r=>r.id===firstId).score===30,'Restoring did not return the archived best result to its original place');
+assert(!(await db.prepare('SELECT student FROM student_moderation WHERE student=?').bind(firstId).first())&&await savedLearning()===workBeforeModeration,'Restoration changed data or left a moderation marker');
+console.log('PASS: owner-only participant listing/search/render, anonymous and forged-header denial, same-origin mutations, malformed/oversized/mismatched profiles rejected, recoverable per-profile removal of live and archived results, consecutive ranks and top-five promotion, restoration of the best score, unchanged certificates/learning/neighboring lessons, additive D1 setup.');
 
 // Deletion is private, reversible, and preserves every student record.
 const mutateCourse=(method,body,expected=200,headers=auth)=>req('/api/teacher',body,expected,headers,method);

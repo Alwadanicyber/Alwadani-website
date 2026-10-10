@@ -1,6 +1,6 @@
 'use client';
 import {useState,useEffect} from 'react';
-import {BookOpen,Plus,Save,Share2,GraduationCap,Trash2,CheckCircle2,Download} from 'lucide-react';
+import {BookOpen,Plus,Save,Share2,GraduationCap,Trash2,CheckCircle2,Download,Users} from 'lucide-react';
 import {grades,gradeLabel} from '@/lib/grades';
 import {audienceWords,participantNoun} from '@/lib/audience';
 import {Select,SelectTrigger,SelectValue,SelectContent,SelectItem} from '@/components/ui/select';
@@ -60,6 +60,7 @@ const lesson=draft?.definition.lessons[active],displayedCourses=(showDeleted?del
 <div className="course-counts"><span>{c.definition.lessons.length} محطات</span><span>{c.definition.questions.length} أسئلة</span><span>{c.students||0} {participantNoun(c.students||0,c.studentGender)}</span></div>
 <div className="course-card-actions">{showDeleted?<button className="secondary" disabled={busy} onClick={()=>restoreCourse(c.id)}>استعادة كمسودة</button>:<>
 <button className="primary" disabled={busy} onClick={()=>edit(c)}>تعديل المحتوى</button>
+<a className="secondary" href={'/teacher/students?course='+encodeURIComponent(c.id)}><Users size={17}/>المشاركون</a>
 {c.published===1&&<><button className="secondary" disabled={busy} onClick={()=>copy(c.id)} aria-label="نسخ رابط الدرس"><Share2 size={17}/></button><a className="secondary" href={'/?course='+encodeURIComponent(c.id)}>معاينة</a></>}
 <button className="secondary danger" disabled={busy} onClick={()=>askDelete(c)} aria-label={'حذف الدرس '+c.title}><Trash2 size={17}/>حذف الدرس</button>
 </>}</div></article>)}</div>:<div className="standalone teacher-empty">{showDeleted?<Trash2 size={30}/>:<BookOpen size={30}/>}<h2>{showDeleted?'لا توجد دروس في المحذوفات':'ابدأ بإضافة درس جديد'}</h2><p>{showDeleted?'ستظهر هنا الدروس التي تحذفها.':'اضغط إضافة درس لإنشاء الشرح والتمارين لطلابك.'}</p></div>}
