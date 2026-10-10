@@ -1,11 +1,13 @@
 import type {Rank} from './result-ranking';
 
-// Owner-requested starting benchmarks for the two existing student entries.
+// Owner-requested starting benchmarks for existing student entries.
 // Keep estimates separate from measured answer times and completion certificates.
 const publishedTiming='2026-10-10T09:33:51Z';
 const legacyBenchmarks=new Map([
   ['يوسف سيف الدين يوسف محمد عثمان',170_000],
   ['فهد يحيى المرحبي',170_000],
+  ['راكان عماد جلي',170_000],
+  ['Hamad',170_000],
 ]);
 
 function joinedBeforeTiming(joined:string){
