@@ -18,7 +18,7 @@ let cookies={};
 const courseAttempts={};
 async function req(path,body,expected=200,headers={},method=body?'POST':'GET'){if(body&&path==='/api/classroom'&&body.action!=='start'&&body.attempt===undefined&&courseAttempts[body.course||'life-stories'])body={...body,attempt:courseAttempts[body.course||'life-stories']};const r=await mf.dispatchFetch('https://course.test'+path,{method,headers:{'Content-Type':'application/json',origin:'https://course.test',cookie:Object.entries(cookies).map(([k,v])=>k+'='+v).join('; '),...headers},...(body?{body:JSON.stringify(body)}:{})});if(r.headers.get('set-cookie')){const c=r.headers.get('set-cookie').split(';')[0];const i=c.indexOf('=');cookies[c.slice(0,i)]=c.slice(i+1);}const d=await r.json();if(r.status===200&&d.student&&d.course)courseAttempts[d.course.id]=d.student.attempt;if(r.status!==expected)throw new Error(JSON.stringify({path,status:r.status,expected,d,body}));return d;}
 function assert(v,m){if(!v)throw new Error(m);}
-try{const db=await mf.getD1Database('DB');for(const file of readdirSync(project+'drizzle').filter(x=>x.endsWith('.sql')&&!x.startsWith('0005_')&&!x.startsWith('0010_')).sort()){for(const s of readFileSync(project+'drizzle/'+file,'utf8').split('--> statement-breakpoint'))await db.prepare(s.trim()).run();}
+try{const db=await mf.getD1Database('DB');for(const file of readdirSync(project+'drizzle').filter(x=>x.endsWith('.sql')&&!x.startsWith('0005_')&&!x.startsWith('0010_')&&!x.startsWith('0011_')).sort()){for(const s of readFileSync(project+'drizzle/'+file,'utf8').split('--> statement-breakpoint'))await db.prepare(s.trim()).run();}
 assert(!(await db.prepare("SELECT name FROM sqlite_master WHERE name='student_moderation'").first()),'Test should begin without the new moderation table');
 // Public search metadata, sitemap and crawler guidance work without a login.
 const siteOrigin='https://alwadani-website.jubranii45.workers.dev';
@@ -60,6 +60,16 @@ const initial=await req('/api/courses');assert(initial.courses.length===2,'Built
 await req('/api/teacher',{},403,{...auth,origin:'https://evil.test'});
 await req('/api/teacher',{},403,{...auth,origin:''});
 const admin=await req('/api/teacher',null,200,auth);assert(admin.courses.length===2,'Owner cannot load courses');
+// The fourth-grade announcement is active by default; unscheduled lessons stay open.
+const competitionPath='/api/teacher/competition';
+assert(!(await db.prepare("SELECT name FROM sqlite_master WHERE name='course_competitions'").first()),'Competition table should be added lazily');
+const defaultEvent=(await req(competitionPath+'?course=chores-grade-4',null,200,auth)).competition;
+assert(defaultEvent.enabled&&defaultEvent.showCountdown&&defaultEvent.endsAt==='2026-10-14T13:00:00.000Z'&&defaultEvent.prize==='جائزة للمركز الأول','Requested fourth-grade schedule is incorrect');
+assert((await req(competitionPath+'?course=life-stories',null,200,auth)).competition.enabled===false,'Fourth-grade schedule leaked to other lessons');
+assert(await db.prepare("SELECT name FROM sqlite_master WHERE name='course_competitions'").first(),'Competition schema not added to existing D1');
+await db.prepare(readFileSync(project+'drizzle/0011_course_competitions.sql','utf8')).run();
+// Keep the existing lesson regression suite independent of its execution date.
+await req(competitionPath,{course:'chores-grade-4',enabled:false,showCountdown:true,prize:''},200,auth,'PUT');
 const lesson={title:'المضارع البسيط',en:'Simple Present',tag:'01',intro:'شرح الدرس',formula:'Subject + verb',rules:[['المفرد','نضيف s مع he','He works.']],note:'',example:'He works.',translation:'هو يعمل.'};
 const payload={title:'درس جديد',description:'وصف',grade:'grade-4',published:0,definition:{lessons:[lesson],questions:[{id:1,lesson:0,prompt:'He ___ every day.',options:['work','works','worked'],answer:1,reason:'مع he في المضارع البسيط نضيف s.'}]}};
 const draft=await req('/api/teacher',payload,200,auth);assert((await req('/api/courses')).courses.length===2,'Draft is visible');assert(!(await(await mf.dispatchFetch('https://course.test/sitemap.xml')).text()).includes('course='+draft.id),'Draft leaked into sitemap');const pub=await req('/api/teacher',{...payload,id:draft.id,published:1},200,auth);assert((await req('/api/courses')).courses.length===3,'Published course missing');assert((await(await mf.dispatchFetch('https://course.test/sitemap.xml')).text()).includes('course='+draft.id),'Published lesson not discoverable in sitemap');
@@ -465,6 +475,60 @@ await req(recordsPath,{...schoolFetched,marks:{[student1]:{[schoolFetched.tasks[
 assert((await req(recordsPath+'?id='+schoolSaved.id,null,200,auth)).record.version===schoolSaved.version,'Invalid school paper edit changed saved data');
 console.log('PASS: school paper template fields and grade/box settings persist in D1; invalid boxes and electronic marks rejected.');
 
+
+// Competition deadlines are owner-only, isolated per lesson and anchored on the server.
+const eventCourse=(await req('/api/teacher',{...payload,published:1,title:'اختبار موعد المنافسة'},200,auth)).id;
+const eventBody={course:eventCourse,enabled:true,showCountdown:true,mode:'days',days:2,hours:3,minutes:4,prize:'جائزة للمركز الأول'};
+for(const headers of [{},forged]){await req(competitionPath+'?course='+eventCourse,null,403,headers);await req(competitionPath,eventBody,403,headers,'PUT');}
+for(const origin of ['https://evil.test',''])await req(competitionPath,eventBody,403,{...auth,origin},'PUT');
+await req(competitionPath+'?course=invalid!',null,400,auth);await req(competitionPath+'?course=missing',null,404,auth);
+for(const change of [{days:-1},{days:0.5},{hours:24},{minutes:60},{days:0,hours:0,minutes:0},{showCountdown:'yes'},{enabled:1},{prize:'<script>'},{prize:'x'.repeat(201)},{mode:'invalid'},{mode:'date',endsAt:'2026-02-30T13:00:00.000Z'},{mode:'date',endsAt:new Date(Date.now()-1000).toISOString()}])await req(competitionPath,{...eventBody,...change},400,auth,'PUT');
+await req(competitionPath,{...eventBody,course:'missing'},404,auth,'PUT');
+const beforeSchedule=Date.now(),eventSaved=(await req(competitionPath,eventBody,200,auth,'PUT')).competition;
+const duration=(2*86400+3*3600+4*60)*1000;
+assert(Date.parse(eventSaved.endsAt)>=beforeSchedule+duration&&Date.parse(eventSaved.endsAt)<=Date.now()+duration,'Relative duration was not anchored on the server');
+assert(JSON.stringify((await req(competitionPath+'?course='+eventCourse,null,200,auth)).competition.endsAt)===JSON.stringify(eventSaved.endsAt),'Reload restarted the countdown');
+assert((await req('/api/classroom?course='+eventCourse)).competition.endsAt===eventSaved.endsAt,'Public countdown differs from teacher settings');
+assert(!(await req('/api/classroom?course=life-stories')).competition.enabled,'Scheduling altered another lesson');
+const hidden=(await req(competitionPath,{...eventBody,mode:'date',endsAt:eventSaved.endsAt,showCountdown:false},200,auth,'PUT')).competition;
+assert(hidden.enabled&&!hidden.showCountdown&&hidden.endsAt===eventSaved.endsAt,'Hiding countdown changed the deadline');
+const cutoff=new Date(Date.now()-1000).toISOString(),beforeCutoff=new Date(Date.parse(cutoff)-60000).toISOString(),afterCutoff=new Date(Date.parse(cutoff)+500).toISOString();
+await db.prepare('UPDATE course_competitions SET ends_at=? WHERE course=?').bind(cutoff,eventCourse).run();
+const eventDefinition=JSON.stringify({...payload,id:eventCourse,published:1});
+for(const [id,name,completed,score] of [['event-a','متسابق أول',afterCutoff,1],['event-b','متسابق ثان',beforeCutoff,1],['event-c','متسابق ثالث',cutoff,1],['event-d','متسابق غير مكتمل',null,0]]){
+ await db.prepare('INSERT INTO students(id,name,created,completed,course,snapshot) VALUES(?,?,?,?,?,?)').bind(id,name,beforeCutoff,completed,eventCourse,eventDefinition).run();
+ await db.prepare('INSERT INTO student_sessions(student,attempt,started) VALUES(?,2,?)').bind(id,beforeCutoff).run();
+ await db.prepare('INSERT INTO answers(student,question,choice,correct) VALUES(?,1,1,?)').bind(id,score).run();
+}
+await db.prepare("INSERT INTO student_attempts(student,attempt,course,snapshot,answers,reads,score,total,answered,completed,created) VALUES('event-a',1,?,?,'[]','[]',0,1,1,?,?)").bind(eventCourse,eventDefinition,beforeCutoff,beforeCutoff).run();
+let finalEvent=await req('/api/classroom?course='+eventCourse);
+assert(finalEvent.competition.ended&&finalEvent.leaderboard.length===2&&finalEvent.leaderboard[0].id==='event-b'&&finalEvent.leaderboard[1].id==='event-a'&&finalEvent.leaderboard[1].score===0,'Deadline failed to keep pre-deadline best, exclude exact boundary or incomplete participants');
+await db.prepare("UPDATE answers SET correct=0 WHERE student='event-a'").run();
+assert(JSON.stringify((await req('/api/classroom?course='+eventCourse)).leaderboard)===JSON.stringify(finalEvent.leaderboard),'Post-deadline result changed the prize ranking');
+// A later improved balloon run in the same attempt must not replace a valid earlier run.
+const gameStudent='event-balloon',gameSnapshot=JSON.stringify(sourceChores);
+await db.prepare('INSERT INTO students(id,name,created,completed,course,snapshot) VALUES(?,?,?,?,?,?)').bind(gameStudent,'متسابق لعبة',beforeCutoff,afterCutoff,choresId,gameSnapshot).run();
+for(const q of sourceChores.definition.questions)await db.prepare('INSERT INTO answers(student,question,choice,correct) VALUES(?,?,?,1)').bind(gameStudent,q.id,q.answer).run();
+for(let question=1;question<=6;question++)await db.prepare("INSERT INTO student_dictation_answers(student,attempt,question,text,correct,created) VALUES(?,1,?,'test',1,?)").bind(gameStudent,question,beforeCutoff).run();
+for(const [id,score,completed] of [['event-run-before',8,beforeCutoff],['event-run-after',12,afterCutoff]])await db.prepare("INSERT INTO student_game_runs(id,student,attempt,difficulty,rounds,state,score,answered,solved,status,created,completed) VALUES(?,?,1,'easy','[]','{}',?,12,12,'won',?,?)").bind(id,gameStudent,score,beforeCutoff,completed).run();
+await req(competitionPath,{...eventBody,course:choresId,mode:'date',endsAt:eventSaved.endsAt},200,auth,'PUT');
+await db.prepare('UPDATE course_competitions SET ends_at=? WHERE course=?').bind(cutoff,choresId).run();
+const gameFinal=(await req('/api/classroom?course='+choresId)).leaderboard.find(r=>r.id===gameStudent);
+assert(gameFinal?.gameScore===8&&gameFinal.score===26,'A post-deadline balloon replay replaced its earlier eligible result');
+await req(competitionPath,{...eventBody,course:choresId,enabled:false},200,auth,'PUT');
+assert((await req('/api/classroom?course='+choresId)).leaderboard.find(r=>r.id===gameStudent)?.score===30,'Unscheduled learning lost the later best game score');
+const lateLearner=await req('/api/classroom',{action:'start',course:eventCourse,name:'محاولة تعليمية بعد النهاية'});
+await db.prepare('INSERT INTO answers(student,question,choice,correct) VALUES(?,1,1,1)').bind(lateLearner.student.id).run();
+await db.prepare('UPDATE students SET completed=? WHERE id=?').bind(afterCutoff,lateLearner.student.id).run();
+const lateCertificate=await req('/api/classroom?course='+eventCourse);
+assert(lateCertificate.certificate?.score===1&&lateCertificate.bestResult?.score===1&&!lateCertificate.leaderboard.some(r=>r.id===lateLearner.student.id),'Deadline blocked learning certificate or admitted late participation');
+await req(competitionPath,{...eventBody,enabled:false},200,auth,'PUT');
+assert(!(await req('/api/classroom?course='+eventCourse)).competition.enabled&&(await req('/api/classroom?course='+eventCourse)).leaderboard.length===5,'Disabling a deadline did not reopen ordinary rankings');
+const ownerEventHtml=await(await mf.dispatchFetch('https://course.test/teacher/students?course='+eventCourse,{headers:auth})).text();
+assert(ownerEventHtml.includes('موعد المنافسة والعدّاد'),'Owner competition control missing');
+await req('/api/teacher',{id:eventCourse},200,auth,'DELETE');
+await req(competitionPath,eventBody,404,auth,'PUT');
+console.log('PASS: optional per-lesson countdown, Saudi Wednesday deadline, persistent duration, prize announcement, owner/CSRF validation, deadline boundary, archived pre-deadline best and balloon replay eligibility.');
 
 // Recovery revokes existing sessions, expiration denies access, logout revokes.
 const oldAuth={...auth};

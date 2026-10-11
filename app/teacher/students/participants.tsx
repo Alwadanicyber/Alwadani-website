@@ -7,6 +7,7 @@ import {formatSolveTime} from '@/lib/solve-time';
 import type {StudentParticipation} from '@/lib/student-moderation';
 import {AlertDialog,AlertDialogContent,AlertDialogHeader,AlertDialogTitle,AlertDialogDescription,AlertDialogFooter,AlertDialogCancel,AlertDialogAction} from '@/components/ui/alert-dialog';
 import TeacherShell from '../shell';
+import CompetitionSettings from './competition-settings';
 
 type CourseOption={id:string;title:string;grade?:string;studentGender:Gender};
 type ParticipantsResponse={participants:StudentParticipation[];error?:string};
@@ -47,6 +48,7 @@ export default function TeacherParticipants({username,courses,initialCourse,init
     {notice&&<div className="teacher-notice" role="status"><CheckCircle2 size={19}/>{notice}</div>}
     {courses.length?<>
       <div className="participants-toolbar"><label htmlFor="participants-course">الدرس<select id="participants-course" value={courseId} disabled={busy||loading} onChange={event=>{setCourseId(event.target.value);setRows([]);setSearch('');setShowRemoved(false);setError('');setNotice('');setTarget(null);}}>{courses.map(c=><option key={c.id} value={c.id}>{c.title} — {gradeLabel(c.grade)}</option>)}</select></label><button className="secondary" disabled={busy||loading} onClick={()=>void load()}><RefreshCw size={17}/>{loading?'جارٍ التحديث…':'تحديث النتائج'}</button></div>
+      <CompetitionSettings key={courseId} courseId={courseId} onSaved={()=>void load()}/>
       <div className="teacher-library-tabs" aria-label="عرض المشاركات"><button className="secondary" aria-pressed={!showRemoved} disabled={busy} onClick={()=>{setShowRemoved(false);setSearch('');}}><Users size={17}/>المشاركات ({active.length})</button><button className="secondary" aria-pressed={showRemoved} disabled={busy} onClick={()=>{setShowRemoved(true);setSearch('');}}><Trash2 size={17}/>المحذوفات ({removed.length})</button></div>
       <label className="participants-search"><Search size={19}/><input type="search" aria-label={'ابحث باسم '+words.student} placeholder={'ابحث باسم '+words.student} value={search} onChange={event=>setSearch(event.target.value)}/></label>
       {showRemoved&&<p className="trash-help">هذه المشاركات لا تظهر في لوحة المنافسة. استعادتها تعيد الاسم وأفضل نتيجة إلى ترتيبها الصحيح.</p>}

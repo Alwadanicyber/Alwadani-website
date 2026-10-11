@@ -6,6 +6,7 @@ import {dictationSchema,allDictationResults,DICTATION_POINTS} from './chores-dic
 import {answerTimingSchema,allAnswerTimes} from './answer-timing';
 import {withLeaderboardBaseline,excludedTeacherEntry} from './leaderboard-baselines';
 import {compareResults,betterResult,resultPercent,type Result,type Rank} from './result-ranking';
+import {getCompetition} from './course-competition';
 import {studentModerationSchema,type StudentParticipation} from './student-moderation';
 export {betterResult,resultPercent} from './result-ranking';
 export type {Result,Rank} from './result-ranking';
@@ -29,18 +30,20 @@ export async function archiveAndRestart(id:string,attempt:number,course:TeacherC
 }
 export async function classroomResults(course:TeacherCourse,studentId?:string,teacherView=false){
  const db=database();
- const required=course.id===CHORES_COURSE_ID;
- const [live,history,games,dictations,times,moderation]=await Promise.all([
+ const required=course.id===CHORES_COURSE_ID,competition=await getCompetition(course.id),deadline=competition.enabled?competition.endsAt:null;
+ const [live,history,games,dictations,times,moderation,competitionGames]=await Promise.all([
   db.prepare(`SELECT s.id,s.name,s.created,s.completed,COALESCE(v.attempt,1) AS attempt,COUNT(a.question) AS answered,COALESCE(SUM(a.correct),0) AS score,COALESCE(json_array_length(s.snapshot,'$.definition.questions'),?) AS total,COALESCE(json_extract(s.snapshot,'$.title'),?) AS title FROM students s LEFT JOIN answers a ON a.student=s.id LEFT JOIN student_sessions v ON v.student=s.id WHERE s.course=? GROUP BY s.id`).bind(course.definition.questions.length,course.title,course.id).all(),
   db.prepare('SELECT student,attempt,score,total,answered,completed,created,json_extract(snapshot,\'$.title\') AS title FROM student_attempts WHERE course=?').bind(course.id).all(),required?allGameResults():Promise.resolve([]),required?allDictationResults():Promise.resolve([]),allAnswerTimes(),
-  db.prepare('SELECT m.student,m.removed FROM student_moderation m JOIN students s ON s.id=m.student WHERE s.course=?').bind(course.id).all<{student:string;removed:string}>()
+  db.prepare('SELECT m.student,m.removed FROM student_moderation m JOIN students s ON s.id=m.student WHERE s.course=?').bind(course.id).all<{student:string;removed:string}>(),
+  required&&deadline?allGameResults(deadline):Promise.resolve([])
  ]);
  const rows=new Map<string,Rank>(),gameMap=new Map(games.map(g=>[g.student+':'+g.attempt,g])),dictationMap=new Map(dictations.map(d=>[d.student+':'+d.attempt,d])),timeMap=new Map(times.map(t=>[t.student+':'+t.attempt+':'+t.stage,t]));let certificate:Result|null=null,previousCertificate:Result|null=null;
- const combined=(r:Result,student:string):Result=>{
+ const competitionGameMap=deadline?new Map(competitionGames.map(g=>[g.student+':'+g.attempt,g])):gameMap;
+ const combined=(r:Result,student:string,selectedGames=gameMap):Result=>{
   const key=student+':'+r.attempt,quiz=timeMap.get(key+':quiz');
   const quizMs=quiz?.samples===r.total?quiz.elapsed:null;
   if(!required)return {...r,solveMs:r.completed?quizMs:null};
-  const game=gameMap.get(key),dictation=dictationMap.get(key),dictationTime=timeMap.get(key+':dictation');
+  const game=selectedGames.get(key),dictation=dictationMap.get(key),dictationTime=timeMap.get(key+':dictation');
   const completed=r.completed&&game?.completed&&dictation?.answered===DICTATION_POINTS?game.completed:null;
   const dictationMs=dictationTime?.samples===DICTATION_POINTS?dictationTime.elapsed:null;
   const solveMs=completed&&quizMs!==null&&dictationMs!==null&&typeof game?.solveMs==='number'?quizMs+dictationMs+game.solveMs:null;
@@ -51,10 +54,22 @@ export async function classroomResults(course:TeacherCourse,studentId?:string,te
  const joined=new Map(live.results.map(r=>[String(r.id),String(r.created)]));
  const removed=new Map(moderation.results.map(r=>[r.student,r.removed]));
  const allResults=[...rows.values()].map(r=>withLeaderboardBaseline(course.id,r,joined.get(r.id)||'')).sort((a,b)=>compareResults(a,b)||(a.completed||a.created).localeCompare(b.completed||b.created)||a.id.localeCompare(b.id));
- // Filter after selecting each learner's best attempt, before assigning places.
- // A removed learner's archived attempts must not reappear or leave rank gaps.
- const leaderboard=allResults.filter(r=>!removed.has(r.id)&&!excludedTeacherEntry(course.id,r,joined.get(r.id)||'')).map((r,i)=>({...r,position:i+1}));
+ // Prize rankings use the best completed attempt strictly before the deadline.
+ // Learning, later retries and certificates retain their unrestricted best result.
+ const competitionRows=new Map<string,Rank>();
+ for(const raw of [...live.results,...history.results]){
+  const source=raw as unknown as Rank&{student?:string},id=source.student||source.id,current=rows.get(id);
+  if(!current)continue;
+  const result=combined(source,id,competitionGameMap);
+  if(deadline&&(result.completed?Date.parse(result.completed)>=Date.parse(deadline):competition.ended))continue;
+  if(deadline&&Date.parse(joined.get(id)||'')>=Date.parse(deadline))continue;
+  const previous=competitionRows.get(id);
+  if(!previous||betterResult(result,previous))competitionRows.set(id,{...current,...result,percentage:resultPercent(result)});
+ }
+ const eligible=[...competitionRows.values()].map(r=>withLeaderboardBaseline(course.id,r,joined.get(r.id)||'')).sort((a,b)=>compareResults(a,b)||(a.completed||a.created).localeCompare(b.completed||b.created)||a.id.localeCompare(b.id));
+ const leaderboard=eligible.filter(r=>!removed.has(r.id)&&!excludedTeacherEntry(course.id,r,joined.get(r.id)||'')).map((r,i)=>({...r,position:i+1}));
  const places=new Map(leaderboard.map(r=>[r.id,r.position]));
- const participants:StudentParticipation[]=teacherView?allResults.map(r=>({...r,position:places.get(r.id)||0,removedAt:removed.get(r.id)||null,competing:places.has(r.id)})):[];
- return {leaderboard,bestResult:studentId?leaderboard.find(r=>r.id===studentId)||rows.get(studentId)||null:null,certificate,...(required?{previousCertificate}: {}),...(teacherView?{participants}:{})};
+ const official=new Map(leaderboard.map(r=>[r.id,r]));
+ const participants:StudentParticipation[]=teacherView?allResults.map(r=>({...r,...official.get(r.id),position:places.get(r.id)||0,removedAt:removed.get(r.id)||null,competing:places.has(r.id)})):[];
+ return {competition,leaderboard,bestResult:studentId?(()=>{const own=allResults.find(r=>r.id===studentId);return own?{...own,position:places.get(studentId)||0}:null;})():null,certificate,...(required?{previousCertificate}: {}),...(teacherView?{participants}:{})};
 }
