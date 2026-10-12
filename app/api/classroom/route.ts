@@ -2,6 +2,7 @@ import {database} from '@/lib/database';
 import {parseSolveMs,SolveTimeError} from '@/lib/solve-time';
 import {hashToken,cookieName,identity} from '@/lib/student-session';
 import {getCourse,originalCourse,publicCourse} from '@/lib/courses';
+import {hasLegacyTensesGame,updateStudentTensesGame} from '@/lib/tenses-game-update';
 import {TENSES_COURSE_ID,normalizeSentence} from '@/lib/tenses-learning';
 import type {TeacherCourse} from '@/lib/course-types';
 import {answerOrder} from '@/lib/answer-order';
@@ -16,22 +17,28 @@ async function context(req:Request,courseId:string){
  await ensureClassroomResults();const db=database(),latest=await getCourse(courseId);if(!latest)throw new Error('الدرس غير منشور أو غير موجود.');
  const id=await identity(req,courseId);
  const readStudent=()=>id?db.prepare('SELECT s.id,s.name,s.completed,s.snapshot,COALESCE(v.attempt,1) AS attempt FROM students s LEFT JOIN student_sessions v ON v.student=s.id WHERE s.id=? AND s.course=?').bind(id,courseId).first<any>():null;
- let student=await readStudent(),course:TeacherCourse=student?.snapshot?JSON.parse(student.snapshot):student&&courseId==='life-stories'?originalCourse:latest,migrated=false;
+ let student=await readStudent(),course:TeacherCourse=student?.snapshot?JSON.parse(student.snapshot):student&&courseId==='life-stories'?originalCourse:latest,migrated:boolean|string=false;
  if(student&&courseId===CHORES_COURSE_ID&&[4,7].includes(course.definition.lessons.length)&&latest.definition.lessons.length===3){
   await archiveAndRestart(student.id,student.attempt,stableCourse(latest),student.snapshot);student=await readStudent();course=JSON.parse(student.snapshot);migrated=true;
+ }
+ if(student&&courseId===TENSES_COURSE_ID&&hasLegacyTensesGame(course.definition)){
+  const updated=await updateStudentTensesGame(student,course,stableCourse(latest));
+  // Another tab may have updated the same attempt while this request waited.
+  student=await readStudent();course=JSON.parse(student.snapshot);
+  if(updated)migrated='تحدّثت لعبة محقق الزمن: جمل إنجليزية مع دلائل. إجابات التدريب ونتيجتك السابقة محفوظة؛ تابع اللعبة الجديدة.';
  }
  // Wording follows the teacher's latest setting; saved questions and grades stay intact.
  const presentation:TeacherCourse={...stableCourse(course),studentGender:publicCourse(latest).studentGender};
  return {id,student,course:presentation,latest:stableCourse(latest),grade:latest.grade||'general',migrated};
 }
-async function snapshot(student:any,course:TeacherCourse,grade='general',migrated=false){
+async function snapshot(student:any,course:TeacherCourse,grade='general',migrated:boolean|string=false){
  const db=database(),id=student?.id;let answers:any[]=[],reads:any[]=[],responses=new Map<number,string>();
  if(id){const [a,r,w]=await Promise.all([db.prepare('SELECT question,choice,correct FROM answers WHERE student=? ORDER BY question').bind(id).all(),db.prepare('SELECT lesson FROM reads WHERE student=?').bind(id).all(),db.prepare('SELECT question,response FROM student_sentence_answers WHERE student=? AND attempt=?').bind(id,student.attempt||1).all<{question:number;response:string}>()]);answers=a.results;reads=r.results;responses=new Map(w.results.map(row=>[row.question,row.response]));}
  const visible=publicCourse(course),orders=new Map<number,number[]>();
  if(id)visible.questions=await Promise.all(visible.questions.map(async q=>{const order=await answerOrder(student.attempt>1?id+':attempt:'+student.attempt:id,course.id,q.id,q.options.length);orders.set(q.id,order);return {...q,options:order.map(i=>q.options[i])};}));
  const results=await classroomResults(course,id),gameRequired=course.id===CHORES_COURSE_ID,gameData=gameRequired&&id?await gameSnapshot(id,student.attempt):{game:null,gameBest:null};
  const dictation=gameRequired?await dictationSnapshot(id,student?.attempt):null,dictationReady=!!id&&answers.length===course.definition.questions.length&&reads.length===course.definition.lessons.length,gameReady=dictationReady&&!!dictation?.completed;
- return {student:student?{id:student.id,name:student.name,completed:gameRequired&&(!gameData.gameBest||!dictation?.completed)?null:student.completed,attempt:student.attempt||1}:null,course:{...visible,grade},answers:answers.map(a=>{const q=course.definition.questions.find(q=>q.id===a.question),order=orders.get(a.question);return {...a,...(responses.has(a.question)?{response:responses.get(a.question)}:{}),choice:order?order.indexOf(a.choice):a.choice,answer:order&&q?order.indexOf(q.answer):q?.answer,reason:q?.reason,answerText:q?.options[q.answer]};}),reads:reads.map(r=>r.lesson),...results,...(gameRequired?{gameRequired:true,gameTotal:BALLOON_POINTS,dictationReady,dictation,gameReady,...gameData}:{}),...(migrated?{notice:'أصبح الدرس 3 مشاهد قصيرة. نتيجتك السابقة محفوظة، ويمكنك تحسينها في المحاولة الجديدة.'}:{})};
+ return {student:student?{id:student.id,name:student.name,completed:gameRequired&&(!gameData.gameBest||!dictation?.completed)?null:student.completed,attempt:student.attempt||1}:null,course:{...visible,grade},answers:answers.map(a=>{const q=course.definition.questions.find(q=>q.id===a.question),order=orders.get(a.question);return {...a,...(responses.has(a.question)?{response:responses.get(a.question)}:{}),choice:order?order.indexOf(a.choice):a.choice,answer:order&&q?order.indexOf(q.answer):q?.answer,reason:q?.reason,answerText:q?.options[q.answer]};}),reads:reads.map(r=>r.lesson),...results,...(gameRequired?{gameRequired:true,gameTotal:BALLOON_POINTS,dictationReady,dictation,gameReady,...gameData}:{}),...(migrated?{notice:typeof migrated==='string'?migrated:'أصبح الدرس 3 مشاهد قصيرة. نتيجتك السابقة محفوظة، ويمكنك تحسينها في المحاولة الجديدة.'}:{})};
 }
 export async function GET(req:Request){try{const {student,course,grade,migrated}=await context(req,new URL(req.url).searchParams.get('course')||'life-stories');return reply(await snapshot(student,course,grade,migrated));}catch(e){console.error(e);return reply({error:'تعذّر تحميل الدرس والنتائج. حاول مجددًا.'},503);}}
 export async function POST(req:Request){try{

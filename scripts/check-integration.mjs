@@ -550,7 +550,7 @@ for(let lesson=0;lesson<4;lesson++){
    for(const text of ['', '<script>', 'x'.repeat(801)])await req('/api/classroom',{...body,text},400);
    // Any grammatical arrangement is checked on the server, including wrong text outside the option list.
    body.text=source.id===15?'she is reads now':source.options[source.answer];
-  }else body.choice=visible.options.indexOf(source.options[source.answer]);
+  }else body.choice=visible.options.indexOf(source.options[source.id===15?1-source.answer:source.answer]);
   tenses=await req('/api/classroom',body);
   const answer=tenses.answers.find(a=>a.question===source.id);
   assert(answer.correct===(source.id===15?0:1)&&answer.reason&&answer.answerText===source.options[source.answer],'Sentence/game canonical scoring failed');
@@ -578,10 +578,75 @@ assert(tenses.certificate.score===20&&tenses.certificate.solveMs===10000&&tenses
 assert((await req('/api/classroom?course='+choresId)).course.id===choresId,'New lesson changed the previous course session');
 await req('/api/teacher',{...tensesSource,studentGender:'female',published:1},200,auth);
 const ownerSavedTenses=await req('/api/classroom?course='+tensesId);
-assert(ownerSavedTenses.course.studentGender==='female'&&ownerSavedTenses.course.questions.filter(q=>q.kind==='sentence-build').length===4&&ownerSavedTenses.certificate.score===20,'Teacher editing lost game type, audience or saved result');
+assert(ownerSavedTenses.course.studentGender==='female'&&ownerSavedTenses.course.questions.slice(12).every(q=>q.kind==='tense-sort'&&/^[A-Za-z]/.test(q.prompt))&&ownerSavedTenses.certificate.score===20,'Teacher editing lost game type, audience or saved result');
 const lesson02Html=await(await mf.dispatchFetch('https://course.test/?course='+tensesId)).text();
 assert(lesson02Html.includes('تمارين الكتاب')&&lesson02Html.includes('فيديوهات قصيرة')&&lesson02Html.includes('الصورة نفسها')&&lesson02Html.includes('الدرس 02'),'Interactive lesson UI missing');
-console.log('PASS: grade-four lesson 02, independent sessions, sequential stations, required scored game, protected answer keys, arbitrary sentence correction, saved typed response, retry guards and best certificate.');
+console.log('PASS: grade-four lesson 02, independent sessions, sequential stations, required English sentence game, protected answer keys, retry guards and best certificate.');
+
+
+// Update only the known original game. Carry the first 12 answers/times forward,
+// preserve earned certificates/history, and guard concurrent tabs and stale posts.
+const originalTenses=JSON.parse(readFileSync(project+'scripts/fixtures/tenses-v1.json','utf8'));
+assert(originalTenses.definition.questions.filter(q=>q.kind==='sentence-build').length===4,'Regression fixture must contain the genuine old game');
+const existingTensesCookies={...cookies};
+await req('/api/teacher',{...originalTenses,studentGender:'female',published:1},200,auth);
+const parsedOldOwner=(await req('/api/teacher',null,200,auth)).courses.find(c=>c.id===tensesId);
+assert(parsedOldOwner.definition.questions.slice(12).every(q=>q.kind==='tense-sort'&&/^[A-Za-z]/.test(q.prompt))&&JSON.stringify(parsedOldOwner.definition.questions.slice(0,12))===JSON.stringify(originalTenses.definition.questions.slice(0,12)),'Stored owner course did not receive only the revised game');
+for(const complete of [true,false]){
+ cookies={};let state=await req('/api/classroom',{action:'start',course:tensesId,name:complete?'اختبار تحديث لعبة مكتملة':'اختبار تحديث لعبة جزئية'});
+ const student=state.student.id,questions=originalTenses.definition.questions.slice(0,complete?20:5),completed=complete?'2026-10-12T10:00:00.000Z':null;
+ await db.prepare('UPDATE students SET snapshot=?,completed=? WHERE id=?').bind(JSON.stringify(originalTenses),completed,student).run();
+ await db.batch(questions.flatMap(q=>[
+  db.prepare('INSERT INTO answers(student,question,choice,correct) VALUES(?,?,?,?)').bind(student,q.id,q.answer,1),
+  db.prepare("INSERT INTO student_answer_times(student,attempt,stage,question,elapsed_ms) VALUES(?,1,'quiz',?,1000)").bind(student,q.id)
+ ]));
+ await db.batch(Array.from({length:complete?4:2},(_,i)=>db.prepare('INSERT INTO reads(student,lesson) VALUES(?,?)').bind(student,i)));
+ if(complete)await db.prepare('INSERT INTO student_sentence_answers(student,attempt,question,response) VALUES(?,1,15,?)').bind(student,'she is reading a comic book now').run();
+ const oldAnswers=(await db.prepare('SELECT question,choice,correct FROM answers WHERE student=? AND question<=12 ORDER BY question').bind(student).all()).results;
+ // Both requests may initially read the old snapshot; one atomic fork must win.
+ const concurrent=await Promise.all([req('/api/classroom?course='+tensesId),req('/api/classroom?course='+tensesId)]);
+ state=await req('/api/classroom?course='+tensesId);
+ assert(concurrent.every(d=>d.student.attempt===2&&d.course.questions.slice(12).every(q=>q.kind==='tense-sort')),'Concurrent update returned an obsolete attempt or game');
+ assert(state.student.attempt===2&&state.answers.length===(complete?12:5)&&state.reads.length===(complete?3:2)&&!state.student.completed,'Update reset quiz progress or retained old-game completion');
+ assert(JSON.stringify((await db.prepare('SELECT question,choice,correct FROM answers WHERE student=? ORDER BY question').bind(student).all()).results)===JSON.stringify(oldAnswers),'Canonical quiz choices changed during update');
+ const archived=(await db.prepare('SELECT * FROM student_attempts WHERE student=?').bind(student).all()).results;
+ assert(archived.length===1&&archived[0].attempt===1&&archived[0].score===questions.length&&archived[0].completed===completed&&JSON.parse(archived[0].answers).length===questions.length,'Old game history was lost or archived twice');
+ assert((await db.prepare("SELECT COUNT(*) n,SUM(elapsed_ms) elapsed FROM student_answer_times WHERE student=? AND attempt=2 AND stage='quiz'").bind(student).first()).elapsed===(complete?12000:5000),'Quiz solve time was not carried forward');
+ if(complete){
+  assert(state.certificate?.score===20&&state.certificate.solveMs===20000&&state.leaderboard.find(r=>r.id===student).score===20,'Old best grade/certificate/timing was lost');
+  assert((await db.prepare('SELECT response FROM student_sentence_answers WHERE student=? AND attempt=1 AND question=15').bind(student).first()).response==='she is reading a comic book now','Archived typed response was lost');
+ }else assert(!state.certificate,'Partial progress created an unearned certificate');
+ await req('/api/classroom',{action:'answer',course:tensesId,attempt:1,question:complete?13:6,choice:0},409);
+ await req('/api/classroom',{action:'complete',course:tensesId},400);
+ for(const source of tensesSource.definition.questions.filter(q=>q.id>(complete?12:5))){
+  if(!state.reads.includes(source.lesson))state=await req('/api/classroom',{action:'read',course:tensesId,lesson:source.lesson});
+  const visible=state.course.questions.find(q=>q.id===source.id);
+  state=await req('/api/classroom',{action:'answer',course:tensesId,question:source.id,choice:visible.options.indexOf(source.options[source.answer]),elapsedMs:500});
+ }
+ state=await req('/api/classroom',{action:'complete',course:tensesId});
+ assert(state.certificate.score===20&&state.certificate.solveMs===(complete?16000:12500)&&state.leaderboard.filter(r=>r.id===student).length===1,'Finishing updated game did not preserve whole-journey timing and one best leaderboard entry');
+ assert((await req('/api/classroom?course='+tensesId)).student.attempt===2&&(await db.prepare('SELECT COUNT(*) n FROM student_attempts WHERE student=?').bind(student).first()).n===1,'Reload repeated the game update');
+}
+// A teacher's changed quiz key must never inherit scores from a different quiz.
+cookies={};let guarded=await req('/api/classroom',{action:'start',course:tensesId,name:'اختبار اختلاف مفتاح التصحيح'});
+const editedOld=structuredClone(originalTenses);editedOld.definition.questions[0].answer=1;
+await db.prepare('UPDATE students SET snapshot=? WHERE id=?').bind(JSON.stringify(editedOld),guarded.student.id).run();
+guarded=await req('/api/classroom?course='+tensesId);
+assert(guarded.student.attempt===1&&guarded.course.questions.filter(q=>q.kind==='sentence-build').length===4,'Update carried answers across a changed grading key');
+// Arbitrary sentence-building still works for teacher-created and legacy courses.
+const sentenceCourse={...originalTenses,id:'7ee582a0-54d7-4077-aa24-529a1ae6f353',title:'اختبار ترتيب الجملة',definition:{lessons:[originalTenses.definition.lessons[3]],questions:[{...originalTenses.definition.questions[14],id:1,lesson:0}]}};
+await req('/api/teacher',sentenceCourse,200,auth);
+let arranged=await req('/api/classroom',{action:'start',course:sentenceCourse.id,name:'اختبار حفظ ترتيب الكلمات'});
+arranged=await req('/api/classroom',{action:'read',course:sentenceCourse.id,lesson:0});
+for(const text of ['', '<script>', 'x'.repeat(801)])await req('/api/classroom',{action:'answer',course:sentenceCourse.id,question:1,text},400);
+arranged=await req('/api/classroom',{action:'answer',course:sentenceCourse.id,question:1,text:'she is reads now',elapsedMs:1000});
+assert(arranged.answers[0].response==='she is reads now'&&arranged.answers[0].correct===0,'Arbitrary wrong arrangement was not graded/preserved');
+arranged=await req('/api/classroom',{action:'answer',course:sentenceCourse.id,question:1,text:sentenceCourse.definition.questions[0].options[0]});
+assert(arranged.answers[0].response==='she is reads now'&&arranged.answers[0].correct===0,'Repeated arrangement overwrote the first answer');
+await req('/api/teacher',{id:sentenceCourse.id},200,auth,'DELETE');
+cookies=existingTensesCookies;
+await req('/api/teacher',{...tensesSource,studentGender:'female',published:1},200,auth);
+console.log('PASS: English sentence classification, protected canonical keys, single concurrent game update, retained quiz answers/times, old best certificates/history, partial progress, stale requests, changed-key guard and legacy sentence-building.');
 
 // Recovery revokes existing sessions, expiration denies access, logout revokes.
 const oldAuth={...auth};

@@ -1,0 +1,382 @@
+{
+  "id": "present-tenses-grade-4-02",
+  "grade": "grade-4",
+  "title": "كل يوم أم الآن؟ · Simple Present & Present Progressive",
+  "description": "الدرس 02: ثلاثة مشاهد قصيرة للمقارنة والإثبات والنفي والسؤال، لعبة محقق الزمن، فيديوهات قصيرة وجميع تمارين كتاب الطالب والنشاط مع التصحيح.",
+  "published": 1,
+  "definition": {
+    "lessons": [
+      {
+        "title": "كل يوم أم الآن؟",
+        "en": "Every day or right now?",
+        "tag": "01",
+        "intro": "الصورة نفسها يمكن أن تصف عادةً أو حدثًا الآن. اضغط «كل يوم» ثم «الآن» وشاهد كيف تتغير الجملة.",
+        "formula": "I read every day. ↔ I am reading now.",
+        "rules": [
+          [
+            "عادة تتكرر",
+            "كل يوم، عادةً، دائمًا: نستخدم المضارع البسيط. لا يعني ذلك أن الفعل يحدث أمامنا الآن.",
+            "She reads comic books every day."
+          ],
+          [
+            "حدث يحدث الآن",
+            "الآن أو في هذه اللحظة: نستخدم am / is / are ثم فعلًا ينتهي بـ ing.",
+            "She is reading a comic book now."
+          ],
+          [
+            "الكلمات تساعد، والمعنى هو الأساس",
+            "every day وalways وusually وsometimes للعادات. now وright now وat the moment للأحداث الحالية.",
+            "They visit their grandparents. They are visiting them now."
+          ]
+        ],
+        "note": "Present Progressive وPresent Continuous اسمان للزمن نفسه: المضارع المستمر.",
+        "example": "I play football every day. I am playing football now.",
+        "translation": "ألعب كرة القدم كل يوم. أنا ألعب كرة القدم الآن."
+      },
+      {
+        "title": "مصنع الجملة: أثبت وأنفِ",
+        "en": "Affirmative & Negative",
+        "tag": "02",
+        "intro": "غيّر الفاعل والزمن، ثم اضغط «إثبات» أو «نفي». قطع الجملة ستتحرك إلى أماكنها.",
+        "formula": "He reads. / He doesn’t read. ↔ He is reading. / He isn’t reading.",
+        "rules": [
+          [
+            "إثبات البسيط",
+            "I / you / we / they مع الفعل الأساسي. he / she / it غالبًا نضيف s أو es: reads، goes، catches.",
+            "I read. She reads. He catches the bus."
+          ],
+          [
+            "نفي البسيط",
+            "do not (don’t) مع I / you / we / they. does not (doesn’t) مع he / she / it. بعد doesn’t يعود الفعل بدون s.",
+            "She doesn’t read. We don’t visit them on Fridays."
+          ],
+          [
+            "إثبات المستمر ونفيه",
+            "I am، he / she / it is، you / we / they are. نضيف ing للفعل. للنفي نضع not بعد am / is / are.",
+            "I am reading. He is not reading. They aren’t reading."
+          ]
+        ],
+        "note": "لا نقول She doesn’t reads. بعد does وdoesn’t نكتب read بدون s. وفي المستمر لا ننسى am / is / are.",
+        "example": "He doesn’t catch the bus every day. He is not catching the bus now.",
+        "translation": "هو لا يستقل الحافلة كل يوم. هو لا يستقل الحافلة الآن."
+      },
+      {
+        "title": "كيف أسأل وأجيب؟",
+        "en": "Questions & Short Answers",
+        "tag": "03",
+        "intro": "في البسيط نبدأ بـ Do أو Does. في المستمر نضع am / is / are قبل الفاعل. اضغط الأزرار لتبديل السؤال.",
+        "formula": "Do you read? / Does he read? ↔ Are you reading? / Is he reading?",
+        "rules": [
+          [
+            "سؤال البسيط",
+            "Do + I / you / we / they + الفعل؟ Does + he / she / it + الفعل بدون s؟",
+            "Do they visit their grandparents? Yes, they do. / No, they don’t."
+          ],
+          [
+            "سؤال المستمر",
+            "Am / Is / Are + الفاعل + الفعل مع ing؟ إجابة السؤال تستعمل am / is / are أيضًا.",
+            "Are they visiting their grandparents now? Yes, they are. / No, they aren’t."
+          ],
+          [
+            "السؤال الذي يبدأ بـ What",
+            "للعادة: What do you do on weekends? للآن: What are you doing now? هذه الأسئلة تحتاج معلومة، وليس Yes أو No فقط.",
+            "What are you reading now? I am reading a comic book."
+          ]
+        ],
+        "note": "في هذا الدرس like وlove وneed وwant تصف شعورًا أو حاجة أو رغبة؛ نستخدمها بالبسيط، حتى لو نتحدث الآن: Do you need help? لا نقول Are you needing help?",
+        "example": "Does she catch the bus every day? Is she catching the bus now?",
+        "translation": "هل تستقل الحافلة كل يوم؟ هل تستقل الحافلة الآن؟"
+      },
+      {
+        "title": "لعبة: كل يوم أم الآن؟",
+        "en": "Time Detectives",
+        "tag": "04",
+        "intro": "أنت محقق الزمن! شاهد المشهد وعلامة الوقت، ثم اختر الزمن أو رتّب كلمات الجملة. اللعبة مطلوبة وتدخل نقاطها في النتيجة.",
+        "formula": "Look → choose the tense → build the sentence",
+        "rules": [
+          [
+            "راقب علامة الوقت",
+            "التقويم يعني عادة تتكرر، والساعة مع NOW تعني حدثًا الآن.",
+            "Every day → Simple Present. Now → Present Progressive."
+          ],
+          [
+            "رتّب الكلمات",
+            "اضغط الكلمات لتضعها في مسار الجملة من اليسار إلى اليمين. اضغط كلمة في المسار لإعادتها إلى صندوق الكلمات.",
+            "She + is + reading + a + comic + book + now."
+          ],
+          [
+            "تعلم من الخطأ",
+            "تُحسب الإجابة الأولى، ويظهر التصحيح وسببه. تستطيع إعادة الدرس لتحسين نتيجتك؛ نحتفظ بأفضل محاولة مكتملة.",
+            "Does + he + read…? Is + he + reading…?"
+          ]
+        ],
+        "note": "لا توجد عقوبة تمنعك من إكمال التعلّم. اقرأ سبب التصحيح ثم تابع، وأعد المحاولة لتحسين النتيجة.",
+        "example": "They aren’t playing football now.",
+        "translation": "هم لا يلعبون كرة القدم الآن."
+      }
+    ],
+    "questions": [
+      {
+        "id": 1,
+        "lesson": 0,
+        "prompt": "She ___ comic books every day.",
+        "options": [
+          "reads",
+          "is reading",
+          "read"
+        ],
+        "answer": 0,
+        "reason": "every day = كل يوم، أي عادة. مع She نستخدم reads في المضارع البسيط. المعنى: تقرأ القصص المصورة كل يوم.",
+        "picture": "read-day"
+      },
+      {
+        "id": 2,
+        "lesson": 0,
+        "prompt": "Omar ___ his comic book now.",
+        "options": [
+          "reads",
+          "is reading",
+          "read"
+        ],
+        "answer": 1,
+        "reason": "now = الآن. عمر يقرأ في هذه اللحظة: is + reading. المعنى: عمر يقرأ كتابه المصور الآن.",
+        "picture": "read-now"
+      },
+      {
+        "id": 3,
+        "lesson": 0,
+        "prompt": "Their mom always ___ them a ride.",
+        "options": [
+          "is giving",
+          "give",
+          "gives"
+        ],
+        "answer": 2,
+        "reason": "always = دائمًا، أي عادة. their mom مفرد مثل she، فنستخدم gives. المعنى: أمهم تقلّهم دائمًا.",
+        "picture": "drive-day"
+      },
+      {
+        "id": 4,
+        "lesson": 0,
+        "prompt": "We use am / is / are + verb-ing for…",
+        "options": [
+          "Simple Present",
+          "Present Progressive"
+        ],
+        "answer": 1,
+        "reason": "am / is / are + فعل مع ing هو تركيب المضارع المستمر، ويسمى أيضًا Present Continuous."
+      },
+      {
+        "id": 5,
+        "lesson": 1,
+        "prompt": "He ___ the bus every morning.",
+        "options": [
+          "catch",
+          "catches",
+          "is catch"
+        ],
+        "answer": 1,
+        "reason": "every morning عادة متكررة. مع He نضيف es إلى catch فتصبح catches. المعنى: يستقل الحافلة كل صباح.",
+        "picture": "bus-day"
+      },
+      {
+        "id": 6,
+        "lesson": 1,
+        "prompt": "Amina ___ a big breakfast in the morning.",
+        "options": [
+          "doesn’t have",
+          "doesn’t has",
+          "don’t have"
+        ],
+        "answer": 0,
+        "reason": "أمينة مثل she، لذلك نستخدم doesn’t ثم have بصيغته الأساسية دون s. المعنى: أمينة لا تتناول إفطارًا كبيرًا صباحًا."
+      },
+      {
+        "id": 7,
+        "lesson": 1,
+        "prompt": "They ___ playing football now.",
+        "options": [
+          "is not",
+          "are not",
+          "do not"
+        ],
+        "answer": 1,
+        "reason": "They تحتاج are، ثم not للنفي، ثم playing. المعنى: هم لا يلعبون كرة القدم الآن.",
+        "picture": "football-now"
+      },
+      {
+        "id": 8,
+        "lesson": 1,
+        "prompt": "Asma ___ her homework now.",
+        "options": [
+          "does not do",
+          "is not doing",
+          "is not do"
+        ],
+        "answer": 1,
+        "reason": "now يدل هنا على الحدث الحالي. نفي المستمر: is not + doing. المعنى: أسماء لا تؤدي واجبها الآن.",
+        "picture": "homework-now"
+      },
+      {
+        "id": 9,
+        "lesson": 2,
+        "prompt": "___ you help your grandparents on weekends?",
+        "options": [
+          "Are",
+          "Do",
+          "Does"
+        ],
+        "answer": 1,
+        "reason": "on weekends عادة. مع you نبدأ السؤال بـ Do ثم help بدون ing. المعنى: هل تساعد جدك وجدتك في عطلة نهاية الأسبوع؟",
+        "picture": "garden-day"
+      },
+      {
+        "id": 10,
+        "lesson": 2,
+        "prompt": "___ she catching the bus now?",
+        "options": [
+          "Does",
+          "Is",
+          "Do"
+        ],
+        "answer": 1,
+        "reason": "السؤال عن الآن. نضع Is قبل she ثم catching. المعنى: هل تستقل الحافلة الآن؟",
+        "picture": "bus-now"
+      },
+      {
+        "id": 11,
+        "lesson": 2,
+        "prompt": "Are they reading now? — No, they ___.",
+        "options": [
+          "don’t",
+          "doesn’t",
+          "aren’t"
+        ],
+        "answer": 2,
+        "reason": "السؤال يبدأ بـ Are، لذا الإجابة تستعمل are: No, they aren’t. لا نستعمل don’t مع سؤال المستمر.",
+        "picture": "read-now"
+      },
+      {
+        "id": 12,
+        "lesson": 2,
+        "prompt": "___ you need some help?",
+        "options": [
+          "Are",
+          "Do",
+          "Is"
+        ],
+        "answer": 1,
+        "reason": "need تصف حاجة وليست حركة مستمرة في هذا الدرس. نقول Do you need some help? = هل تحتاج إلى مساعدة؟"
+      },
+      {
+        "id": 13,
+        "lesson": 3,
+        "prompt": "يقرأ الطفل كل يوم. اختر الزمن المناسب.",
+        "options": [
+          "Simple Present",
+          "Present Progressive"
+        ],
+        "answer": 0,
+        "reason": "كل يوم تعني عادة تتكرر، لذلك نستخدم المضارع البسيط.",
+        "picture": "read-day",
+        "kind": "tense-sort"
+      },
+      {
+        "id": 14,
+        "lesson": 3,
+        "prompt": "الأطفال يلعبون كرة القدم الآن. اختر الزمن المناسب.",
+        "options": [
+          "Simple Present",
+          "Present Progressive"
+        ],
+        "answer": 1,
+        "reason": "الحدث يجري الآن، لذلك نستخدم المضارع المستمر: They are playing football now.",
+        "picture": "football-now",
+        "kind": "tense-sort"
+      },
+      {
+        "id": 15,
+        "lesson": 3,
+        "prompt": "رتّب جملة: هي تقرأ كتابًا مصورًا الآن.",
+        "options": [
+          "She is reading a comic book now.",
+          "She reading a comic book now.",
+          "She reads a comic book now."
+        ],
+        "answer": 0,
+        "reason": "المستمر مع She يحتاج is ثم reading. الجملة: She is reading a comic book now.",
+        "picture": "read-now",
+        "kind": "sentence-build"
+      },
+      {
+        "id": 16,
+        "lesson": 3,
+        "prompt": "رتّب جملة: هو لا يستقل الحافلة كل يوم.",
+        "options": [
+          "He doesn’t catch the bus every day.",
+          "He doesn’t catches the bus every day.",
+          "He don’t catch the bus every day."
+        ],
+        "answer": 0,
+        "reason": "مع He نستخدم doesn’t، ثم catch بدون es. الجملة: He doesn’t catch the bus every day.",
+        "picture": "bus-day",
+        "kind": "sentence-build"
+      },
+      {
+        "id": 17,
+        "lesson": 3,
+        "prompt": "رتّب سؤالًا: هل يقرأ كل يوم؟",
+        "options": [
+          "Does he read every day?",
+          "Does he reads every day?",
+          "Do he read every day?"
+        ],
+        "answer": 0,
+        "reason": "سؤال البسيط مع he يبدأ بـ Does، ثم he، ثم read بدون s.",
+        "picture": "read-day",
+        "kind": "sentence-build"
+      },
+      {
+        "id": 18,
+        "lesson": 3,
+        "prompt": "رتّب سؤالًا: هل هم يلعبون كرة القدم الآن؟",
+        "options": [
+          "Are they playing football now?",
+          "Do they playing football now?",
+          "Are they play football now?"
+        ],
+        "answer": 0,
+        "reason": "سؤال المستمر مع they يبدأ بـ Are، ثم they، ثم playing.",
+        "picture": "football-now",
+        "kind": "sentence-build"
+      },
+      {
+        "id": 19,
+        "lesson": 3,
+        "prompt": "أمي تقود السيارة إلى العمل كل صباح. اختر الزمن.",
+        "options": [
+          "Simple Present",
+          "Present Progressive"
+        ],
+        "answer": 0,
+        "reason": "كل صباح عادة متكررة: My mother drives to work every morning.",
+        "picture": "drive-day",
+        "kind": "tense-sort"
+      },
+      {
+        "id": 20,
+        "lesson": 3,
+        "prompt": "الطفل يؤدي واجبه في هذه اللحظة. اختر الزمن.",
+        "options": [
+          "Simple Present",
+          "Present Progressive"
+        ],
+        "answer": 1,
+        "reason": "في هذه اللحظة = at the moment، وهو حدث حالي: He is doing his homework.",
+        "picture": "homework-now",
+        "kind": "tense-sort"
+      }
+    ]
+  },
+  "updated": "2026-10-12"
+}

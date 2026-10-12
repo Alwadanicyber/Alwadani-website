@@ -2,6 +2,23 @@ export const TENSES_COURSE_ID='present-tenses-grade-4-02';
 export type PresentTense='simple'|'continuous';
 export const tenseNames={simple:'Simple Present',continuous:'Present Progressive'};
 export const tenseArabic={simple:'المضارع البسيط',continuous:'المضارع المستمر'};
+// A clue helps the reader understand time; it is not a grading key or a universal tense rule.
+export function sentenceTimeClue(sentence:string){
+ const clues:[RegExp,string,string][]=[
+  [/\bright now\b/i,'الآن تمامًا','تعبير يساعدك على معرفة أن الحدث يحدث في هذه اللحظة.'],
+  [/\bat the moment\b/i,'في هذه اللحظة','تعبير يساعدك على معرفة أن الحدث يحدث في هذه اللحظة.'],
+  [/\bevery day\b/i,'كل يوم','شيء يتكرر؛ فكّر في العادة.'],
+  [/\bevery morning\b/i,'كل صباح','شيء يتكرر؛ فكّر في العادة.'],
+  [/\bevery week\b/i,'كل أسبوع','شيء يتكرر؛ فكّر في العادة.'],
+  [/\bon weekends\b/i,'في عطلات نهاية الأسبوع','شيء يتكرر؛ فكّر في العادة.'],
+  [/\busually\b/i,'عادةً','تخبرنا أن الفعل يتكرر في أغلب الأوقات.'],
+  [/\balways\b/i,'دائمًا','تساعدنا هنا على فهم التكرار؛ اقرأ معنى الجملة وتركيبها أيضًا.'],
+  [/\bsometimes\b/i,'أحيانًا','تخبرنا أن الفعل يتكرر من وقت إلى آخر.'],
+  [/\bnow\b/i,'الآن','تعبير يساعدك على معرفة وقت الحدث. اقرأ معنى الفعل وتركيب الجملة أيضًا.'],
+ ];
+ for(const [pattern,arabic,explanation] of clues){const match=pattern.exec(sentence);if(match)return {text:match[0],index:match.index,arabic,explanation};}
+ return null;
+}
 export const sentenceResponseSchema=`CREATE TABLE IF NOT EXISTS student_sentence_answers(student TEXT NOT NULL REFERENCES students(id),attempt INTEGER NOT NULL,question INTEGER NOT NULL,response TEXT NOT NULL,PRIMARY KEY(student,attempt,question))`;
 export function normalizeSentence(value:string){
   return value.trim().toLowerCase().replace(/[’‘]/g,"'")
