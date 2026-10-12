@@ -23,7 +23,8 @@
     "test:exports": "node scripts/check-exports.mjs",
     "test:ranking": "node --experimental-strip-types scripts/check-ranking-time.mjs",
     "test:audience": "node scripts/check-lesson-audience.mjs",
-    "test:competition": "node --experimental-strip-types scripts/check-competition.mjs"
+    "test:competition": "node --experimental-strip-types scripts/check-competition.mjs",
+    "test:tenses": "node --experimental-strip-types scripts/check-tenses.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

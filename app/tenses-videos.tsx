@@ -1,0 +1,10 @@
+'use client';
+import {useState} from 'react';
+import {Play,Video,ExternalLink} from 'lucide-react';
+import {tenseVideos} from '@/lib/tenses-learning';
+export default function TensesVideos(){
+ const [index,setIndex]=useState(0),[playing,setPlaying]=useState(false),selected=tenseVideos[index];
+ const watch=selected.watch||'https://www.youtube.com/watch?v='+selected.id;
+ const embed='https://www.youtube-nocookie.com/embed/'+selected.id+'?rel=0'+(selected.start?'&start='+selected.start:'')+(selected.end?'&end='+selected.end:'');
+ return <section className="standalone tense-videos"><div className="section-heading"><div><div className="eyebrow">WATCH & UNDERSTAND</div><h2>فيديوهات تساعدك على الفهم</h2><p>شاهد مقطعًا قصيرًا، ثم جرّب تركيب الجملة بنفسك. المشاهدة اختيارية.</p></div><Video size={34}/></div><div className="tense-video-list">{tenseVideos.map((video,i)=><button key={video.id} className={'tense-video-card'+(i===index?' selected':'')} aria-pressed={i===index} onClick={()=>{setIndex(i);setPlaying(false);}}><span className="video-card-play"><Play size={23}/></span><strong>{video.title}</strong><small>{video.publisher}{video.length?' · '+video.length:''}</small></button>)}</div><div className="tense-selected-video"><h3>{selected.title}</h3><p>{selected.focus}</p><div className="video-actions"><button className="primary" onClick={()=>setPlaying(!playing)} aria-expanded={playing}><Play size={17}/>{playing?'إخفاء المشغل':'شاهد هنا'}</button><a className="secondary" href={watch} target="_blank" rel="noopener noreferrer"><ExternalLink size={16}/>افتح في يوتيوب</a></div>{playing&&<div className="video-player"><iframe key={selected.id} src={embed} title={selected.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen/></div>}<p className="tense-tip">إذا لم يعمل المشغل، افتح المقطع في يوتيوب. الشرح العربي المكتوب متاح في محطات الدرس.</p></div></section>;
+}

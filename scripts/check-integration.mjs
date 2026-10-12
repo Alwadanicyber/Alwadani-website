@@ -18,7 +18,7 @@ let cookies={};
 const courseAttempts={};
 async function req(path,body,expected=200,headers={},method=body?'POST':'GET'){if(body&&path==='/api/classroom'&&body.action!=='start'&&body.attempt===undefined&&courseAttempts[body.course||'life-stories'])body={...body,attempt:courseAttempts[body.course||'life-stories']};const r=await mf.dispatchFetch('https://course.test'+path,{method,headers:{'Content-Type':'application/json',origin:'https://course.test',cookie:Object.entries(cookies).map(([k,v])=>k+'='+v).join('; '),...headers},...(body?{body:JSON.stringify(body)}:{})});if(r.headers.get('set-cookie')){const c=r.headers.get('set-cookie').split(';')[0];const i=c.indexOf('=');cookies[c.slice(0,i)]=c.slice(i+1);}const d=await r.json();if(r.status===200&&d.student&&d.course)courseAttempts[d.course.id]=d.student.attempt;if(r.status!==expected)throw new Error(JSON.stringify({path,status:r.status,expected,d,body}));return d;}
 function assert(v,m){if(!v)throw new Error(m);}
-try{const db=await mf.getD1Database('DB');for(const file of readdirSync(project+'drizzle').filter(x=>x.endsWith('.sql')&&!x.startsWith('0005_')&&!x.startsWith('0010_')&&!x.startsWith('0011_')).sort()){for(const s of readFileSync(project+'drizzle/'+file,'utf8').split('--> statement-breakpoint'))await db.prepare(s.trim()).run();}
+try{const db=await mf.getD1Database('DB');for(const file of readdirSync(project+'drizzle').filter(x=>x.endsWith('.sql')&&!x.startsWith('0005_')&&!x.startsWith('0010_')&&!x.startsWith('0011_')&&!x.startsWith('0012_')).sort()){for(const s of readFileSync(project+'drizzle/'+file,'utf8').split('--> statement-breakpoint'))await db.prepare(s.trim()).run();}
 assert(!(await db.prepare("SELECT name FROM sqlite_master WHERE name='student_moderation'").first()),'Test should begin without the new moderation table');
 // Public search metadata, sitemap and crawler guidance work without a login.
 const siteOrigin='https://alwadani-website.jubranii45.workers.dev';
@@ -56,10 +56,10 @@ for(let i=0;i<5;i++)await req('/api/teacher/auth',{action:'login',username:'alwa
 await req('/api/teacher/auth',{action:'login',username:'alwadani',password},429,{'cf-connecting-ip':'198.51.100.5'});
 assert((await db.prepare('SELECT COUNT(*) AS n FROM teacher_account').first()).n===1,'Extra owner created');
 await req('/api/teacher',null,403);await req('/api/teacher',{},403);await req('/api/teacher',null,403,{'oai-authenticated-user-id':'other','oai-authenticated-user-email':'other@test.example'});
-const initial=await req('/api/courses');assert(initial.courses.length===2,'Built-in courses missing');assert(initial.courses.find(c=>c.id==='life-stories')?.grade==='grade-9','Original grade incorrect');assert((await req('/api/courses?grade=grade-9')).courses.length===1,'Third middle class missing');assert((await req('/api/courses?grade=general')).courses.length===0,'Original remains in general');
+const initial=await req('/api/courses');assert(initial.courses.length===3,'Built-in courses missing');assert(initial.courses.find(c=>c.id==='life-stories')?.grade==='grade-9','Original grade incorrect');assert((await req('/api/courses?grade=grade-9')).courses.length===1,'Third middle class missing');assert((await req('/api/courses?grade=general')).courses.length===0,'Original remains in general');
 await req('/api/teacher',{},403,{...auth,origin:'https://evil.test'});
 await req('/api/teacher',{},403,{...auth,origin:''});
-const admin=await req('/api/teacher',null,200,auth);assert(admin.courses.length===2,'Owner cannot load courses');
+const admin=await req('/api/teacher',null,200,auth);assert(admin.courses.length===3,'Owner cannot load courses');
 // The fourth-grade announcement is active by default; unscheduled lessons stay open.
 const competitionPath='/api/teacher/competition';
 assert(!(await db.prepare("SELECT name FROM sqlite_master WHERE name='course_competitions'").first()),'Competition table should be added lazily');
@@ -72,8 +72,8 @@ await db.prepare(readFileSync(project+'drizzle/0011_course_competitions.sql','ut
 await req(competitionPath,{course:'chores-grade-4',enabled:false,showCountdown:true,prize:''},200,auth,'PUT');
 const lesson={title:'المضارع البسيط',en:'Simple Present',tag:'01',intro:'شرح الدرس',formula:'Subject + verb',rules:[['المفرد','نضيف s مع he','He works.']],note:'',example:'He works.',translation:'هو يعمل.'};
 const payload={title:'درس جديد',description:'وصف',grade:'grade-4',published:0,definition:{lessons:[lesson],questions:[{id:1,lesson:0,prompt:'He ___ every day.',options:['work','works','worked'],answer:1,reason:'مع he في المضارع البسيط نضيف s.'}]}};
-const draft=await req('/api/teacher',payload,200,auth);assert((await req('/api/courses')).courses.length===2,'Draft is visible');assert(!(await(await mf.dispatchFetch('https://course.test/sitemap.xml')).text()).includes('course='+draft.id),'Draft leaked into sitemap');const pub=await req('/api/teacher',{...payload,id:draft.id,published:1},200,auth);assert((await req('/api/courses')).courses.length===3,'Published course missing');assert((await(await mf.dispatchFetch('https://course.test/sitemap.xml')).text()).includes('course='+draft.id),'Published lesson not discoverable in sitemap');
-const fourth=await req('/api/courses?grade=grade-4');assert(fourth.courses.length===2&&fourth.courses.every(c=>c.grade==='grade-4'),'Grade grouping failed');await req('/api/courses?grade=invalid',null,400);
+const draft=await req('/api/teacher',payload,200,auth);assert((await req('/api/courses')).courses.length===3,'Draft is visible');assert(!(await(await mf.dispatchFetch('https://course.test/sitemap.xml')).text()).includes('course='+draft.id),'Draft leaked into sitemap');const pub=await req('/api/teacher',{...payload,id:draft.id,published:1},200,auth);assert((await req('/api/courses')).courses.length===4,'Published course missing');assert((await(await mf.dispatchFetch('https://course.test/sitemap.xml')).text()).includes('course='+draft.id),'Published lesson not discoverable in sitemap');
+const fourth=await req('/api/courses?grade=grade-4');assert(fourth.courses.length===3&&fourth.courses.every(c=>c.grade==='grade-4'),'Grade grouping failed');await req('/api/courses?grade=invalid',null,400);
 await req('/api/classroom',{action:'start',course:draft.id,name:'طالب بدون حساب'});await req('/api/classroom',{action:'complete',course:draft.id},400);await req('/api/classroom',{action:'read',course:draft.id,lesson:0});
 const before=await req('/api/classroom?course='+draft.id);assert(!('answer' in before.course.questions[0])&&!('reason' in before.course.questions[0]),'Answer leaked before solving');
 const a=await req('/api/classroom',{action:'answer',course:draft.id,question:1,choice:before.course.questions[0].options.indexOf('work')});assert(a.answers[0].correct===0&&a.answers[0].reason&&a.answers[0].answerText==='works','Correction failed');
@@ -113,7 +113,7 @@ const custom=await req('/api/classroom?course='+draft.id);assert(custom.student.
 for(const path of ['/', '/?grade=grade-4','/?course=life-stories','/teacher']){const r=await mf.dispatchFetch('https://course.test'+path,{headers:path==='/teacher'?auth:{}});assert(r.status===200,'Render failed '+path);}
 const supportPage=await mf.dispatchFetch('https://course.test/?course=life-stories');const supportHtml=await supportPage.text();assert(supportHtml.includes('شرح إضافي للفهم')&&supportHtml.includes('https://www.youtube.com/watch?v=lHzZVybA5Ao'),'Extra explanations missing');
 
-const exported=await mf.dispatchFetch('https://course.test/api/teacher/export',{headers:auth});const backup=await exported.json();assert(exported.status===200&&exported.headers.get('content-disposition').includes('attachment'),'Owner cannot download backup');assert(backup.format==='alwadani-lessons'&&backup.courses.length===3&&backup.courses.find(c=>c.id===draft.id).definition.questions[0].reason==='شرح جديد','Backup content incomplete');assert(!JSON.stringify(backup).includes('طالب بدون حساب'),'Backup leaked students');assert(!('students' in backup.courses[0]),'Student stats exported');for(const headers of [{},{'oai-authenticated-user-id':'other','oai-authenticated-user-email':'other@test.example'}])assert((await mf.dispatchFetch('https://course.test/api/teacher/export',{headers})).status===403,'Backup authorization failed');
+const exported=await mf.dispatchFetch('https://course.test/api/teacher/export',{headers:auth});const backup=await exported.json();assert(exported.status===200&&exported.headers.get('content-disposition').includes('attachment'),'Owner cannot download backup');assert(backup.format==='alwadani-lessons'&&backup.courses.length===4&&backup.courses.find(c=>c.id===draft.id).definition.questions[0].reason==='شرح جديد','Backup content incomplete');assert(!JSON.stringify(backup).includes('طالب بدون حساب'),'Backup leaked students');assert(!('students' in backup.courses[0]),'Student stats exported');for(const headers of [{},{'oai-authenticated-user-id':'other','oai-authenticated-user-email':'other@test.example'}])assert((await mf.dispatchFetch('https://course.test/api/teacher/export',{headers})).status===403,'Backup authorization failed');
 const stored=await db.prepare('SELECT choice,correct FROM answers WHERE student=? AND question=1').bind(end.student.id).first();assert(stored.choice===keys[0]&&stored.correct===1,'Stored choice is not canonical');
 assert(backup.courses.find(c=>c.id===draft.id).studentGender==='female'&&backup.courses.find(c=>c.id===draft.id).definition.studentGender==='female','Lesson export lost the audience choice');
 // Recheck a pre-update canonical saved answer with the new display mapping.
@@ -530,6 +530,59 @@ await req('/api/teacher',{id:eventCourse},200,auth,'DELETE');
 await req(competitionPath,eventBody,404,auth,'PUT');
 console.log('PASS: optional per-lesson countdown, Saudi Wednesday deadline, persistent duration, prize announcement, owner/CSRF validation, deadline boundary, archived pre-deadline best and balloon replay eligibility.');
 
+// Grade-four lesson 02: ordered lessons, sentence construction and complete journey scores.
+const tensesId='present-tenses-grade-4-02',tensesSource=admin.courses.find(c=>c.id===tensesId);
+assert(tensesSource&&tensesSource.grade==='grade-4'&&tensesSource.definition.lessons.length===4&&tensesSource.definition.questions.length===20,'Lesson 02 content is missing');
+const gradeFourNow=(await req('/api/courses?grade=grade-4')).courses;
+assert(gradeFourNow.find(c=>c.id===tensesId)?.sequence===2&&gradeFourNow.find(c=>c.id===choresId)?.sequence===1,'Grade-four lesson numbers are unstable');
+const tensesPublic=await req('/api/classroom?course='+tensesId);
+assert(tensesPublic.course.questions.every(q=>!('answer' in q)&&!('reason' in q))&&!tensesPublic.competition.enabled,'New lesson leaked keys or inherited the old competition deadline');
+let tenses=await req('/api/classroom',{action:'start',course:tensesId,name:'اختبار درس الزمنين'}),tensesStudent=tenses.student.id;
+await req('/api/classroom',{action:'read',course:tensesId,lesson:3},400);
+await req('/api/classroom',{action:'complete',course:tensesId},400);
+assert(await db.prepare("SELECT name FROM sqlite_master WHERE name='student_sentence_answers'").first(),'Sentence response table was not added lazily');
+await db.prepare(readFileSync(project+'drizzle/0012_student_sentence_answers.sql','utf8')).run();
+for(let lesson=0;lesson<4;lesson++){
+ tenses=await req('/api/classroom',{action:'read',course:tensesId,lesson});
+ for(const source of tensesSource.definition.questions.filter(q=>q.lesson===lesson)){
+  const visible=tenses.course.questions.find(q=>q.id===source.id),body={action:'answer',course:tensesId,question:source.id,elapsedMs:1000};
+  if(source.kind==='sentence-build'){
+   for(const text of ['', '<script>', 'x'.repeat(801)])await req('/api/classroom',{...body,text},400);
+   // Any grammatical arrangement is checked on the server, including wrong text outside the option list.
+   body.text=source.id===15?'she is reads now':source.options[source.answer];
+  }else body.choice=visible.options.indexOf(source.options[source.answer]);
+  tenses=await req('/api/classroom',body);
+  const answer=tenses.answers.find(a=>a.question===source.id);
+  assert(answer.correct===(source.id===15?0:1)&&answer.reason&&answer.answerText===source.options[source.answer],'Sentence/game canonical scoring failed');
+  if(source.kind==='sentence-build'){
+   assert(answer.response===body.text,'Student arrangement was not preserved');
+   const repeated=await req('/api/classroom',{...body,text:source.options[source.answer]});
+   assert(repeated.answers.find(a=>a.question===source.id).response===body.text&&repeated.answers.find(a=>a.question===source.id).correct===answer.correct,'Repeated response rewrote first-answer score or text');
+  }
+ }
+ if(lesson===2)await req('/api/classroom',{action:'complete',course:tensesId},400);
+}
+tenses=await req('/api/classroom',{action:'complete',course:tensesId});
+assert(tenses.certificate.score===19&&tenses.certificate.total===20&&tenses.certificate.solveMs===20000&&tenses.leaderboard.find(r=>r.id===tensesStudent).score===19,'Required game or whole-journey timing omitted from leaderboard/certificate');
+const reloadTenses=await req('/api/classroom?course='+tensesId);
+assert(JSON.stringify(reloadTenses.answers)===JSON.stringify(tenses.answers),'Reload lost sentence arrangements');
+const previousTensesAttempt=tenses.student.attempt;
+tenses=await req('/api/classroom',{action:'retry',course:tensesId});
+await req('/api/classroom',{action:'answer',course:tensesId,question:15,text:'He reads.',attempt:previousTensesAttempt},409);
+for(const source of tensesSource.definition.questions){
+ const visible=tenses.course.questions.find(q=>q.id===source.id);
+ tenses=await req('/api/classroom',{action:'answer',course:tensesId,question:source.id,...(source.kind==='sentence-build'?{text:source.options[source.answer]}:{choice:visible.options.indexOf(source.options[source.answer])}),elapsedMs:500});
+}
+tenses=await req('/api/classroom',{action:'complete',course:tensesId});
+assert(tenses.certificate.score===20&&tenses.certificate.solveMs===10000&&tenses.leaderboard.filter(r=>r.id===tensesStudent).length===1&&tenses.bestResult.score===20,'Better lesson-02 retry did not replace the same profile');
+assert((await req('/api/classroom?course='+choresId)).course.id===choresId,'New lesson changed the previous course session');
+await req('/api/teacher',{...tensesSource,studentGender:'female',published:1},200,auth);
+const ownerSavedTenses=await req('/api/classroom?course='+tensesId);
+assert(ownerSavedTenses.course.studentGender==='female'&&ownerSavedTenses.course.questions.filter(q=>q.kind==='sentence-build').length===4&&ownerSavedTenses.certificate.score===20,'Teacher editing lost game type, audience or saved result');
+const lesson02Html=await(await mf.dispatchFetch('https://course.test/?course='+tensesId)).text();
+assert(lesson02Html.includes('تمارين الكتاب')&&lesson02Html.includes('فيديوهات قصيرة')&&lesson02Html.includes('الصورة نفسها')&&lesson02Html.includes('الدرس 02'),'Interactive lesson UI missing');
+console.log('PASS: grade-four lesson 02, independent sessions, sequential stations, required scored game, protected answer keys, arbitrary sentence correction, saved typed response, retry guards and best certificate.');
+
 // Recovery revokes existing sessions, expiration denies access, logout revokes.
 const oldAuth={...auth};
 await req('/api/teacher/auth',{action:'recover',username:'alwadani',password:'New-Teacher-Password-456!',setupKey:'wrong'},403,{'cf-connecting-ip':'198.51.100.10'});
@@ -548,7 +601,7 @@ const unauth=await mf.dispatchFetch('https://course.test/teacher');assert((await
 // Unconfigured installations fail closed even with forged identity headers.
 await mf.setOptions({modules,modulesRoot:root,compatibilityDate:'2026-05-15',compatibilityFlags:['nodejs_compat'],bindings:{},d1Databases:{DB:'test'},cf:false});
 await req('/api/teacher',null,403,forged);await req('/api/teacher/auth',{action:'setup',username:'someone',password,setupKey:ownerKey},503);
-assert((await req('/api/courses')).courses.length===3,'Unconfigured teacher blocks students');
+assert((await req('/api/courses')).courses.length===4,'Unconfigured teacher blocks students');
 let blocked=false;try{requireProductionDatabase({d1_databases:[{binding:'DB',database_id:'00000000-0000-4000-8000-000000000000'}]});}catch{blocked=true;}assert(blocked,'Placeholder deployment accepted');
 console.log('PASS: private teacher records, lazy additive D1 schema, progress/grades/absence persistence, concurrent edit conflicts, isolated copies, record validation, teacher navigation and settings; reversible course deletion and draft restoration; owner-only deletion and restore; CSRF and malformed mutation rejection; original fallback suppression; student records and snapshots preserved; stale editors cannot republish deleted lessons; independent owner setup/login/logout/recovery; secure hashed passwords and sessions; CSRF checks; forged headers denied; rate limit and expiration; deployment placeholder blocked;  export permissions and saved content; third middle placement; stable per-student choice shuffling; canonical scoring; legacy leaderboard;  grade assignment, filtering, saved progress, anonymous isolation, supplemental explanation, owner-only editing; anonymous student start; draft visibility; publishing; corrections; certificate; snapshot preservation; per-course sessions; all 28 original questions; page rendering.');
 }finally{await mf.dispose();}
