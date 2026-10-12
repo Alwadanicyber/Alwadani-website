@@ -85,7 +85,7 @@ export async function POST(req:Request){try{
   if(q.kind==='sentence-build'&&(!response||response.length>800||/[<>\x00-\x1f]/.test(response)))return reply({error:'رتّب كلمات الجملة قبل التحقق.'},400);
   const matched=response?q.options.findIndex(option=>normalizeSentence(option)===normalizeSentence(response)):order[body.choice];
   const choice=matched<0?q.options.findIndex((_,i)=>i!==q.answer):matched,correct=response?normalizeSentence(response)===normalizeSentence(q.options[q.answer]):choice===q.answer;
-  const elapsed=parseSolveMs(body.elapsedMs);
+  const elapsed=courseId===TENSES_COURSE_ID?null:parseSolveMs(body.elapsedMs);
   await db.batch([
    ...(response===null?[]:[db.prepare('INSERT OR IGNORE INTO student_sentence_answers(student,attempt,question,response) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?) AND NOT EXISTS(SELECT 1 FROM answers WHERE student=? AND question=?)').bind(id,attempt,q.id,response,id,attempt,id,q.id)]),
    ...(elapsed===null?[]:[db.prepare("INSERT OR IGNORE INTO student_answer_times(student,attempt,stage,question,elapsed_ms) SELECT ?,?,'quiz',?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?) AND NOT EXISTS(SELECT 1 FROM answers WHERE student=? AND question=?)").bind(id,attempt,q.id,elapsed,id,attempt,id,q.id)]),

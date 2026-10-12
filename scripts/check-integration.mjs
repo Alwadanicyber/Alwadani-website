@@ -563,21 +563,26 @@ for(let lesson=0;lesson<4;lesson++){
  if(lesson===2)await req('/api/classroom',{action:'complete',course:tensesId},400);
 }
 tenses=await req('/api/classroom',{action:'complete',course:tensesId});
-assert(tenses.certificate.score===19&&tenses.certificate.total===20&&tenses.certificate.solveMs===20000&&tenses.leaderboard.find(r=>r.id===tensesStudent).score===19,'Required game or whole-journey timing omitted from leaderboard/certificate');
+assert(tenses.certificate.score===19&&tenses.certificate.total===20&&!('solveMs' in tenses.certificate)&&tenses.leaderboard.find(r=>r.id===tensesStudent).score===19,'Required game or whole-journey timing omitted from leaderboard/certificate');
 const reloadTenses=await req('/api/classroom?course='+tensesId);
 assert(JSON.stringify(reloadTenses.answers)===JSON.stringify(tenses.answers),'Reload lost sentence arrangements');
+const firstTensesOrders=JSON.stringify(tenses.course.questions.map(q=>q.options));
 const previousTensesAttempt=tenses.student.attempt;
 tenses=await req('/api/classroom',{action:'retry',course:tensesId});
+assert(JSON.stringify(tenses.course.questions.map(q=>q.options))!==firstTensesOrders,'Lesson 02 retry did not reshuffle options');
+assert(JSON.stringify((await req('/api/classroom?course='+tensesId)).course.questions)===JSON.stringify(tenses.course.questions),'Lesson 02 choices changed during the same attempt');
 await req('/api/classroom',{action:'answer',course:tensesId,question:15,text:'He reads.',attempt:previousTensesAttempt},409);
 for(const source of tensesSource.definition.questions){
  const visible=tenses.course.questions.find(q=>q.id===source.id);
  tenses=await req('/api/classroom',{action:'answer',course:tensesId,question:source.id,...(source.kind==='sentence-build'?{text:source.options[source.answer]}:{choice:visible.options.indexOf(source.options[source.answer])}),elapsedMs:500});
 }
 tenses=await req('/api/classroom',{action:'complete',course:tensesId});
-assert(tenses.certificate.score===20&&tenses.certificate.solveMs===10000&&tenses.leaderboard.filter(r=>r.id===tensesStudent).length===1&&tenses.bestResult.score===20,'Better lesson-02 retry did not replace the same profile');
+assert(tenses.certificate.score===20&&!('solveMs' in tenses.certificate)&&tenses.leaderboard.filter(r=>r.id===tensesStudent).length===1&&tenses.bestResult.score===20,'Better lesson-02 retry did not replace the same profile');
 assert((await req('/api/classroom?course='+choresId)).course.id===choresId,'New lesson changed the previous course session');
 await req('/api/teacher',{...tensesSource,studentGender:'female',published:1},200,auth);
 const ownerSavedTenses=await req('/api/classroom?course='+tensesId);
+assert(tenses.leaderboard.every(r=>!('solveMs' in r)&&!('estimatedSolveMs' in r))&&!('solveMs' in tenses.bestResult),'Untimed lesson leaked a speed metric');
+assert(!(await db.prepare('SELECT student FROM student_answer_times WHERE student=?').bind(tensesStudent).first()),'Untimed lesson recorded a new duration');
 assert(ownerSavedTenses.course.studentGender==='female'&&ownerSavedTenses.course.questions.slice(12).every(q=>q.kind==='tense-sort'&&/^[A-Za-z]/.test(q.prompt))&&ownerSavedTenses.certificate.score===20,'Teacher editing lost game type, audience or saved result');
 const lesson02Html=await(await mf.dispatchFetch('https://course.test/?course='+tensesId)).text();
 assert(lesson02Html.includes('تمارين الكتاب')&&lesson02Html.includes('فيديوهات قصيرة')&&lesson02Html.includes('الصورة نفسها')&&lesson02Html.includes('الدرس 02'),'Interactive lesson UI missing');
@@ -613,7 +618,7 @@ for(const complete of [true,false]){
  assert(archived.length===1&&archived[0].attempt===1&&archived[0].score===questions.length&&archived[0].completed===completed&&JSON.parse(archived[0].answers).length===questions.length,'Old game history was lost or archived twice');
  assert((await db.prepare("SELECT COUNT(*) n,SUM(elapsed_ms) elapsed FROM student_answer_times WHERE student=? AND attempt=2 AND stage='quiz'").bind(student).first()).elapsed===(complete?12000:5000),'Quiz solve time was not carried forward');
  if(complete){
-  assert(state.certificate?.score===20&&state.certificate.solveMs===20000&&state.leaderboard.find(r=>r.id===student).score===20,'Old best grade/certificate/timing was lost');
+  assert(state.certificate?.score===20&&!('solveMs' in state.certificate)&&state.leaderboard.find(r=>r.id===student).score===20,'Old best grade/certificate/timing was lost');
   assert((await db.prepare('SELECT response FROM student_sentence_answers WHERE student=? AND attempt=1 AND question=15').bind(student).first()).response==='she is reading a comic book now','Archived typed response was lost');
  }else assert(!state.certificate,'Partial progress created an unearned certificate');
  await req('/api/classroom',{action:'answer',course:tensesId,attempt:1,question:complete?13:6,choice:0},409);
@@ -624,9 +629,26 @@ for(const complete of [true,false]){
   state=await req('/api/classroom',{action:'answer',course:tensesId,question:source.id,choice:visible.options.indexOf(source.options[source.answer]),elapsedMs:500});
  }
  state=await req('/api/classroom',{action:'complete',course:tensesId});
- assert(state.certificate.score===20&&state.certificate.solveMs===(complete?16000:12500)&&state.leaderboard.filter(r=>r.id===student).length===1,'Finishing updated game did not preserve whole-journey timing and one best leaderboard entry');
+ assert(state.certificate.score===20&&!('solveMs' in state.certificate)&&state.leaderboard.filter(r=>r.id===student).length===1,'Finishing updated game did not preserve whole-journey timing and one best leaderboard entry');
  assert((await req('/api/classroom?course='+tensesId)).student.attempt===2&&(await db.prepare('SELECT COUNT(*) n FROM student_attempts WHERE student=?').bind(student).first()).n===1,'Reload repeated the game update');
 }
+// Existing durations do not rank this lesson or select its best equal grade.
+const old20=await db.prepare('SELECT student FROM student_attempts WHERE course=? AND completed IS NOT NULL AND score=20 LIMIT 1').bind(tensesId).first();
+const allTenses=(await req('/api/teacher/students?course='+tensesId,null,200,auth)).participants;
+assert(allTenses.every(r=>!('solveMs' in r)&&!('estimatedSolveMs' in r)),'Teacher participant view leaked lesson 02 durations');
+assert(allTenses.map(r=>r.name).join('|')===[...allTenses].sort((a,b)=>a.name.localeCompare(b.name,'ar')||a.id.localeCompare(b.id)).map(r=>r.name).join('|'),'Learning participants must have neutral name ordering');
+assert(allTenses.find(r=>r.id===old20.student).attempt===2,'A faster archived attempt displaced an equally good current grade');
+const participantCookies={...cookies},orders02=new Set(),gameOrders02=new Set();
+for(let i=0;i<6;i++){
+ cookies={};const session=await req('/api/classroom',{action:'start',course:tensesId,name:'اختبار مواقع الخيارات '+i});
+ orders02.add(JSON.stringify(session.course.questions.map(q=>q.options)));gameOrders02.add(JSON.stringify(session.course.questions.slice(12).map(q=>q.options)));
+ const reload=await req('/api/classroom?course='+tensesId);
+ assert(JSON.stringify(reload.course.questions)===JSON.stringify(session.course.questions),'Lesson 02 options changed on reload');
+ assert(session.course.questions.every((q,i)=>[...q.options].sort().join('|')===[...tensesSource.definition.questions[i].options].sort().join('|')),'Shuffling duplicated or removed a choice');
+}
+assert(orders02.size>1&&gameOrders02.size>1,'New participants receive fixed quiz or game positions');
+cookies=participantCookies;
+console.log('PASS: lesson 02 is untimed on the server, old speed does not affect best grades, participants use name order, no public/owner/certificate durations, no new timing rows, shuffled quiz and game positions with stable reloads.');
 // A teacher's changed quiz key must never inherit scores from a different quiz.
 cookies={};let guarded=await req('/api/classroom',{action:'start',course:tensesId,name:'اختبار اختلاف مفتاح التصحيح'});
 const editedOld=structuredClone(originalTenses);editedOld.definition.questions[0].answer=1;

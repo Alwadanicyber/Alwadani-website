@@ -6,7 +6,7 @@ import {dictationSchema,allDictationResults,DICTATION_POINTS} from './chores-dic
 import {answerTimingSchema,allAnswerTimes} from './answer-timing';
 import {withLeaderboardBaseline,excludedTeacherEntry} from './leaderboard-baselines';
 import {compareResults,betterResult,resultPercent,type Result,type Rank} from './result-ranking';
-import {sentenceResponseSchema} from './tenses-learning';
+import {sentenceResponseSchema,TENSES_COURSE_ID} from './tenses-learning';
 import {getCompetition} from './course-competition';
 import {studentModerationSchema,type StudentParticipation} from './student-moderation';
 export {betterResult,resultPercent} from './result-ranking';
@@ -31,16 +31,19 @@ export async function archiveAndRestart(id:string,attempt:number,course:TeacherC
 }
 export async function classroomResults(course:TeacherCourse,studentId?:string,teacherView=false){
  const db=database();
- const required=course.id===CHORES_COURSE_ID,competition=await getCompetition(course.id),deadline=competition.enabled?competition.endsAt:null;
+ const required=course.id===CHORES_COURSE_ID,learningOnly=course.id===TENSES_COURSE_ID,competition=await getCompetition(course.id),deadline=!learningOnly&&competition.enabled?competition.endsAt:null;
  const [live,history,games,dictations,times,moderation,competitionGames]=await Promise.all([
   db.prepare(`SELECT s.id,s.name,s.created,s.completed,COALESCE(v.attempt,1) AS attempt,COUNT(a.question) AS answered,COALESCE(SUM(a.correct),0) AS score,COALESCE(json_array_length(s.snapshot,'$.definition.questions'),?) AS total,COALESCE(json_extract(s.snapshot,'$.title'),?) AS title FROM students s LEFT JOIN answers a ON a.student=s.id LEFT JOIN student_sessions v ON v.student=s.id WHERE s.course=? GROUP BY s.id`).bind(course.definition.questions.length,course.title,course.id).all(),
-  db.prepare('SELECT student,attempt,score,total,answered,completed,created,json_extract(snapshot,\'$.title\') AS title FROM student_attempts WHERE course=?').bind(course.id).all(),required?allGameResults():Promise.resolve([]),required?allDictationResults():Promise.resolve([]),allAnswerTimes(),
+  db.prepare('SELECT student,attempt,score,total,answered,completed,created,json_extract(snapshot,\'$.title\') AS title FROM student_attempts WHERE course=?').bind(course.id).all(),required?allGameResults():Promise.resolve([]),required?allDictationResults():Promise.resolve([]),learningOnly?Promise.resolve([]):allAnswerTimes(),
   db.prepare('SELECT m.student,m.removed FROM student_moderation m JOIN students s ON s.id=m.student WHERE s.course=?').bind(course.id).all<{student:string;removed:string}>(),
   required&&deadline?allGameResults(deadline):Promise.resolve([])
  ]);
  const rows=new Map<string,Rank>(),gameMap=new Map(games.map(g=>[g.student+':'+g.attempt,g])),dictationMap=new Map(dictations.map(d=>[d.student+':'+d.attempt,d])),timeMap=new Map(times.map(t=>[t.student+':'+t.attempt+':'+t.stage,t]));let certificate:Result|null=null,previousCertificate:Result|null=null;
  const competitionGameMap=deadline?new Map(competitionGames.map(g=>[g.student+':'+g.attempt,g])):gameMap;
  const combined=(r:Result,student:string,selectedGames=gameMap):Result=>{
+  // Lesson 02 is for learning at the student's own pace. Neither live nor
+  // archived durations may influence its best grade, ordering or certificate.
+  if(learningOnly)return r;
   const key=student+':'+r.attempt,quiz=timeMap.get(key+':quiz');
   const quizMs=quiz?.samples===r.total?quiz.elapsed:null;
   if(!required)return {...r,solveMs:r.completed?quizMs:null};
@@ -54,7 +57,7 @@ export async function classroomResults(course:TeacherCourse,studentId?:string,te
  for(const raw of history.results){const source=raw as unknown as Result&{student:string},r=combined(source,source.student),current=rows.get(source.student);if(current&&betterResult(r,current))rows.set(source.student,{...current,...r,id:source.student,percentage:resultPercent(r)});if(source.student===studentId&&source.completed&&(!previousCertificate||betterResult(source,previousCertificate)))previousCertificate=source;if(source.student===studentId&&r.completed&&(!certificate||betterResult(r,certificate)))certificate=r;}
  const joined=new Map(live.results.map(r=>[String(r.id),String(r.created)]));
  const removed=new Map(moderation.results.map(r=>[r.student,r.removed]));
- const allResults=[...rows.values()].map(r=>withLeaderboardBaseline(course.id,r,joined.get(r.id)||'')).sort((a,b)=>compareResults(a,b)||(a.completed||a.created).localeCompare(b.completed||b.created)||a.id.localeCompare(b.id));
+ const allResults=[...rows.values()].map(r=>withLeaderboardBaseline(course.id,r,joined.get(r.id)||'')).sort((a,b)=>learningOnly?a.name.localeCompare(b.name,'ar')||a.id.localeCompare(b.id):compareResults(a,b)||(a.completed||a.created).localeCompare(b.completed||b.created)||a.id.localeCompare(b.id));
  // Prize rankings use the best completed attempt strictly before the deadline.
  // Learning, later retries and certificates retain their unrestricted best result.
  const competitionRows=new Map<string,Rank>();
@@ -67,7 +70,7 @@ export async function classroomResults(course:TeacherCourse,studentId?:string,te
   const previous=competitionRows.get(id);
   if(!previous||betterResult(result,previous))competitionRows.set(id,{...current,...result,percentage:resultPercent(result)});
  }
- const eligible=[...competitionRows.values()].map(r=>withLeaderboardBaseline(course.id,r,joined.get(r.id)||'')).sort((a,b)=>compareResults(a,b)||(a.completed||a.created).localeCompare(b.completed||b.created)||a.id.localeCompare(b.id));
+ const eligible=[...competitionRows.values()].map(r=>withLeaderboardBaseline(course.id,r,joined.get(r.id)||'')).sort((a,b)=>learningOnly?a.name.localeCompare(b.name,'ar')||a.id.localeCompare(b.id):compareResults(a,b)||(a.completed||a.created).localeCompare(b.completed||b.created)||a.id.localeCompare(b.id));
  const leaderboard=eligible.filter(r=>!removed.has(r.id)&&!excludedTeacherEntry(course.id,r,joined.get(r.id)||'')).map((r,i)=>({...r,position:i+1}));
  const places=new Map(leaderboard.map(r=>[r.id,r.position]));
  const official=new Map(leaderboard.map(r=>[r.id,r]));
