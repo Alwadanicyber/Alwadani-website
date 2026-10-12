@@ -585,59 +585,76 @@ assert(tenses.leaderboard.every(r=>!('solveMs' in r)&&!('estimatedSolveMs' in r)
 assert(!(await db.prepare('SELECT student FROM student_answer_times WHERE student=?').bind(tensesStudent).first()),'Untimed lesson recorded a new duration');
 assert(ownerSavedTenses.course.studentGender==='female'&&ownerSavedTenses.course.questions.slice(12).every(q=>q.kind==='tense-sort'&&/^[A-Za-z]/.test(q.prompt))&&ownerSavedTenses.certificate.score===20,'Teacher editing lost game type, audience or saved result');
 const lesson02Html=await(await mf.dispatchFetch('https://course.test/?course='+tensesId)).text();
-assert(lesson02Html.includes('تمارين الكتاب')&&lesson02Html.includes('فيديوهات قصيرة')&&lesson02Html.includes('الصورة نفسها')&&lesson02Html.includes('الدرس 02'),'Interactive lesson UI missing');
+assert(lesson02Html.includes('تمارين الكتاب')&&lesson02Html.includes('فيديوهات قصيرة')&&lesson02Html.includes('أولًا: المضارع البسيط')&&lesson02Html.includes('الدرس 02'),'Interactive lesson UI missing');
 console.log('PASS: grade-four lesson 02, independent sessions, sequential stations, required English sentence game, protected answer keys, retry guards and best certificate.');
 
 
-// Update only the known original game. Carry the first 12 answers/times forward,
-// preserve earned certificates/history, and guard concurrent tabs and stale posts.
+// Regroup the same quiz by tense without losing canonical answers or grades.
+// Both older games are fixtures from genuinely published versions.
 const originalTenses=JSON.parse(readFileSync(project+'scripts/fixtures/tenses-v1.json','utf8'));
+const sentenceTenses=JSON.parse(readFileSync(project+'scripts/fixtures/tenses-v2.json','utf8'));
+const quizSequence=[1,5,6,9,2,7,8,10,3,4,11,12],mappedId=id=>id<=12?quizSequence.indexOf(id)+1:id;
 assert(originalTenses.definition.questions.filter(q=>q.kind==='sentence-build').length===4,'Regression fixture must contain the genuine old game');
+assert(tensesSource.definition.lessons.slice(0,3).map(l=>l.en).join('|')==='Simple Present|Present Progressive|Simple or Continuous?','New lesson sequence is wrong');
+assert(quizSequence.every((id,i)=>tensesSource.definition.questions[i].prompt===originalTenses.definition.questions[id-1].prompt),'Quiz was not regrouped with the explanation');
 const existingTensesCookies={...cookies};
 await req('/api/teacher',{...originalTenses,studentGender:'female',published:1},200,auth);
 const parsedOldOwner=(await req('/api/teacher',null,200,auth)).courses.find(c=>c.id===tensesId);
-assert(parsedOldOwner.definition.questions.slice(12).every(q=>q.kind==='tense-sort'&&/^[A-Za-z]/.test(q.prompt))&&JSON.stringify(parsedOldOwner.definition.questions.slice(0,12))===JSON.stringify(originalTenses.definition.questions.slice(0,12)),'Stored owner course did not receive only the revised game');
-for(const complete of [true,false]){
- cookies={};let state=await req('/api/classroom',{action:'start',course:tensesId,name:complete?'اختبار تحديث لعبة مكتملة':'اختبار تحديث لعبة جزئية'});
- const student=state.student.id,questions=originalTenses.definition.questions.slice(0,complete?20:5),completed=complete?'2026-10-12T10:00:00.000Z':null;
- await db.prepare('UPDATE students SET snapshot=?,completed=? WHERE id=?').bind(JSON.stringify(originalTenses),completed,student).run();
+assert(parsedOldOwner.definition.lessons[0].en==='Simple Present'&&parsedOldOwner.definition.questions.slice(12).every(q=>q.kind==='tense-sort'&&/^[A-Za-z]/.test(q.prompt))&&quizSequence.every((id,i)=>parsedOldOwner.definition.questions[i].prompt===originalTenses.definition.questions[id-1].prompt),'Stored owner course did not receive the new sequence');
+const updateCases=[
+ {fixture:originalTenses,answered:20,reads:4,complete:true,gameChanged:true,wrong:0},
+ {fixture:originalTenses,answered:5,reads:2,complete:false,gameChanged:true,wrong:3},
+ {fixture:sentenceTenses,answered:20,reads:4,complete:true,gameChanged:false,wrong:3},
+ {fixture:sentenceTenses,answered:5,reads:2,complete:false,gameChanged:false,wrong:0},
+ {fixture:sentenceTenses,answered:15,reads:4,complete:false,gameChanged:false,wrong:0},
+];
+for(const [caseIndex,test] of updateCases.entries()){
+ cookies={};let state=await req('/api/classroom',{action:'start',course:tensesId,name:'اختبار تحديث ترتيب الدرس '+caseIndex});
+ const student=state.student.id,questions=test.fixture.definition.questions.slice(0,test.answered),completed=test.complete?'2026-10-12T10:00:00.000Z':null;
+ await db.prepare('UPDATE students SET snapshot=?,completed=? WHERE id=?').bind(JSON.stringify(test.fixture),completed,student).run();
  await db.batch(questions.flatMap(q=>[
-  db.prepare('INSERT INTO answers(student,question,choice,correct) VALUES(?,?,?,?)').bind(student,q.id,q.answer,1),
+  db.prepare('INSERT INTO answers(student,question,choice,correct) VALUES(?,?,?,?)').bind(student,q.id,q.id===test.wrong?q.options.findIndex((_,i)=>i!==q.answer):q.answer,q.id===test.wrong?0:1),
   db.prepare("INSERT INTO student_answer_times(student,attempt,stage,question,elapsed_ms) VALUES(?,1,'quiz',?,1000)").bind(student,q.id)
  ]));
- await db.batch(Array.from({length:complete?4:2},(_,i)=>db.prepare('INSERT INTO reads(student,lesson) VALUES(?,?)').bind(student,i)));
- if(complete)await db.prepare('INSERT INTO student_sentence_answers(student,attempt,question,response) VALUES(?,1,15,?)').bind(student,'she is reading a comic book now').run();
- const oldAnswers=(await db.prepare('SELECT question,choice,correct FROM answers WHERE student=? AND question<=12 ORDER BY question').bind(student).all()).results;
- // Both requests may initially read the old snapshot; one atomic fork must win.
+ await db.batch(Array.from({length:test.reads},(_,i)=>db.prepare('INSERT INTO reads(student,lesson) VALUES(?,?)').bind(student,i)));
+ if(test.gameChanged&&test.complete)await db.prepare('INSERT INTO student_sentence_answers(student,attempt,question,response) VALUES(?,1,15,?)').bind(student,'she is reading a comic book now').run();
+ const oldAnswers=(await db.prepare('SELECT question,choice,correct FROM answers WHERE student=? ORDER BY question').bind(student).all()).results;
+ const expectedAnswers=oldAnswers.filter(a=>!test.gameChanged||a.question<=12).map(a=>({...a,question:mappedId(a.question)})).sort((a,b)=>a.question-b.question);
+ const expectedReads=test.reads===4?(test.gameChanged?3:4):1;
  const concurrent=await Promise.all([req('/api/classroom?course='+tensesId),req('/api/classroom?course='+tensesId)]);
  state=await req('/api/classroom?course='+tensesId);
- assert(concurrent.every(d=>d.student.attempt===2&&d.course.questions.slice(12).every(q=>q.kind==='tense-sort')),'Concurrent update returned an obsolete attempt or game');
- assert(state.student.attempt===2&&state.answers.length===(complete?12:5)&&state.reads.length===(complete?3:2)&&!state.student.completed,'Update reset quiz progress or retained old-game completion');
- assert(JSON.stringify((await db.prepare('SELECT question,choice,correct FROM answers WHERE student=? ORDER BY question').bind(student).all()).results)===JSON.stringify(oldAnswers),'Canonical quiz choices changed during update');
+ assert(concurrent.every(d=>d.student.attempt===2&&d.course.lessons[0].en==='Simple Present'),'Concurrent update returned an obsolete attempt or sequence');
+ assert(state.student.attempt===2&&state.answers.length===expectedAnswers.length&&state.reads.length===expectedReads&&state.student.completed===(test.complete&&!test.gameChanged?completed:null),'Update reset quiz progress or incorrectly changed completion');
+ assert(JSON.stringify((await db.prepare('SELECT question,choice,correct FROM answers WHERE student=? ORDER BY question').bind(student).all()).results)===JSON.stringify(expectedAnswers),'Reordering changed a canonical choice or correct/incorrect score');
+ for(const answer of state.answers){const q=tensesSource.definition.questions.find(q=>q.id===answer.question);assert(state.course.questions.find(q=>q.id===answer.question).options[answer.choice]===q.options[expectedAnswers.find(a=>a.question===answer.question).choice],'Saved answer no longer points to the same choice after shuffling');}
  const archived=(await db.prepare('SELECT * FROM student_attempts WHERE student=?').bind(student).all()).results;
- assert(archived.length===1&&archived[0].attempt===1&&archived[0].score===questions.length&&archived[0].completed===completed&&JSON.parse(archived[0].answers).length===questions.length,'Old game history was lost or archived twice');
- assert((await db.prepare("SELECT COUNT(*) n,SUM(elapsed_ms) elapsed FROM student_answer_times WHERE student=? AND attempt=2 AND stage='quiz'").bind(student).first()).elapsed===(complete?12000:5000),'Quiz solve time was not carried forward');
- if(complete){
-  assert(state.certificate?.score===20&&!('solveMs' in state.certificate)&&state.leaderboard.find(r=>r.id===student).score===20,'Old best grade/certificate/timing was lost');
-  assert((await db.prepare('SELECT response FROM student_sentence_answers WHERE student=? AND attempt=1 AND question=15').bind(student).first()).response==='she is reading a comic book now','Archived typed response was lost');
+ assert(archived.length===1&&archived[0].attempt===1&&archived[0].score===questions.length-(test.wrong?1:0)&&archived[0].completed===completed&&JSON.parse(archived[0].answers).length===questions.length,'History was lost or archived twice');
+ assert((await db.prepare("SELECT SUM(elapsed_ms) elapsed FROM student_answer_times WHERE student=? AND attempt=2 AND stage='quiz'").bind(student).first()).elapsed===expectedAnswers.length*1000,'Old timing records were not mapped with their answers');
+ if(test.complete){
+  assert(state.certificate?.score===20-(test.wrong?1:0)&&!('solveMs' in state.certificate)&&state.leaderboard.find(r=>r.id===student).score===20-(test.wrong?1:0),'Old best grade/certificate was lost');
+  if(test.gameChanged)assert((await db.prepare('SELECT response FROM student_sentence_answers WHERE student=? AND attempt=1 AND question=15').bind(student).first()).response==='she is reading a comic book now','Archived typed response was lost');
  }else assert(!state.certificate,'Partial progress created an unearned certificate');
- await req('/api/classroom',{action:'answer',course:tensesId,attempt:1,question:complete?13:6,choice:0},409);
- await req('/api/classroom',{action:'complete',course:tensesId},400);
- for(const source of tensesSource.definition.questions.filter(q=>q.id>(complete?12:5))){
+ await req('/api/classroom',{action:'answer',course:tensesId,attempt:1,question:1,choice:0},409);
+ await req('/api/classroom',{action:'complete',course:tensesId},test.complete&&!test.gameChanged?200:400);
+ for(const source of tensesSource.definition.questions.filter(q=>!state.answers.some(a=>a.question===q.id))){
   if(!state.reads.includes(source.lesson))state=await req('/api/classroom',{action:'read',course:tensesId,lesson:source.lesson});
   const visible=state.course.questions.find(q=>q.id===source.id);
   state=await req('/api/classroom',{action:'answer',course:tensesId,question:source.id,choice:visible.options.indexOf(source.options[source.answer]),elapsedMs:500});
  }
  state=await req('/api/classroom',{action:'complete',course:tensesId});
- assert(state.certificate.score===20&&!('solveMs' in state.certificate)&&state.leaderboard.filter(r=>r.id===student).length===1,'Finishing updated game did not preserve whole-journey timing and one best leaderboard entry');
- assert((await req('/api/classroom?course='+tensesId)).student.attempt===2&&(await db.prepare('SELECT COUNT(*) n FROM student_attempts WHERE student=?').bind(student).first()).n===1,'Reload repeated the game update');
+ assert(state.certificate.attempt===2&&state.certificate.score===20-(test.wrong?1:0)&&!('solveMs' in state.certificate)&&state.leaderboard.filter(r=>r.id===student).length===1,'Finishing reordered quiz lost the best grade or duplicated a profile');
+ assert((await req('/api/classroom?course='+tensesId)).student.attempt===2&&(await db.prepare('SELECT COUNT(*) n FROM student_attempts WHERE student=?').bind(student).first()).n===1,'Reload repeated the sequence update');
+ // A later voluntary retry must archive the rearranged completed attempt too.
+ state=await req('/api/classroom',{action:'retry',course:tensesId});
+ assert(state.student.attempt===3&&state.answers.length===0&&state.certificate.score===20-(test.wrong?1:0),'Retry lost the completed rearranged result');
 }
+console.log('PASS: simple→progressive→comparison sequence, matching station quizzes, canonical answer remapping, retained wrong grades and completion, partial progress before and during game, archived certificates, concurrent update, idempotence, stale requests and subsequent retry.');
 // Existing durations do not rank this lesson or select its best equal grade.
 const old20=await db.prepare('SELECT student FROM student_attempts WHERE course=? AND completed IS NOT NULL AND score=20 LIMIT 1').bind(tensesId).first();
 const allTenses=(await req('/api/teacher/students?course='+tensesId,null,200,auth)).participants;
 assert(allTenses.every(r=>!('solveMs' in r)&&!('estimatedSolveMs' in r)),'Teacher participant view leaked lesson 02 durations');
 assert(allTenses.map(r=>r.name).join('|')===[...allTenses].sort((a,b)=>a.name.localeCompare(b.name,'ar')||a.id.localeCompare(b.id)).map(r=>r.name).join('|'),'Learning participants must have neutral name ordering');
-assert(allTenses.find(r=>r.id===old20.student).attempt===2,'A faster archived attempt displaced an equally good current grade');
+assert(allTenses.find(r=>r.id===old20.student).score===20,'A later unfinished retry displaced the best completed grade');
 const participantCookies={...cookies},orders02=new Set(),gameOrders02=new Set();
 for(let i=0;i<6;i++){
  cookies={};const session=await req('/api/classroom',{action:'start',course:tensesId,name:'اختبار مواقع الخيارات '+i});

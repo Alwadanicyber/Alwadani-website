@@ -3,6 +3,8 @@ import {parseSolveMs,SolveTimeError} from '@/lib/solve-time';
 import {hashToken,cookieName,identity} from '@/lib/student-session';
 import {getCourse,originalCourse,publicCourse} from '@/lib/courses';
 import {hasLegacyTensesGame,updateStudentTensesGame} from '@/lib/tenses-game-update';
+import {hasOldTensesSequence,hasNewTensesSequence} from '@/lib/tenses-sequence';
+import {updateStudentTensesSequence} from '@/lib/tenses-sequence-update';
 import {TENSES_COURSE_ID,normalizeSentence} from '@/lib/tenses-learning';
 import type {TeacherCourse} from '@/lib/course-types';
 import {answerOrder} from '@/lib/answer-order';
@@ -21,11 +23,12 @@ async function context(req:Request,courseId:string){
  if(student&&courseId===CHORES_COURSE_ID&&[4,7].includes(course.definition.lessons.length)&&latest.definition.lessons.length===3){
   await archiveAndRestart(student.id,student.attempt,stableCourse(latest),student.snapshot);student=await readStudent();course=JSON.parse(student.snapshot);migrated=true;
  }
- if(student&&courseId===TENSES_COURSE_ID&&hasLegacyTensesGame(course.definition)){
-  const updated=await updateStudentTensesGame(student,course,stableCourse(latest));
+ if(student&&courseId===TENSES_COURSE_ID&&(hasOldTensesSequence(course.definition)||hasLegacyTensesGame(course.definition))){
+  const sequence=hasNewTensesSequence(latest.definition);
+  const updated=sequence?await updateStudentTensesSequence(student,course,stableCourse(latest)):await updateStudentTensesGame(student,course,stableCourse(latest));
   // Another tab may have updated the same attempt while this request waited.
   student=await readStudent();course=JSON.parse(student.snapshot);
-  if(updated)migrated='تحدّثت لعبة محقق الزمن: جمل إنجليزية مع دلائل. إجابات التدريب ونتيجتك السابقة محفوظة؛ تابع اللعبة الجديدة.';
+  if(updated)migrated=sequence?'تحدّث ترتيب الشرح: البسيط، ثم المستمر، ثم المقارنة. إجاباتك ونتائجك السابقة محفوظة؛ تابع من أول سؤال لم تجب عنه.':'تحدّثت لعبة محقق الزمن: جمل إنجليزية مع دلائل. إجابات التدريب ونتيجتك السابقة محفوظة؛ تابع اللعبة الجديدة.';
  }
  // Wording follows the teacher's latest setting; saved questions and grades stay intact.
  const presentation:TeacherCourse={...stableCourse(course),studentGender:publicCourse(latest).studentGender};

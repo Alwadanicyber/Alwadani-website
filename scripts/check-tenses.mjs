@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {arrangeTensesDefinition,hasNewTensesSequence,tenseQuestionKey,tensesSequenceOrder} from '../lib/tenses-sequence.ts';
 import {presentSubject,presentReadingPieces} from '../lib/present-subjects.ts';
 import {normalizeSentence,tokenPool,tenseVideos,sentenceTimeClue} from '../lib/tenses-learning.ts';
 import {tensesWorkbook} from '../lib/tenses-workbook.ts';
@@ -56,3 +58,13 @@ for(const [sentence,text,arabic] of [
 assert.equal(sentenceTimeClue('I know him.'),null);
 assert.equal(sentenceTimeClue('They snowball ideas.'),null);
 console.log('PASS: time clues retain exact English spans and Arabic meanings; full right now phrase precedes now.');
+
+const before=JSON.parse(readFileSync(new URL('./fixtures/tenses-v2.json',import.meta.url),'utf8')).definition;
+const regrouped=arrangeTensesDefinition(before,before.questions);
+assert(hasNewTensesSequence(regrouped));
+assert(regrouped.questions.every((q,i)=>q.id===i+1&&q.lesson===Math.floor(i<12?i/4:3)));
+for(let i=0;i<12;i++)assert.equal(tenseQuestionKey(regrouped.questions[i]),tenseQuestionKey(before.questions[tensesSequenceOrder[i]-1]));
+assert.deepEqual(regrouped.questions.slice(12),before.questions.slice(12));
+const changed=structuredClone(before);changed.questions[0].answer=1;
+assert.equal(arrangeTensesDefinition(changed,before.questions),changed);
+console.log('PASS: topic sequence and question groupings preserve grading keys and the eight English game questions; custom changed content is preserved.');
