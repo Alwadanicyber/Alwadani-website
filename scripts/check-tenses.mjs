@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {tensesBookExercises,tensesBookPages,bookChoices,applyBookChoice,shuffleBookChoices,targetFocus} from '../lib/tenses-book-pages.ts';
 import {arrangeTensesDefinition,hasNewTensesSequence,tenseQuestionKey,tensesSequenceOrder} from '../lib/tenses-sequence.ts';
 import {presentSubject,presentReadingPieces} from '../lib/present-subjects.ts';
 import {normalizeSentence,tokenPool,tenseVideos,sentenceTimeClue} from '../lib/tenses-learning.ts';
@@ -68,3 +69,27 @@ assert.deepEqual(regrouped.questions.slice(12),before.questions.slice(12));
 const changed=structuredClone(before);changed.questions[0].answer=1;
 assert.equal(arrangeTensesDefinition(changed,before.questions),changed);
 console.log('PASS: topic sequence and question groupings preserve grading keys and the eight English game questions; custom changed content is preserved.');
+
+let fieldCount=0;
+for(const group of tensesWorkbook){
+ const layout=tensesBookExercises[group.id],page=tensesBookPages.find(p=>p.id===layout.page);
+ assert(page,group.id+' missing original page');
+ assert.deepEqual(layout.targets.map(t=>t.id),group.items.map(i=>i.id));
+ for(const field of layout.targets){
+  fieldCount++;const r=field.rect;assert(r.x>=0&&r.y>=0&&r.width>0&&r.height>0&&r.x+r.width<=page.width&&r.y+r.height<=page.height);
+  const f=targetFocus(field,layout);assert(f.x>=0&&f.y>=0&&f.x+f.width<=page.width&&f.y+f.height<=page.height);
+ }
+ for(const question of group.items){
+  const bank=bookChoices(question);assert(bank.length>=2,question.id+' has no useful answer choices');
+  if(!question.words&&!question.open)assert(bank.some(value=>question.answers.some(a=>normalizeSentence(a)===normalizeSentence(value))),question.id+' missing the accepted model');
+  const a=shuffleBookChoices(bank,'student-A:'+question.id),b=shuffleBookChoices(bank,'student-A:'+question.id);assert.deepEqual(a,b);assert.deepEqual(a.map(c=>c.value).sort(),[...bank].sort());
+  assert.equal(applyBookChoice(question,'old answer',bank[0]),question.words?'old answer '+bank[0]:bank[0]);
+ }
+ const png=readFileSync(new URL('../public'+page.src,import.meta.url));assert.equal(png.readUInt32BE(16),page.width);assert.equal(png.readUInt32BE(20),page.height);
+}
+assert.equal(fieldCount,61);assert.equal(tensesBookPages.length,4);
+const wordItem=tensesWorkbook.find(g=>g.id==='order').items[0];
+let built='';for(const word of ['Ashraf','isn’t','riding','on','the','bus'])built=applyBookChoice(wordItem,built,word);
+assert.equal(normalizeSentence(built),normalizeSentence(wordItem.answers[0]));
+assert.notDeepEqual(shuffleBookChoices(bookChoices(wordItem),'student-A'),shuffleBookChoices(bookChoices(wordItem),'student-B'));
+console.log('PASS: all 61 original-page fields, four exact PNG dimensions, native coordinates/focus bounds, valid shuffled choice banks, sentence token insertion and personal answers.');
