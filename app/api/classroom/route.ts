@@ -3,6 +3,7 @@ import {parseSolveMs,SolveTimeError} from '@/lib/solve-time';
 import {hashToken,cookieName,identity} from '@/lib/student-session';
 import {getCourse,originalCourse,publicCourse} from '@/lib/courses';
 import {hasLegacyTensesGame,updateStudentTensesGame} from '@/lib/tenses-game-update';
+import {restartTensesGame} from '@/lib/tenses-game-retry';
 import {hasOldTensesSequence,hasNewTensesSequence} from '@/lib/tenses-sequence';
 import {updateStudentTensesSequence} from '@/lib/tenses-sequence-update';
 import {TENSES_COURSE_ID,normalizeSentence} from '@/lib/tenses-learning';
@@ -62,6 +63,12 @@ export async function POST(req:Request){try{
  const {questions,lessons}=course.definition;
  if(body.action==='retry'){
   await archiveAndRestart(id,attempt,latest,student.snapshot);const current=await context(req,courseId);return reply(await snapshot(current.student,current.course,current.grade));
+ }else if(body.action==='tenses-game-retry'){
+  if(courseId!==TENSES_COURSE_ID||!hasNewTensesSequence(course.definition))return reply({error:'إعادة هذه اللعبة غير متاحة لهذا الدرس.'},400);
+  const counts=await db.prepare('SELECT (SELECT COUNT(*) FROM answers WHERE student=? AND question<=12) AS quiz,(SELECT COUNT(*) FROM answers WHERE student=? AND question>12) AS game,(SELECT COUNT(*) FROM reads WHERE student=?) AS reads').bind(id,id,id).first<{quiz:number;game:number;reads:number}>();
+  if(counts?.quiz!==12||!counts.game||counts.reads!==4)return reply({error:'أكمل المحطات الثلاث وابدأ اللعبة أولًا.'},400);
+  if(!await restartTensesGame(student,course))return reply({error:'تغيّرت المحاولة. أعد تحميل تقدمك قبل إعادة اللعبة.'},409);
+  const current=await context(req,courseId);return reply(await snapshot(current.student,current.course,current.grade));
  }else if(body.action==='dictation-answer'){
   if(courseId!==CHORES_COURSE_ID)return reply({error:'محطة الإملاء غير متاحة لهذا الدرس.'},400);
   const counts=await db.prepare('SELECT (SELECT COUNT(*) FROM answers WHERE student=?) AS answers,(SELECT COUNT(*) FROM reads WHERE student=?) AS reads').bind(id,id).first<{answers:number;reads:number}>();

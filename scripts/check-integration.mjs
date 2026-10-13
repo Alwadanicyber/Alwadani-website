@@ -540,6 +540,7 @@ assert(tensesPublic.course.questions.every(q=>!('answer' in q)&&!('reason' in q)
 let tenses=await req('/api/classroom',{action:'start',course:tensesId,name:'اختبار درس الزمنين'}),tensesStudent=tenses.student.id;
 await req('/api/classroom',{action:'read',course:tensesId,lesson:3},400);
 await req('/api/classroom',{action:'complete',course:tensesId},400);
+await req('/api/classroom',{action:'tenses-game-retry',course:tensesId},400);
 assert(await db.prepare("SELECT name FROM sqlite_master WHERE name='student_sentence_answers'").first(),'Sentence response table was not added lazily');
 await db.prepare(readFileSync(project+'drizzle/0012_student_sentence_answers.sql','utf8')).run();
 for(let lesson=0;lesson<4;lesson++){
@@ -566,6 +567,37 @@ tenses=await req('/api/classroom',{action:'complete',course:tensesId});
 assert(tenses.certificate.score===19&&tenses.certificate.total===20&&!('solveMs' in tenses.certificate)&&tenses.leaderboard.find(r=>r.id===tensesStudent).score===19,'Required game or whole-journey timing omitted from leaderboard/certificate');
 const reloadTenses=await req('/api/classroom?course='+tensesId);
 assert(JSON.stringify(reloadTenses.answers)===JSON.stringify(tenses.answers),'Reload lost sentence arrangements');
+// Game-only replay archives the completed result and resets exactly questions 13–20.
+const prefixBeforeReplay=await db.prepare('SELECT question,choice,correct FROM answers WHERE student=? AND question<=12 ORDER BY question').bind(tensesStudent).all();
+const gameAttempt=tenses.student.attempt,gameOrders=JSON.stringify(tenses.course.questions.slice(12).map(q=>q.options));
+tenses=await req('/api/classroom',{action:'tenses-game-retry',course:tensesId});
+assert(tenses.student.attempt===gameAttempt+1&&tenses.answers.length===12&&tenses.answers.every(a=>a.question<=12)&&tenses.reads.length===4&&!tenses.student.completed,'Game replay retained old answers or lost reads');
+assert(tenses.certificate.score===19&&tenses.bestResult.score===19&&tenses.leaderboard.find(r=>r.id===tensesStudent).score===19,'Game replay lost the previous completed result');
+assert(JSON.stringify((await db.prepare('SELECT question,choice,correct FROM answers WHERE student=? AND question<=12 ORDER BY question').bind(tensesStudent).all()).results)===JSON.stringify(prefixBeforeReplay.results),'Game replay changed training answers');
+assert(JSON.stringify(tenses.course.questions.slice(12).map(q=>q.options))!==gameOrders,'Game replay did not reshuffle options');
+await req('/api/classroom',{action:'tenses-game-retry',course:tensesId,attempt:gameAttempt},409);
+await req('/api/classroom',{action:'tenses-game-retry',course:tensesId},400);
+assert(JSON.stringify((await req('/api/classroom?course='+tensesId)).answers)===JSON.stringify(tenses.answers),'Replay reset did not survive reload');
+for(const source of tensesSource.definition.questions.slice(12)){
+ const visible=tenses.course.questions.find(q=>q.id===source.id);
+ tenses=await req('/api/classroom',{action:'answer',course:tensesId,question:source.id,choice:visible.options.indexOf(source.options[source.answer])});
+}
+tenses=await req('/api/classroom',{action:'complete',course:tensesId});
+assert(tenses.certificate.score===20&&tenses.leaderboard.filter(r=>r.id===tensesStudent).length===1&&tenses.bestResult.score===20,'Game-only improvement did not update the same profile');
+// Replaying a partial game also clears its answer; a worse completed game retains the best.
+tenses=await req('/api/classroom',{action:'tenses-game-retry',course:tensesId});
+let gameQuestion=tenses.course.questions.find(q=>q.id===13);
+tenses=await req('/api/classroom',{action:'answer',course:tensesId,question:13,choice:0});
+const partialGameAttempt=tenses.student.attempt;
+tenses=await req('/api/classroom',{action:'tenses-game-retry',course:tensesId});
+assert(tenses.student.attempt===partialGameAttempt+1&&tenses.answers.length===12,'Partial-game replay kept a locked answer');
+for(const source of tensesSource.definition.questions.slice(12)){
+ const visible=tenses.course.questions.find(q=>q.id===source.id);
+ tenses=await req('/api/classroom',{action:'answer',course:tensesId,question:source.id,choice:visible.options.indexOf(source.options[1-source.answer])});
+}
+tenses=await req('/api/classroom',{action:'complete',course:tensesId});
+assert(tenses.student.completed&&tenses.answers.filter(a=>a.correct).length===12&&tenses.certificate.score===20&&tenses.bestResult.score===20,'Worse game replay replaced the best certificate');
+console.log('PASS: game-only and partial replay, first twelve answers preserved, fresh choices, stale attempt guards, reload persistence and best complete result.');
 const firstTensesOrders=JSON.stringify(tenses.course.questions.map(q=>q.options));
 const previousTensesAttempt=tenses.student.attempt;
 tenses=await req('/api/classroom',{action:'retry',course:tensesId});
