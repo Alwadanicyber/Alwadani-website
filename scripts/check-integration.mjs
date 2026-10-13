@@ -842,6 +842,7 @@ async function completeModeProfile(profileCookies,ms,wrong=false,retry=false){
  if(retry)state=await req('/api/classroom',{action:'retry',course:modeCourseId});
  state=await req('/api/classroom',{action:'read',course:modeCourseId,lesson:0});
  for(const q of state.course.questions)state=await req('/api/classroom',{action:'answer',course:modeCourseId,question:q.id,choice:q.options.indexOf(wrong&&q.id===1?'B':'A'),elapsedMs:ms});
+ if(state.course.rankingMode==='speed')await db.prepare("UPDATE student_speed_clocks SET elapsed_ms=?,running_since=NULL WHERE student=? AND attempt=? AND run=''").bind(ms*state.course.questions.length,state.student.id,state.student.attempt).run();
  return req('/api/classroom',{action:'complete',course:modeCourseId});
 }
 await completeModeProfile(secondModeCookies,10);let modeState=await completeModeProfile(firstModeCookies,900);
@@ -876,6 +877,35 @@ const modeSSR=await(await mf.dispatchFetch('https://course.test/?course='+modeCo
 const ownerMode=(await req('/api/teacher/students?course='+modeCourseId,null,200,auth));assert(ownerMode.rankingMode==='accuracy'&&ownerMode.participants[0].id===firstMode.student.id,'Owner result order differs from public order');
 await req('/api/teacher',{...modeCourse,title:'عنوان جديد'},200,auth);
 assert((await req(rankModePath+'?course='+modeCourseId,null,200,auth)).rankingMode==='accuracy','Content edit reset independent ranking settings');
+// The fastest stopwatch runs across saving/correction/loading, and pauses only for study.
+await req(rankModePath,{course:modeCourseId,action:'ranking',rankingMode:'speed'},200,auth,'PUT');
+cookies={};let continuous=await req('/api/classroom',{action:'start',course:modeCourseId,name:'اختبار العداد المستمر'}),continuousId=continuous.student.id;
+continuous=await req('/api/classroom',{action:'read',course:modeCourseId,lesson:0});
+const clockOf=()=>db.prepare("SELECT * FROM student_speed_clocks WHERE student=? AND attempt=? AND run='' ").bind(continuousId,continuous.student.attempt).first();
+assert((await clockOf()).valid===1&&typeof (await clockOf()).running_since==='number','Speed clock did not start with solving');
+await db.prepare("UPDATE student_speed_clocks SET elapsed_ms=5000,running_since=? WHERE student=? AND attempt=? AND run='' ").bind(Date.now()-10000,continuousId,continuous.student.attempt).run();
+continuous=await req('/api/classroom',{action:'answer',course:modeCourseId,question:1,choice:continuous.course.questions[0].options.indexOf('A'),elapsedMs:10});
+assert((await clockOf()).running_since!==null,'Submitting an answer paused the stopwatch');
+await req('/api/classroom',{action:'speed-view',course:modeCourseId,view:'explain'});
+const pausedClock=await clockOf();assert(pausedClock.running_since===null&&pausedClock.elapsed_ms>=15000,'Correction/save waiting was excluded before viewing explanation');
+await req('/api/classroom',{action:'speed-view',course:modeCourseId,view:'not-a-view'},400);
+await req('/api/classroom',{action:'speed-view',course:modeCourseId,view:'solve',attempt:0},409);
+await req('/api/classroom',{action:'speed-view',course:modeCourseId,view:'explain'});
+assert((await clockOf()).elapsed_ms===pausedClock.elapsed_ms,'Repeated explanation added explanation time');
+await req('/api/classroom',{action:'speed-view',course:modeCourseId,view:'solve'});
+const resumedClock=await clockOf();assert(resumedClock.running_since!==null&&resumedClock.elapsed_ms===pausedClock.elapsed_ms,'Returning to solving reset the elapsed time');
+for(const q of continuous.course.questions.slice(1))continuous=await req('/api/classroom',{action:'answer',course:modeCourseId,question:q.id,choice:q.options.indexOf('A'),elapsedMs:10});
+await db.prepare("UPDATE student_speed_clocks SET elapsed_ms=24000,running_since=NULL WHERE student=? AND attempt=? AND run='' ").bind(continuousId,continuous.student.attempt).run();
+continuous=await req('/api/classroom',{action:'complete',course:modeCourseId});
+assert(continuous.bestResult.solveMs===24000&&continuous.certificate.solveMs===24000,'Speed ranking used old per-answer active time instead of the continuous clock');
+const finishedClock=await clockOf();assert(finishedClock.finished_at!==null&&finishedClock.running_since===null,'Completion left the stopwatch running');
+await req('/api/classroom',{action:'complete',course:modeCourseId});
+await req('/api/classroom',{action:'speed-view',course:modeCourseId,view:'solve'});
+assert((await clockOf()).elapsed_ms===24000&&(await clockOf()).finished_at===finishedClock.finished_at,'Replay of completion/view changed the final duration');
+continuous=await req('/api/classroom',{action:'retry',course:modeCourseId});
+assert((await clockOf()).valid===1&&(await clockOf()).running_since!==null&&continuous.student.id===continuousId,'Full retake with retained reads did not start a fresh clock');
+const protectedClockCookies={...cookies};cookies={};await req('/api/classroom',{action:'speed-view',course:modeCourseId,view:'solve'},401);cookies=protectedClockCookies;
+console.log('PASS: continuous fastest timing includes correction/save gaps, explicit explanation pause and resume, no reset or duplicate finalization, stale/anonymous guards, final leaderboard/certificate duration and automatic retake restart.');
 await req(rankModePath,{course:modeCourseId,action:'ranking',rankingMode:'default'},200,auth,'PUT');
 assert((await req(rankModePath+'?course='+modeCourseId,null,200,auth)).rankingMode==='balanced','Original mode restoration failed');
 await req('/api/teacher',{id:modeCourseId},200,auth,'DELETE');
@@ -902,6 +932,20 @@ assert((await db.prepare('SELECT elapsed_ms FROM student_answer_times WHERE stud
 await req(rankModePath,{course:tensesId,action:'ranking',rankingMode:'default'},200,auth,'PUT');
 assert((await req('/api/classroom?course='+tensesId)).course.rankingMode==='participation','Original learning-only mode was not restored');
 console.log('PASS: owner-only accuracy/speed controls, separate deadlines, entry-first perfect ties across archives, fastest completed attempts, exact-time grade/entry ties, unknown times, no accuracy timing, protected best-grade certificates, fastest balloon replay, mandatory stage totals and legacy lesson defaults.');
+
+// Whole-clock speed timing also keeps the grade-four journey and replay prefix intact.
+await req(rankModePath,{course:choresId,action:'ranking',rankingMode:'speed'},200,auth,'PUT');
+cookies={};let continuousChores=await req('/api/classroom',{action:'start',course:choresId,name:'اختبار سرعة الرحلة كاملة'});
+for(let l=0;l<3;l++){continuousChores=await req('/api/classroom',{action:'read',course:choresId,lesson:l});for(const source of sourceChores.definition.questions.filter(q=>q.lesson===l)){const q=continuousChores.course.questions.find(q=>q.id===source.id);continuousChores=await req('/api/classroom',{action:'answer',course:choresId,question:q.id,choice:q.options.indexOf(source.options[source.answer])});}}
+continuousChores=await playRequiredGame(continuousChores,{fast:true,mistakes:1});
+assert(continuousChores.certificate.total===30&&continuousChores.certificate.score===29&&continuousChores.bestResult.solveMs>0,'Continuous journey clock lost mandatory stages or its final measured duration');
+const firstWholeRun=await db.prepare('SELECT * FROM student_speed_clocks WHERE student=? AND run=?').bind(continuousChores.student.id,continuousChores.game.id).first();
+assert(firstWholeRun.valid===1&&firstWholeRun.prefix_ms>0&&firstWholeRun.elapsed_ms>=firstWholeRun.prefix_ms&&firstWholeRun.finished_at!==null,'Whole journey prefix or game finish missing');
+continuousChores=await playRequiredGame(continuousChores,{fast:true});
+const secondWholeRun=await db.prepare('SELECT * FROM student_speed_clocks WHERE student=? AND run=?').bind(continuousChores.student.id,continuousChores.game.id).first();
+assert(secondWholeRun.prefix_ms===firstWholeRun.prefix_ms&&secondWholeRun.valid===1&&continuousChores.certificate.score===30,'Balloon replay recounted the previous game or lowered the certificate');
+await req(rankModePath,{course:choresId,action:'ranking',rankingMode:'default'},200,auth,'PUT');
+console.log('PASS: continuous full-journey timing, wrong-answer correction, required quiz/dictation/balloon grades, finished game clocks and reused training prefix for independent replays.');
 
 // Recovery revokes existing sessions, expiration denies access, logout revokes.
 const oldAuth={...auth};

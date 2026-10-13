@@ -1,5 +1,6 @@
 import {database} from './database';
 import {parseSolveMs} from './solve-time';
+import {ensureContinuousSpeed} from './continuous-speed';
 import {CHORES_COURSE_ID,balloonWords,balloonLevels,makeBalloonRounds,initialBalloonRun,popBalloon,type BalloonDifficulty,type BalloonRound,type BalloonRun} from './chores-learning';
 export const BALLOON_POINTS=balloonWords.length;
 type SavedState={timing?:{elapsedMs:number;complete:boolean};run:BalloonRun;roundIndex:number;points:number;answered:number;log:{round:number;choice:string;correct:boolean;first:boolean}[]};
@@ -46,4 +47,10 @@ export async function gameStep(student:string,attempt:number,body:{action?:strin
  const results=await db.batch(updates);if(!results[0].meta.changes)throw new GameError('تقدّمت اللعبة. أعد تحميل الجولة.',409);
  return visible({...g,state:JSON.stringify(state),revision:g.revision+1,completed:now});
 }
-export async function allGameResults(endsAt?:string,speed=false){const order=speed?`${gameSolveSql} IS NULL,${gameSolveSql} ASC,score DESC,completed ASC,id ASC`:bestGameOrder;return (await database().prepare(`SELECT g.student,g.attempt,b.score,b.completed,g.solved,CASE WHEN json_extract(b.state,'$.timing.complete')=1 AND json_extract(b.state,'$.timing.elapsedMs')>0 THEN json_extract(b.state,'$.timing.elapsedMs') ELSE NULL END AS solveMs FROM (SELECT student,attempt,MAX(solved) AS solved FROM student_game_runs GROUP BY student,attempt) g LEFT JOIN student_game_runs b ON b.id=(SELECT id FROM student_game_runs WHERE student=g.student AND attempt=g.attempt AND status='won' AND (? IS NULL OR completed<?) ORDER BY ${order} LIMIT 1)`).bind(endsAt??null,endsAt??null).all()).results as unknown as {student:string;attempt:number;score:number|null;completed:string|null;solved:number;solveMs:number|null}[];}
+export async function allGameResults(endsAt?:string,speed=false){
+ await ensureContinuousSpeed();
+ const clockWhere='sc.student=candidate.student AND sc.attempt=candidate.attempt AND sc.run=candidate.id',oldTime=gameSolveSql.replaceAll('state','candidate.state');
+ const measured=`CASE WHEN EXISTS(SELECT 1 FROM student_speed_clocks sc WHERE ${clockWhere}) THEN (SELECT CASE WHEN sc.valid=1 AND sc.finished_at IS NOT NULL THEN MAX(1,sc.elapsed_ms-sc.prefix_ms) ELSE NULL END FROM student_speed_clocks sc WHERE ${clockWhere}) ELSE ${oldTime} END`;
+ const order=speed?`${measured} IS NULL,${measured} ASC,score DESC,completed ASC,id ASC`:bestGameOrder;
+ return (await database().prepare(`SELECT g.student,g.attempt,b.score,b.completed,g.solved,CASE WHEN ${Number(speed)}=1 AND c.student IS NOT NULL THEN CASE WHEN c.valid=1 AND c.finished_at IS NOT NULL THEN MAX(1,c.elapsed_ms-c.prefix_ms) ELSE NULL END ELSE CASE WHEN json_extract(b.state,'$.timing.complete')=1 AND json_extract(b.state,'$.timing.elapsedMs')>0 THEN json_extract(b.state,'$.timing.elapsedMs') ELSE NULL END END AS solveMs,c.student IS NOT NULL AS wholeTimingSeen,CASE WHEN c.valid=1 AND c.finished_at IS NOT NULL THEN c.elapsed_ms ELSE NULL END AS wholeSolveMs FROM (SELECT student,attempt,MAX(solved) AS solved FROM student_game_runs GROUP BY student,attempt) g LEFT JOIN student_game_runs b ON b.id=(SELECT candidate.id FROM student_game_runs candidate WHERE candidate.student=g.student AND candidate.attempt=g.attempt AND candidate.status='won' AND (? IS NULL OR candidate.completed<?) ORDER BY ${order} LIMIT 1) LEFT JOIN student_speed_clocks c ON c.student=b.student AND c.attempt=b.attempt AND c.run=b.id`).bind(endsAt??null,endsAt??null).all()).results as unknown as {student:string;attempt:number;score:number|null;completed:string|null;solved:number;solveMs:number|null;wholeTimingSeen:number;wholeSolveMs:number|null}[];
+}

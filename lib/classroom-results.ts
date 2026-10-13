@@ -9,6 +9,7 @@ import {compareResults,betterResult,resultPercent,type Result,type Rank} from '.
 import {sentenceResponseSchema} from './tenses-learning';
 import {getCompetition} from './course-competition';
 import {getRankingMode} from './course-ranking';
+import {allContinuousTimes} from './continuous-speed';
 import {rankingUsesTime,compareCompetitionResults} from './ranking-mode';
 import {studentModerationSchema,type StudentParticipation} from './student-moderation';
 export {betterResult,resultPercent} from './result-ranking';
@@ -36,12 +37,13 @@ export async function classroomResults(course:TeacherCourse,studentId?:string,te
  const rankingMode=course.rankingMode??await getRankingMode(course.id),required=course.id===CHORES_COURSE_ID,learningOnly=rankingMode==='participation',untimed=!rankingUsesTime(rankingMode),competition=await getCompetition(course.id),deadline=!learningOnly&&competition.enabled?competition.endsAt:null;
  const compareAttempt=(a:Result,b:Result)=>rankingMode==='speed'?compareCompetitionResults(a,b,rankingMode):betterResult(a,b)?-1:betterResult(b,a)?1:0;
  const compareRows=(a:Rank,b:Rank)=>(learningOnly?a.name.localeCompare(b.name,'ar'):rankingMode==='balanced'?compareResults(a,b):compareCompetitionResults(a,b,rankingMode))||(rankingMode==='accuracy'||rankingMode==='speed'?a.created.localeCompare(b.created)||((entryOrder.get(a.id)||0)-(entryOrder.get(b.id)||0)):(a.completed||a.created).localeCompare(b.completed||b.created))||a.id.localeCompare(b.id);
- const [live,history,games,dictations,times,moderation,competitionGames,fastGames]=await Promise.all([
+ const [live,history,games,dictations,times,moderation,competitionGames,fastGames,continuousTimes]=await Promise.all([
   db.prepare(`SELECT s.id,s.name,s.created,s.rowid AS _entryOrder,s.completed,COALESCE(v.attempt,1) AS attempt,COUNT(a.question) AS answered,COALESCE(SUM(a.correct),0) AS score,COALESCE(json_array_length(s.snapshot,'$.definition.questions'),?) AS total,COALESCE(json_extract(s.snapshot,'$.title'),?) AS title FROM students s LEFT JOIN answers a ON a.student=s.id LEFT JOIN student_sessions v ON v.student=s.id WHERE s.course=? GROUP BY s.id`).bind(course.definition.questions.length,course.title,course.id).all(),
   db.prepare('SELECT student,attempt,score,total,answered,completed,created,json_extract(snapshot,\'$.title\') AS title FROM student_attempts WHERE course=?').bind(course.id).all(),required?allGameResults():Promise.resolve([]),required?allDictationResults():Promise.resolve([]),untimed?Promise.resolve([]):allAnswerTimes(),
   db.prepare('SELECT m.student,m.removed FROM student_moderation m JOIN students s ON s.id=m.student WHERE s.course=?').bind(course.id).all<{student:string;removed:string}>(),
-  required&&deadline?allGameResults(deadline,rankingMode==='speed'):Promise.resolve([]),required&&rankingMode==='speed'?allGameResults(undefined,true):Promise.resolve([])
+  required&&deadline?allGameResults(deadline,rankingMode==='speed'):Promise.resolve([]),required&&rankingMode==='speed'?allGameResults(undefined,true):Promise.resolve([]),rankingMode==='speed'?allContinuousTimes(course.id):Promise.resolve([])
  ]);
+ const continuousMap=new Map(continuousTimes.map(t=>[t.student+':'+t.attempt,t]));
  const entryOrder=new Map(live.results.map(r=>[String(r.id),Number(r._entryOrder)]));
  const rows=new Map<string,Rank>(),gameMap=new Map(games.map(g=>[g.student+':'+g.attempt,g])),dictationMap=new Map(dictations.map(d=>[d.student+':'+d.attempt,d])),timeMap=new Map(times.map(t=>[t.student+':'+t.attempt+':'+t.stage,t]));let certificate:Result|null=null,previousCertificate:Result|null=null;
  const unrestrictedGameMap=rankingMode==='speed'&&required?new Map(fastGames.map(g=>[g.student+':'+g.attempt,g])):gameMap,competitionGameMap=deadline?new Map(competitionGames.map(g=>[g.student+':'+g.attempt,g])):unrestrictedGameMap;
@@ -49,11 +51,11 @@ export async function classroomResults(course:TeacherCourse,studentId?:string,te
   // Accuracy and participation never use durations, but still include every required stage.
   const key=student+':'+r.attempt,quiz=timeMap.get(key+':quiz');
   const quizMs=quiz?.samples===r.total?quiz.elapsed:null;
-  if(!required)return untimed?r:{...r,solveMs:r.completed?quizMs:null};
+  if(!required){const clock=continuousMap.get(key),elapsed=clock?(clock.valid&&clock.finished_at!==null?clock.elapsed:null):quizMs;return untimed?r:{...r,solveMs:r.completed?elapsed:null};}
   const game=selectedGames.get(key),dictation=dictationMap.get(key),dictationTime=timeMap.get(key+':dictation');
   const completed=r.completed&&game?.completed&&dictation?.answered===DICTATION_POINTS?game.completed:null;
   const dictationMs=dictationTime?.samples===DICTATION_POINTS?dictationTime.elapsed:null;
-  const solveMs=completed&&quizMs!==null&&dictationMs!==null&&typeof game?.solveMs==='number'?quizMs+dictationMs+game.solveMs:null;
+  const solveMs=rankingMode==='speed'&&game?.wholeTimingSeen?(completed?game.wholeSolveMs:null):completed&&quizMs!==null&&dictationMs!==null&&typeof game?.solveMs==='number'?quizMs+dictationMs+game.solveMs:null;
   return {...r,...(untimed?{}:{solveMs}),quizScore:r.score,quizTotal:r.total,dictationScore:dictation?.score??0,dictationTotal:DICTATION_POINTS,gameScore:game?.score??0,gameTotal:BALLOON_POINTS,gameCompleted:game?.completed??null,score:r.score+(dictation?.score??0)+(game?.score??0),total:r.total+DICTATION_POINTS+BALLOON_POINTS,answered:r.answered+(dictation?.answered??0)+(game?.completed?BALLOON_POINTS:Math.min(game?.solved??0,BALLOON_POINTS-1)),completed};
  };
  for(const raw of live.results){const {_entryOrder,...source}=raw as unknown as Rank&{_entryOrder:number},r={...source,...combined(source,source.id,unrestrictedGameMap)},bestGrade=combined(source,source.id);rows.set(r.id,{...r,percentage:resultPercent(r),position:0,attempts:r.attempt});if(r.id===studentId&&source.completed)previousCertificate=source;if(r.id===studentId&&bestGrade.completed)certificate=bestGrade;}

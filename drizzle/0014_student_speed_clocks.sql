@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS student_speed_clocks(student TEXT NOT NULL REFERENCES students(id),attempt INTEGER NOT NULL,run TEXT NOT NULL DEFAULT '',elapsed_ms INTEGER NOT NULL DEFAULT 0,prefix_ms INTEGER NOT NULL DEFAULT 0,running_since INTEGER,finished_at INTEGER,valid INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(student,attempt,run));

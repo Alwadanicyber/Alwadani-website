@@ -14,6 +14,7 @@ import {answerOrder} from '@/lib/answer-order';
 import {courseStudentAccess} from '@/lib/student-access';
 import {getRankingMode} from '@/lib/course-ranking';
 import {rankingUsesTime} from '@/lib/ranking-mode';
+import {resumeSpeedClock,setSpeedView,startSpeedGame,finishSpeedClock,markSpeedPrefix} from '@/lib/continuous-speed';
 import {CHORES_COURSE_ID} from '@/lib/chores-learning';
 import {ensureClassroomResults,archiveAndRestart,classroomResults} from '@/lib/classroom-results';
 import {gameSnapshot,startGame,gameStep,GameError,BALLOON_POINTS} from '@/lib/balloon-assessment';
@@ -50,9 +51,9 @@ async function snapshot(student:any,course:TeacherCourse,grade='general',migrate
  return {student:student?{id:student.id,name:student.name,completed:gameRequired&&(!gameData.gameBest||!dictation?.completed)?null:student.completed,attempt:student.attempt||1}:null,course:{...visible,grade},answers:answers.map(a=>{const q=course.definition.questions.find(q=>q.id===a.question),order=orders.get(a.question);return {...a,...(responses.has(a.question)?{response:responses.get(a.question)}:{}),choice:order?order.indexOf(a.choice):a.choice,answer:order&&q?order.indexOf(q.answer):q?.answer,reason:q?.reason,answerText:q?.options[q.answer]};}),reads:reads.map(r=>r.lesson),...results,...(gameRequired?{gameRequired:true,gameTotal:BALLOON_POINTS,dictationReady,dictation,gameReady,...gameData}:{}),...(migrated?{notice:typeof migrated==='string'?migrated:'أصبح الدرس 3 مشاهد قصيرة. نتيجتك السابقة محفوظة، ويمكنك تحسينها في المحاولة الجديدة.'}:{})};
 }
 export async function GET(req:Request){try{const {student,course,grade,migrated}=await context(req,new URL(req.url).searchParams.get('course')||'life-stories');return reply(await snapshot(student,course,grade,migrated));}catch(e){console.error(e);return reply({error:'تعذّر تحميل الدرس والنتائج. حاول مجددًا.'},503);}}
-export async function POST(req:Request){try{
+export async function POST(req:Request){const receivedAt=Date.now();try{
  if(req.headers.get('origin')&&new URL(req.headers.get('origin')!).origin!==new URL(req.url).origin)return reply({error:'طلب غير صالح.'},403);
- const body=await req.json() as {course?:string;action?:string;name?:string;lesson:number;question:number;choice:number;attempt?:number;difficulty?:string;restart?:boolean;run?:string;revision?:number;selection?:string;text?:string;advance?:boolean;gameUpdate?:boolean;elapsedMs?:unknown};
+ const body=await req.json() as {course?:string;action?:string;name?:string;lesson:number;question:number;choice:number;attempt?:number;difficulty?:string;restart?:boolean;run?:string;revision?:number;selection?:string;text?:string;advance?:boolean;gameUpdate?:boolean;elapsedMs?:unknown;view?:unknown};
  const courseId=body.course||'life-stories',db=database();let {id,student,course,latest,grade,migrated}=await context(req,courseId);
  if(body.action==='start'){
   const name=typeof body.name==='string'?body.name.trim():'';if(name.length<2||name.length>60||/[<>\x00-\x1f]/.test(name))return reply({error:'أدخل اسمًا من حرفين إلى ٦٠ حرفًا.'},400);
@@ -68,7 +69,7 @@ export async function POST(req:Request){try{
  await db.prepare('INSERT OR IGNORE INTO student_sessions(student,attempt,started) SELECT id,1,created FROM students WHERE id=?').bind(id).run();
  const {questions,lessons}=course.definition;
  if(body.action==='retry'){
-  await archiveAndRestart(id,attempt,latest,student.snapshot);const current=await context(req,courseId);return reply(await snapshot(current.student,current.course,current.grade));
+  await archiveAndRestart(id,attempt,latest,student.snapshot);const current=await context(req,courseId);if(current.course.rankingMode==='speed'&&await db.prepare('SELECT lesson FROM reads WHERE student=? AND lesson=0').bind(id).first())await resumeSpeedClock(id,current.student.attempt);return reply(await snapshot(current.student,current.course,current.grade));
  }else if(body.action==='tenses-game-retry'){
   if(courseId!==TENSES_COURSE_ID||!hasNewTensesSequence(course.definition))return reply({error:'إعادة هذه اللعبة غير متاحة لهذا الدرس.'},400);
   const counts=await db.prepare('SELECT (SELECT COUNT(*) FROM answers WHERE student=? AND question<=12) AS quiz,(SELECT COUNT(*) FROM answers WHERE student=? AND question>12) AS game,(SELECT COUNT(*) FROM reads WHERE student=?) AS reads').bind(id,id,id).first<{quiz:number;game:number;reads:number}>();
@@ -81,6 +82,12 @@ export async function POST(req:Request){try{
   if(counts?.quiz!==questions.filter(q=>q.id<first).length||!counts.game||counts.reads!==lessons.length)return reply({error:'أكمل المحطات السابقة وابدأ اللعبة أولًا.'},400);
   if(!await restartPrepositionGame(student,course))return reply({error:'تغيّرت المحاولة. أعد تحميل تقدمك.'},409);
   const current=await context(req,courseId);return reply(await snapshot(current.student,current.course,current.grade));
+ }else if(body.action==='speed-view'){
+  if(course.rankingMode!=='speed'||(body.view!=='solve'&&body.view!=='explain'))return reply({error:'إعداد وقت غير صالح.'},400);
+  const game=courseId===CHORES_COURSE_ID?(await gameSnapshot(id,attempt)).game:null;
+  if(game&&body.run!==game.id)return reply({error:'تغيّرت جولة اللعبة. أعد تحميل تقدمك.'},409);
+  if(!student.completed||game?.status==='playing')await setSpeedView(id,attempt,game?.id||'',body.view,receivedAt);
+  return reply({saved:true});
  }else if(body.action==='dictation-answer'){
   if(courseId!==CHORES_COURSE_ID)return reply({error:'محطة الإملاء غير متاحة لهذا الدرس.'},400);
   const counts=await db.prepare('SELECT (SELECT COUNT(*) FROM answers WHERE student=?) AS answers,(SELECT COUNT(*) FROM reads WHERE student=?) AS reads').bind(id,id).first<{answers:number;reads:number}>();
@@ -92,11 +99,14 @@ export async function POST(req:Request){try{
   if(counts?.answers!==questions.length||counts?.reads!==lessons.length)return reply({error:'أكمل المشاهد الثلاثة وتدريباتها بالترتيب قبل اللعبة النهائية.'},400);
   if(counts.dictation!==DICTATION_POINTS)return reply({error:'أكمل محطة الإملاء قبل لعبة البالونات النهائية.'},400);
   const game=body.action==='game-start'?await startGame(id,attempt,body.difficulty,body.restart===true):await gameStep(id,attempt,body,questions.length,lessons.length,DICTATION_POINTS);
+  if(course.rankingMode==='speed'){if(body.action==='game-start')await startSpeedGame(id,attempt,game.id,receivedAt);else if(game.status==='won')await finishSpeedClock(id,attempt,game.id);}
   if(body.gameUpdate===true&&game.status!=='won')return reply({kind:'game-update',game});
   const current=await context(req,courseId);return reply(await snapshot(current.student,current.course,current.grade));
  }else if(body.action==='read'){
   if(!Number.isInteger(body.lesson)||!lessons[body.lesson])return reply({error:'درس غير صالح.'},400);
   if(courseId===CHORES_COURSE_ID||courseId===TENSES_COURSE_ID||courseId===TIME_PLACE_COURSE_ID){const previous=questions.filter(q=>q.lesson<body.lesson),done=await db.prepare('SELECT COUNT(*) AS n FROM answers WHERE student=? AND question<?').bind(id,questions.find(q=>q.lesson===body.lesson)?.id??Number.MAX_SAFE_INTEGER).first<{n:number}>();if(done?.n!==previous.length)return reply({error:'أكمل تدريب المشهد السابق أولًا.'},400);}
+  if(course.rankingMode==='speed'&&!student.completed)await resumeSpeedClock(id,attempt,receivedAt);
+  if(course.rankingMode==='speed'&&body.lesson===lessons.length-1&&(courseId===TIME_PLACE_COURSE_ID||courseId===TENSES_COURSE_ID))await markSpeedPrefix(id,attempt,receivedAt);
   await db.prepare('INSERT OR IGNORE INTO reads(student,lesson) SELECT ?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?)').bind(id,body.lesson,id,attempt).run();
  }else if(body.action==='answer'){
   const q=questions.find(q=>q.id===body.question);if(!q||q.kind!=='sentence-build'&&(!Number.isInteger(body.choice)||!q.options[body.choice]))return reply({error:'إجابة غير صالحة.'},400);
@@ -117,6 +127,7 @@ export async function POST(req:Request){try{
   if(courseId===CHORES_COURSE_ID&&(!(await gameSnapshot(id,attempt)).gameBest||!(await dictationSnapshot(id,attempt)).completed))return reply({error:'أكمل الإملاء ولعبة البالونات النهائية للحصول على الشهادة.'},400);
   const now=new Date().toISOString(),changed=await db.prepare('UPDATE students SET completed=COALESCE(completed,?) WHERE id=? AND EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?) AND (SELECT COUNT(*) FROM answers WHERE student=?)=? AND (SELECT COUNT(*) FROM reads WHERE student=?)=?').bind(now,id,id,attempt,id,questions.length,id,lessons.length).run();
   if(!changed.meta.changes)return reply({error:'أكمل جميع المشاهد والأسئلة للحصول على الشهادة.'},400);
+  if(course.rankingMode==='speed'&&courseId!==CHORES_COURSE_ID)await finishSpeedClock(id,attempt);
   student.completed=student.completed||now;
  }else return reply({error:'طلب غير صالح.'},400);
  const currentAttempt=await db.prepare('SELECT attempt FROM student_sessions WHERE student=?').bind(id).first<{attempt:number}>();
