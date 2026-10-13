@@ -24,3 +24,5 @@ export const studentModeration=sqliteTable('student_moderation',{student:text('s
 export const courseCompetitions=sqliteTable('course_competitions',{course:text('course').primaryKey(),enabled:integer('enabled').notNull().default(0),showCountdown:integer('show_countdown').notNull().default(1),endsAt:text('ends_at'),prize:text('prize').notNull().default(''),updated:text('updated').notNull()});
 
 export const studentSentenceAnswers=sqliteTable('student_sentence_answers',{student:text('student').notNull().references(()=>students.id),attempt:integer('attempt').notNull(),question:integer('question').notNull(),response:text('response').notNull()},t=>[primaryKey({columns:[t.student,t.attempt,t.question]})]);
+
+export const courseRankingSettings=sqliteTable('course_ranking_settings',{course:text('course').primaryKey(),mode:text('mode').notNull(),updated:text('updated').notNull()});

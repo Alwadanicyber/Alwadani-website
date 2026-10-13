@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {compareCompetitionResults,defaultRankingMode,rankingUsesTime,parseRankingChoice} from '../lib/ranking-mode.ts';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import {readFileSync,readdirSync} from 'node:fs';
@@ -6,6 +7,19 @@ import {ActiveSolveTimer,parseSolveMs,formatSolveTime} from '../lib/solve-time.t
 import {compareResults,betterResult} from '../lib/result-ranking.ts';
 import {withLeaderboardBaseline,excludedTeacherEntry} from '../lib/leaderboard-baselines.ts';
 
+assert.equal(defaultRankingMode('life-stories-time-place-grade-9'),'accuracy');
+assert.equal(defaultRankingMode('present-tenses-grade-4-02'),'participation');
+assert.equal(defaultRankingMode('chores-grade-4'),'balanced');
+assert(rankingUsesTime('speed')&&!rankingUsesTime('accuracy'));
+assert.throws(()=>parseRankingChoice('invalid'));
+const ranked=(score,solveMs=null,completed='2026-10-13T12:00:00Z')=>({score,total:24,answered:24,solveMs,completed,attempt:1,created:'2026-10-13T11:00:00Z'});
+assert.equal(compareCompetitionResults(ranked(24,90000),ranked(24,500),'accuracy'),0);
+assert(compareCompetitionResults(ranked(24,90000),ranked(23,500),'accuracy')<0);
+assert(compareCompetitionResults(ranked(23,500),ranked(24,90000),'speed')<0);
+assert(compareCompetitionResults(ranked(24,null),ranked(23,500),'speed')>0);
+assert(compareCompetitionResults(ranked(24,1,null),ranked(23,500),'speed')>0);
+assert(compareCompetitionResults(ranked(24,500),ranked(23,500),'speed')<0);
+assert.equal(compareCompetitionResults(ranked(24,90000,null),ranked(24,500),'accuracy'),0);
 let now=0;
 const timer=new ActiveSolveTimer(0,()=>now);
 now=90_000;assert.equal(timer.value(),0,'Explanation time counted');

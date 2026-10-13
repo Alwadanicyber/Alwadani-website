@@ -14,5 +14,5 @@ export default async function TeacherStudents({searchParams}:{searchParams:Promi
   const results=selected?await classroomResults(selected,undefined,true):null;
   return <TeacherParticipants username={owner.username}
     courses={courses.map(c=>({id:c.id,title:c.title,grade:c.grade,studentGender:c.studentGender||c.definition.studentGender||'male'}))}
-    initialCourse={selected?.id||''} initialParticipants={results?.participants||[]}/>;
+    initialCourse={selected?.id||''} initialRankingMode={results?.rankingMode||'balanced'} initialParticipants={results?.participants||[]}/>;
 }

@@ -17,7 +17,7 @@ async function participants(courseId:string){
   if(!course)return reply({error:'الدرس غير موجود أو في المحذوفات.'},404);
   await ensureClassroomResults();
   const results=await classroomResults(course,undefined,true);
-  return reply({course:course.id,participants:results.participants});
+  return reply({course:course.id,participants:results.participants,rankingMode:results.rankingMode});
 }
 export async function GET(req:Request){
   const denied=await access(req);if(denied)return denied;

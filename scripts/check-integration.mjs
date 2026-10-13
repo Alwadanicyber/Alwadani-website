@@ -97,7 +97,7 @@ const audienceOwner=await req('/api/teacher',null,200,auth),audienceCourse=audie
 assert(audienceCourse.studentGender==='female'&&audienceCourse.definition.studentGender==='female','Teacher selection was not stored');
 const audienceCatalog=await req('/api/courses');
 assert(audienceCatalog.courses.find(c=>c.id===draft.id).studentGender==='female'&&audienceCatalog.courses.find(c=>c.id==='life-stories').studentGender==='male','Audience setting leaked between lessons');
-const privateHelp='الأوقات التقديرية قيم مبدئية أضافها المعلم',medalHelp='الميداليات بعد إكمال الرحلة';
+const privateHelp='الأوقات التقديرية قيم مبدئية أضافها المعلم',medalHelp='من أيقونة «المنافسة» لكل درس';
 const privateTeacherHtml=await(await mf.dispatchFetch('https://course.test/teacher',{headers:auth})).text();
 assert(privateTeacherHtml.includes(privateHelp)&&privateTeacherHtml.includes(medalHelp),'Competition explanation is missing from the private teacher page');
 for(const path of ['/?course='+draft.id,'/?course=chores-grade-4','/teacher']){
@@ -815,6 +815,93 @@ const accessExport=(await req('/api/teacher/export',null,200,auth)).courses.find
 assert(accessExport.definition.studentAccess==='single','Access policy not included in teacher backup');
 console.log('PASS: single-profile defaults, same-name resume, server-side switch/spoof rejection, unchanged cookies/student count, owner-only validation, immediate policy changes on saved snapshots, shared-browser enrollment, retained grades and same-student retry.');
 
+
+// Accuracy uses enrollment time, including best results from archived retries.
+await db.prepare('UPDATE students SET created=? WHERE id=?').bind('2026-10-13T08:00:00.000Z',prepId).run();
+await db.prepare('UPDATE students SET created=?,completed=? WHERE id=?').bind('2026-10-13T09:00:00.000Z','2026-10-13T10:00:00.000Z',competitors[1]).run();
+const entryBoard=await req('/api/classroom?course='+timePlaceId);
+assert(entryBoard.course.rankingMode==='accuracy'&&entryBoard.leaderboard.filter(r=>r.score===24).map(r=>r.id).join(',')===[prepId,competitors[1]].join(','),'Earlier entry with archived perfect result lost to completion/retry time');
+const entryOwner=await req('/api/teacher/students?course='+timePlaceId,null,200,auth);
+assert(entryOwner.participants.find(r=>r.id===prepId).created==='2026-10-13T08:00:00.000Z','Archived result overwrote enrollment date');
+
+const rankModePath='/api/teacher/competition',modeCourseId='b8e7f489-fb81-44a0-8318-d9a926f61aa1';
+const modeCourse={...payload,id:modeCourseId,published:1,title:'اختبار طريقتي المنافسة',definition:{lessons:[lesson],questions:[1,2,3].map(id=>({id,lesson:0,prompt:'Choose A '+id,options:['A','B'],answer:0,reason:'الإجابة A.'}))}};
+await req('/api/teacher',modeCourse,200,auth);
+for(const headers of [{},forged,{...auth,origin:'https://evil.test'}])await req(rankModePath,{course:modeCourseId,action:'ranking',rankingMode:'speed'},403,headers,'PUT');
+await req(rankModePath,{course:modeCourseId,action:'ranking',rankingMode:'invalid'},400,auth,'PUT');
+await req(rankModePath,{course:'missing-course',action:'ranking',rankingMode:'speed'},404,auth,'PUT');
+const beforeModeEvent=(await req(rankModePath+'?course='+modeCourseId,null,200,auth)).competition;
+await req(rankModePath,{course:modeCourseId,action:'ranking',rankingMode:'accuracy'},200,auth,'PUT');
+cookies={};const firstMode=await req('/api/classroom',{action:'start',course:modeCourseId,name:'الأسبق في الدخول'}),firstModeCookies={...cookies};
+assert(firstMode.course.rankingMode==='accuracy','Chosen mode missing on initial enrollment');
+cookies={};const secondMode=await req('/api/classroom',{action:'start',course:modeCourseId,name:'الثاني في الدخول'}),secondModeCookies={...cookies};
+await db.prepare('UPDATE students SET created=? WHERE id=?').bind('2026-10-13T08:00:00.000Z',firstMode.student.id).run();
+await db.prepare('UPDATE students SET created=? WHERE id=?').bind('2026-10-13T09:00:00.000Z',secondMode.student.id).run();
+async function completeModeProfile(profileCookies,ms,wrong=false,retry=false){
+ cookies={...profileCookies};let state=await req('/api/classroom?course='+modeCourseId);
+ if(retry)state=await req('/api/classroom',{action:'retry',course:modeCourseId});
+ state=await req('/api/classroom',{action:'read',course:modeCourseId,lesson:0});
+ for(const q of state.course.questions)state=await req('/api/classroom',{action:'answer',course:modeCourseId,question:q.id,choice:q.options.indexOf(wrong&&q.id===1?'B':'A'),elapsedMs:ms});
+ return req('/api/classroom',{action:'complete',course:modeCourseId});
+}
+await completeModeProfile(secondModeCookies,10);let modeState=await completeModeProfile(firstModeCookies,900);
+assert(modeState.leaderboard[0].id===firstMode.student.id&&modeState.leaderboard.every(r=>r.percentage===100&&!('solveMs' in r)),'Accuracy used speed or completion date instead of entry time');
+assert(!(await db.prepare('SELECT student FROM student_answer_times WHERE student IN (?,?)').bind(firstMode.student.id,secondMode.student.id).first()),'Accuracy recorded quiz time');
+await req('/api/classroom',{action:'answer',course:modeCourseId,question:1,choice:0,elapsedMs:1,rankingMode:'speed'});
+assert((await req('/api/classroom?course='+modeCourseId)).course.rankingMode==='accuracy','Student could override teacher ranking policy');
+const rankedSaved=await req(rankModePath,{course:modeCourseId,action:'ranking',rankingMode:'speed'},200,auth,'PUT');
+assert(rankedSaved.competition.enabled===beforeModeEvent.enabled&&rankedSaved.competition.endsAt===beforeModeEvent.endsAt,'Changing ranking reset the deadline');
+const untimedHistory=await req('/api/classroom?course='+modeCourseId);
+assert(untimedHistory.course.rankingMode==='speed'&&untimedHistory.leaderboard.every(r=>r.solveMs===null),'Legacy unknown time became zero');
+await req('/api/classroom',{action:'retry',course:modeCourseId});
+await req('/api/classroom',{action:'read',course:modeCourseId,lesson:0});
+await req('/api/classroom',{action:'answer',course:modeCourseId,question:1,choice:0,elapsedMs:0},400);
+modeState=await completeModeProfile(firstModeCookies,600,true);
+assert(modeState.bestResult.score===2&&modeState.bestResult.solveMs===1800&&modeState.certificate.score===3,'Fast lower grade replaced the highest-grade certificate');
+await completeModeProfile(secondModeCookies,1000,false,true);
+modeState=await completeModeProfile(firstModeCookies,1000,false,true);
+assert(modeState.leaderboard[0].id===firstMode.student.id&&modeState.leaderboard[0].score===2&&modeState.leaderboard[0].solveMs===1800&&modeState.certificate.score===3,'Slower higher-grade retry replaced the fastest archived attempt');
+assert(modeState.leaderboard[1].score===3&&modeState.leaderboard[1].solveMs===3000,'Speed ranking incorrectly made grade the primary key');
+await completeModeProfile(secondModeCookies,600,true,true);
+modeState=await req('/api/classroom?course='+modeCourseId);
+assert(modeState.leaderboard[0].id===firstMode.student.id,'Exact speed/grade tie lost enrollment precedence');
+await req(rankModePath,{course:modeCourseId,action:'ranking',rankingMode:'accuracy'},200,auth,'PUT');
+modeState=await req('/api/classroom?course='+modeCourseId);
+assert(modeState.leaderboard[0].id===firstMode.student.id&&modeState.leaderboard.every(r=>r.score===3&&!('solveMs' in r)),'Restored accuracy did not use the best grade without old speed data');
+assert(modeState.leaderboard[0].created==='2026-10-13T08:00:00.000Z','Retry changed entry precedence');
+await db.prepare('UPDATE students SET created=? WHERE id=?').bind('2026-10-13T08:00:00.000Z',secondMode.student.id).run();
+const sameMillisecond=await req('/api/classroom?course='+modeCourseId);
+assert(sameMillisecond.leaderboard[0].id===firstMode.student.id&&sameMillisecond.leaderboard.every(r=>!('_entryOrder' in r)),'Same-millisecond registrations lost insertion order or exposed an internal key');
+const modeSSR=await(await mf.dispatchFetch('https://course.test/?course='+modeCourseId)).text();assert(modeSSR.includes(modeCourse.title)&&modeSSR.includes('rankingMode')&&modeSSR.includes('accuracy'),'Initial HTML did not include the selected ranking configuration');
+const ownerMode=(await req('/api/teacher/students?course='+modeCourseId,null,200,auth));assert(ownerMode.rankingMode==='accuracy'&&ownerMode.participants[0].id===firstMode.student.id,'Owner result order differs from public order');
+await req('/api/teacher',{...modeCourse,title:'عنوان جديد'},200,auth);
+assert((await req(rankModePath+'?course='+modeCourseId,null,200,auth)).rankingMode==='accuracy','Content edit reset independent ranking settings');
+await req(rankModePath,{course:modeCourseId,action:'ranking',rankingMode:'default'},200,auth,'PUT');
+assert((await req(rankModePath+'?course='+modeCourseId,null,200,auth)).rankingMode==='balanced','Original mode restoration failed');
+await req('/api/teacher',{id:modeCourseId},200,auth,'DELETE');
+
+// The optional fastest mode covers existing archived balloon replays as well.
+const replayFixtures=(await db.prepare("SELECT id,score,state FROM student_game_runs WHERE student=? AND attempt=1 AND status='won' ORDER BY score DESC").bind(firstId).all()).results;
+const highReplay=replayFixtures[0],lowReplay=replayFixtures.find(r=>r.score<highReplay.score);
+assert(highReplay&&lowReplay,'Missing genuine graded replay fixtures');
+for(const [row,elapsed] of [[highReplay,3600],[lowReplay,1200]]){const state=JSON.parse(row.state);state.timing={elapsedMs:elapsed,complete:true};await db.prepare('UPDATE student_game_runs SET state=? WHERE id=?').bind(JSON.stringify(state),row.id).run();}
+for(const stage of ['quiz','dictation'])for(let q=1;q<=(stage==='quiz'?12:6);q++)await db.prepare('INSERT OR REPLACE INTO student_answer_times(student,attempt,stage,question,elapsed_ms) VALUES(?,1,?,?,1000)').bind(firstId,stage,q).run();
+await req(rankModePath,{course:choresId,action:'ranking',rankingMode:'speed'},200,auth,'PUT');
+const speedReplay=(await req('/api/teacher/students?course='+choresId,null,200,auth)).participants.find(r=>r.id===firstId);
+assert(speedReplay.solveMs===19200&&speedReplay.gameScore===lowReplay.score,'Fastest mode selected the higher-grade slower balloon replay');
+await req(rankModePath,{course:choresId,action:'ranking',rankingMode:'accuracy'},200,auth,'PUT');
+const accuracyReplay=(await req('/api/teacher/students?course='+choresId,null,200,auth)).participants.find(r=>r.id===firstId);
+assert(accuracyReplay.total===30&&accuracyReplay.gameTotal===12&&accuracyReplay.dictationTotal===6&&!('solveMs' in accuracyReplay),'Accuracy lost required dictation/balloon points or leaked durations');
+await req(rankModePath,{course:choresId,action:'ranking',rankingMode:'default'},200,auth,'PUT');
+await req(rankModePath,{course:tensesId,action:'ranking',rankingMode:'speed'},200,auth,'PUT');
+cookies={};const timedTenses=await req('/api/classroom',{action:'start',course:tensesId,name:'اختبار الزمنين بتوقيت'});
+assert(timedTenses.course.rankingMode==='speed','Teacher could not activate a competition on a participation-only lesson');
+await req('/api/classroom',{action:'read',course:tensesId,lesson:0});
+await req('/api/classroom',{action:'answer',course:tensesId,question:1,choice:0,elapsedMs:750});
+assert((await db.prepare('SELECT elapsed_ms FROM student_answer_times WHERE student=?').bind(timedTenses.student.id).first()).elapsed_ms===750,'Selected speed mode still discarded tense timing');
+await req(rankModePath,{course:tensesId,action:'ranking',rankingMode:'default'},200,auth,'PUT');
+assert((await req('/api/classroom?course='+tensesId)).course.rankingMode==='participation','Original learning-only mode was not restored');
+console.log('PASS: owner-only accuracy/speed controls, separate deadlines, entry-first perfect ties across archives, fastest completed attempts, exact-time grade/entry ties, unknown times, no accuracy timing, protected best-grade certificates, fastest balloon replay, mandatory stage totals and legacy lesson defaults.');
 
 // Recovery revokes existing sessions, expiration denies access, logout revokes.
 const oldAuth={...auth};

@@ -12,6 +12,8 @@ import {TENSES_COURSE_ID,normalizeSentence} from '@/lib/tenses-learning';
 import type {TeacherCourse} from '@/lib/course-types';
 import {answerOrder} from '@/lib/answer-order';
 import {courseStudentAccess} from '@/lib/student-access';
+import {getRankingMode} from '@/lib/course-ranking';
+import {rankingUsesTime} from '@/lib/ranking-mode';
 import {CHORES_COURSE_ID} from '@/lib/chores-learning';
 import {ensureClassroomResults,archiveAndRestart,classroomResults} from '@/lib/classroom-results';
 import {gameSnapshot,startGame,gameStep,GameError,BALLOON_POINTS} from '@/lib/balloon-assessment';
@@ -35,8 +37,8 @@ async function context(req:Request,courseId:string){
   if(updated)migrated=sequence?'تحدّث ترتيب الشرح: البسيط، ثم المستمر، ثم المقارنة. إجاباتك ونتائجك السابقة محفوظة؛ تابع من أول سؤال لم تجب عنه.':'تحدّثت لعبة محقق الزمن: جمل إنجليزية مع دلائل. إجابات التدريب ونتيجتك السابقة محفوظة؛ تابع اللعبة الجديدة.';
  }
  // Wording follows the teacher's latest setting; saved questions and grades stay intact.
- const presentation:TeacherCourse={...stableCourse(course),studentGender:publicCourse(latest).studentGender,studentAccess:courseStudentAccess(latest)};
- return {id,student,course:presentation,latest:stableCourse(latest),grade:latest.grade||'general',migrated};
+ const rankingMode=await getRankingMode(courseId),presentation:TeacherCourse={...stableCourse(course),studentGender:publicCourse(latest).studentGender,studentAccess:courseStudentAccess(latest),rankingMode};
+ return {id,student,course:presentation,latest:{...stableCourse(latest),rankingMode},grade:latest.grade||'general',migrated};
 }
 async function snapshot(student:any,course:TeacherCourse,grade='general',migrated:boolean|string=false){
  const db=database(),id=student?.id;let answers:any[]=[],reads:any[]=[],responses=new Map<number,string>();
@@ -105,7 +107,7 @@ export async function POST(req:Request){try{
   if(q.kind==='sentence-build'&&(!response||response.length>800||/[<>\x00-\x1f]/.test(response)))return reply({error:'رتّب كلمات الجملة قبل التحقق.'},400);
   const matched=response?q.options.findIndex(option=>normalizeSentence(option)===normalizeSentence(response)):order[body.choice];
   const choice=matched<0?q.options.findIndex((_,i)=>i!==q.answer):matched,correct=response?normalizeSentence(response)===normalizeSentence(q.options[q.answer]):choice===q.answer;
-  const elapsed=courseId===TENSES_COURSE_ID||courseId===TIME_PLACE_COURSE_ID?null:parseSolveMs(body.elapsedMs);
+  const elapsed=rankingUsesTime(course.rankingMode!)?parseSolveMs(body.elapsedMs):null;
   await db.batch([
    ...(response===null?[]:[db.prepare('INSERT OR IGNORE INTO student_sentence_answers(student,attempt,question,response) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?) AND NOT EXISTS(SELECT 1 FROM answers WHERE student=? AND question=?)').bind(id,attempt,q.id,response,id,attempt,id,q.id)]),
    ...(elapsed===null?[]:[db.prepare("INSERT OR IGNORE INTO student_answer_times(student,attempt,stage,question,elapsed_ms) SELECT ?,?,'quiz',?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?) AND NOT EXISTS(SELECT 1 FROM answers WHERE student=? AND question=?)").bind(id,attempt,q.id,elapsed,id,attempt,id,q.id)]),
