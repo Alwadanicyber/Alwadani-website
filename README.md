@@ -220,3 +220,5 @@ React وTypeScript وVinext وCloudflare Workers وD1. الحزم مثبتة ف�
 لوحة هذا الدرس مرتبة تنازليًا بالنسبة المئوية، ولا تستعمل وقت الحل. تمارين الصفحتين (38 سؤالًا) ومسودة قصة الطالب مراجعة اختيارية محفوظة في متصفحه، خارج الدرجة. الأسئلة الشخصية لها نماذج متعددة ولا تصحح كنص حر. صور الصفحتين الأصلية محفوظة دون تعديل في `public/lesson-pages/grade9-life-stories-02/`.
 
 المحتوى: `lib/time-place-course.ts`، والشرح: `app/time-place-study.tsx`، ولعبة السهم: `app/preposition-balloon-question.tsx`، والمراجعة: `lib/time-place-workbook.ts` و`app/time-place-workbook.tsx`، والتصميم: `app/time-place.css`.
+
+يشمل شرح حروف جر الزمان السنوات والشهور والقرون والفصول وأجزاء اليوم، مع مثال صفحة 21: `in the 20th century`. يوجد توضيح مستقل في محطة الشرح يقارن `in 1932` بالسنة و`in the 20th century` بالقرن.
