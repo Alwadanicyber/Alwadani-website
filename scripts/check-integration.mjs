@@ -724,6 +724,9 @@ console.log('PASS: English sentence classification, protected canonical keys, si
 const timePlaceId='life-stories-time-place-grade-9',timePlaceOwner=(await req('/api/teacher',null,200,auth)).courses.find(c=>c.id===timePlaceId);
 assert(timePlaceOwner?.grade==='grade-9'&&timePlaceOwner.definition.lessons.length===5&&timePlaceOwner.definition.questions.length===24,'New grade-nine lesson missing');
 assert(timePlaceOwner.definition.questions.slice(12).every(q=>q.kind==='preposition-balloon'),'Balloons were not preserved in owner definition');
+assert(timePlaceOwner.studentAccess==='single'&&timePlaceOwner.definition.studentAccess==='single','New lesson should default to one browser profile');
+const expectedPrepositions=['in','on','at','in','on','at','last','ago','When','in / on','from / to','before','on','in','at','on','in','in','in','at','on','on','from','to'];
+assert(timePlaceOwner.definition.questions.every((q,i)=>q.options[q.answer]===expectedPrepositions[i]),'Reviewed canonical time/place key changed');
 const timePlaceCatalog=await req('/api/courses?grade=grade-9');assert(timePlaceCatalog.courses.find(c=>c.id===timePlaceId)?.sequence===2&&timePlaceCatalog.courses.find(c=>c.id==='life-stories')?.sequence===1,'Grade-nine sequence missing');
 const timePlaceAnonymous=await req('/api/classroom?course='+timePlaceId);
 assert(timePlaceAnonymous.course.questions.every(q=>!('answer' in q)&&!('reason' in q)),'Preposition answer keys leaked before play');
@@ -781,6 +784,37 @@ assert(prepOwnerReload.definition.questions.slice(12).every(q=>q.kind==='preposi
 assert((await req('/api/classroom?course='+timePlaceId)).course.studentGender==='female','Teacher gender wording is missing');
 assert((await(await mf.dispatchFetch('https://course.test/sitemap.xml')).text()).includes('course='+timePlaceId),'Published grade-nine lesson absent from sitemap');
 console.log('PASS: grade-nine lesson 02, five ordered stations, 12 required balloon points, protected shuffled scoring, wrong-first preservation, 24-point certificate, descending score ranking, no timing, independent game replay and teacher roundtrip.');
+// Browser access is a teacher-controlled presentation policy, even for saved snapshots.
+cookies={...prepCookies};
+const beforeAccess=await req('/api/classroom?course='+timePlaceId),beforeAccessCookies=JSON.stringify(cookies);
+const beforeAccessCount=(await db.prepare('SELECT COUNT(*) AS n FROM students WHERE course=?').bind(timePlaceId).first()).n;
+const resumeAccess=await req('/api/classroom',{action:'start',course:timePlaceId,name:beforeAccess.student.name});
+assert(resumeAccess.student.id===prepId&&resumeAccess.student.attempt===beforeAccess.student.attempt,'Same-name resume changed the profile');
+for(const extra of [{},{studentAccess:'shared'},{definition:{studentAccess:'shared'}}]){
+ await req('/api/classroom',{action:'start',course:timePlaceId,name:'اسم آخر ممنوع',...extra},409);
+}
+assert(JSON.stringify(cookies)===beforeAccessCookies&&(await db.prepare('SELECT COUNT(*) AS n FROM students WHERE course=?').bind(timePlaceId).first()).n===beforeAccessCount,'Blocked name switch created a student or changed identity');
+await req('/api/teacher',{...prepOwnerReload,studentAccess:'invalid'},400,auth);
+await req('/api/teacher',{...prepOwnerReload,studentAccess:'shared'},403,forged);
+await req('/api/teacher',{...prepOwnerReload,studentAccess:'shared'},403,{...auth,origin:'https://evil.test'});
+await req('/api/teacher',{...prepOwnerReload,studentAccess:'shared'},200,auth);
+const sharedAccess=await req('/api/classroom?course='+timePlaceId);
+assert(sharedAccess.course.studentAccess==='shared'&&sharedAccess.student.attempt===beforeAccess.student.attempt&&JSON.stringify(sharedAccess.answers)===JSON.stringify(beforeAccess.answers),'Teacher access setting failed to update an existing snapshot without resetting progress');
+const secondBrowserProfile=await req('/api/classroom',{action:'start',course:timePlaceId,name:'اسم ثان مسموح'});
+assert(secondBrowserProfile.student.id!==prepId,'Shared-browser mode could not create the next profile');
+const switchedCookies={...cookies};
+await req('/api/teacher',{...prepOwnerReload,studentAccess:'single'},200,auth);
+const relocked=await req('/api/classroom?course='+timePlaceId);
+assert(relocked.course.studentAccess==='single','Latest single-browser policy lost to a shared snapshot');
+await req('/api/classroom',{action:'start',course:timePlaceId,name:'اسم ثالث ممنوع'},409);
+assert(JSON.stringify(cookies)===JSON.stringify(switchedCookies),'Relocking replaced the active identity');
+cookies={...prepCookies};
+const accessRetry=await req('/api/classroom',{action:'retry',course:timePlaceId,attempt:beforeAccess.student.attempt});
+assert(accessRetry.student.id===prepId&&accessRetry.student.attempt===beforeAccess.student.attempt+1&&accessRetry.certificate.score===24&&accessRetry.reads.length===5,'Single-profile policy blocked retry or erased best certificate');
+const accessExport=(await req('/api/teacher/export',null,200,auth)).courses.find(c=>c.id===timePlaceId);
+assert(accessExport.definition.studentAccess==='single','Access policy not included in teacher backup');
+console.log('PASS: single-profile defaults, same-name resume, server-side switch/spoof rejection, unchanged cookies/student count, owner-only validation, immediate policy changes on saved snapshots, shared-browser enrollment, retained grades and same-student retry.');
+
 
 // Recovery revokes existing sessions, expiration denies access, logout revokes.
 const oldAuth={...auth};

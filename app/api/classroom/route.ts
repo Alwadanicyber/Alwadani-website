@@ -11,13 +11,14 @@ import {updateStudentTensesSequence} from '@/lib/tenses-sequence-update';
 import {TENSES_COURSE_ID,normalizeSentence} from '@/lib/tenses-learning';
 import type {TeacherCourse} from '@/lib/course-types';
 import {answerOrder} from '@/lib/answer-order';
+import {courseStudentAccess} from '@/lib/student-access';
 import {CHORES_COURSE_ID} from '@/lib/chores-learning';
 import {ensureClassroomResults,archiveAndRestart,classroomResults} from '@/lib/classroom-results';
 import {gameSnapshot,startGame,gameStep,GameError,BALLOON_POINTS} from '@/lib/balloon-assessment';
 import {dictationSnapshot,answerDictation,DICTATION_POINTS} from '@/lib/chores-dictation';
 export const dynamic='force-dynamic';
 const reply=(data:unknown,status=200,headers:Record<string,string>={})=>Response.json(data,{status,headers:{'Cache-Control':'no-store',...headers}});
-const stableCourse=(c:TeacherCourse):TeacherCourse=>({id:c.id,title:c.title,description:c.description,studentGender:c.studentGender||c.definition.studentGender||'male',published:1,definition:c.definition,updated:''});
+const stableCourse=(c:TeacherCourse):TeacherCourse=>({id:c.id,title:c.title,description:c.description,studentGender:c.studentGender||c.definition.studentGender||'male',studentAccess:courseStudentAccess(c),published:1,definition:c.definition,updated:''});
 async function context(req:Request,courseId:string){
  await ensureClassroomResults();const db=database(),latest=await getCourse(courseId);if(!latest)throw new Error('الدرس غير منشور أو غير موجود.');
  const id=await identity(req,courseId);
@@ -34,7 +35,7 @@ async function context(req:Request,courseId:string){
   if(updated)migrated=sequence?'تحدّث ترتيب الشرح: البسيط، ثم المستمر، ثم المقارنة. إجاباتك ونتائجك السابقة محفوظة؛ تابع من أول سؤال لم تجب عنه.':'تحدّثت لعبة محقق الزمن: جمل إنجليزية مع دلائل. إجابات التدريب ونتيجتك السابقة محفوظة؛ تابع اللعبة الجديدة.';
  }
  // Wording follows the teacher's latest setting; saved questions and grades stay intact.
- const presentation:TeacherCourse={...stableCourse(course),studentGender:publicCourse(latest).studentGender};
+ const presentation:TeacherCourse={...stableCourse(course),studentGender:publicCourse(latest).studentGender,studentAccess:courseStudentAccess(latest)};
  return {id,student,course:presentation,latest:stableCourse(latest),grade:latest.grade||'general',migrated};
 }
 async function snapshot(student:any,course:TeacherCourse,grade='general',migrated:boolean|string=false){
@@ -54,6 +55,7 @@ export async function POST(req:Request){try{
  if(body.action==='start'){
   const name=typeof body.name==='string'?body.name.trim():'';if(name.length<2||name.length>60||/[<>\x00-\x1f]/.test(name))return reply({error:'أدخل اسمًا من حرفين إلى ٦٠ حرفًا.'},400);
   if(student?.name===name)return reply(await snapshot(student,course,grade,migrated));
+  if(student&&courseStudentAccess(latest)==='single')return reply({error:'هذا الدرس يسمح باسم واحد على المتصفح نفسه. تابع باسمك الحالي؛ يمكنك إعادة المحاولة وتحسين نتيجتك.'},409);
   course=latest;const token=crypto.randomUUID();id=await hashToken(token);const saved=JSON.stringify(course),now=new Date().toISOString();
   await db.batch([db.prepare('INSERT INTO students(id,name,created,course,snapshot) VALUES(?,?,?,?,?)').bind(id,name,now,courseId,saved),db.prepare('INSERT INTO student_sessions(student,attempt,started) VALUES(?,1,?)').bind(id,now)]);
   student={id,name,completed:null,snapshot:saved,attempt:1};return reply(await snapshot(student,course,grade),200,{'Set-Cookie':`${cookieName(courseId)}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${new URL(req.url).protocol==='https:'?'; Secure':''}`});

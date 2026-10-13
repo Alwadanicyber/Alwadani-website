@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import {learningTextParts} from '../lib/learning-text.ts';
+import {prepositionAim,balloonBurstPieces} from '../lib/preposition-motion.ts';
+import {courseStudentAccess,validateStudentAccess} from '../lib/student-access.ts';
 import {readFileSync} from 'node:fs';
 import {TIME_PLACE_COURSE_ID,compareTimePlaceResults,prepositionExamples,pastExpressions,completeTimePlacePrompt} from '../lib/time-place-learning.ts';
 import {lifeStoryParts,timePlaceWorkbook,normalizeBookAnswer} from '../lib/time-place-workbook.ts';
@@ -32,3 +35,22 @@ for(const name of ['student-20.png','student-21.png']){
  assert.equal(png.subarray(1,4).toString(),'PNG');assert(png.readUInt32BE(16)>=840&&png.readUInt32BE(20)>=1070);
 }
 console.log('PASS: score-first descending order without speed, 38 book items, 20 story slots, exact source word sets including repeated words, accepted normalization and both original PNGs.');
+
+// The screenshot's ambiguous "on. in" must be two separate LTR islands.
+const mixed='نستخدم on. in تعني داخل، وat تحدد نقطة.';
+const parts=learningTextParts(mixed);
+assert.equal(parts.map(p=>p.text).join(''),mixed);
+assert.deepEqual(parts.filter(p=>p.english).map(p=>p.text),['on','in','at']);
+for(const text of ['on June 27, 1956','at 8:00 a.m.','in / on','When I was a child, I used to play.'])assert.equal(learningTextParts(text).map(p=>p.text).join(''),text);
+for(const [x,y,sign] of [[80,100,-1],[240,70,0],[400,100,1]]){
+ const aim=prepositionAim(480,410,x,y);
+ assert.equal(Math.sign(aim.bowAngle),sign);
+ assert.equal(240+aim.dx,x);assert.equal(367+aim.dy,y);
+ assert(Number.isFinite(aim.angle)&&Number.isFinite(aim.bowAngle));
+}
+assert.equal(balloonBurstPieces.length,14);assert(balloonBurstPieces.every(p=>Math.hypot(p.dx,p.dy)>=48-1e-9));
+assert.equal(courseStudentAccess({id:TIME_PLACE_COURSE_ID}),'single');
+assert.equal(courseStudentAccess({id:'chores-grade-4'}),'shared');
+assert.equal(courseStudentAccess({id:TIME_PLACE_COURSE_ID,definition:{studentAccess:'shared'}}),'shared');
+assert.throws(()=>validateStudentAccess('anything','shared'));
+console.log('PASS: mixed-language sentence boundaries, exact arrow destinations and bow directions, radial burst and browser-access defaults.');

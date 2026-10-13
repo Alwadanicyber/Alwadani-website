@@ -17,7 +17,7 @@ export async function ensureClassroomResults(){const db=database();let ready=pre
 export async function archiveAndRestart(id:string,attempt:number,course:TeacherCourse,expectedSnapshot:string|null){
  const db=database(),now=new Date().toISOString(),saved=JSON.stringify(course);
  // Audience wording does not change the material a learner has already read.
- const content=(c:TeacherCourse)=>JSON.stringify({...c,studentGender:undefined,definition:{...c.definition,studentGender:undefined}});
+ const content=(c:TeacherCourse)=>JSON.stringify({...c,studentGender:undefined,studentAccess:undefined,definition:{...c.definition,studentGender:undefined,studentAccess:undefined}});
  const sameContent=saved===expectedSnapshot||expectedSnapshot!==null&&content(course)===content(JSON.parse(expectedSnapshot));
  await db.batch([
   db.prepare('INSERT OR IGNORE INTO student_sessions(student,attempt,started) SELECT id,1,created FROM students WHERE id=?').bind(id),
