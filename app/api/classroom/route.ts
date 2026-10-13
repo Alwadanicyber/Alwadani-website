@@ -3,6 +3,8 @@ import {parseSolveMs,SolveTimeError} from '@/lib/solve-time';
 import {hashToken,cookieName,identity} from '@/lib/student-session';
 import {getCourse,originalCourse,publicCourse} from '@/lib/courses';
 import {hasLegacyTensesGame,updateStudentTensesGame} from '@/lib/tenses-game-update';
+import {TIME_PLACE_COURSE_ID} from '@/lib/time-place-learning';
+import {prepositionGameStart,restartPrepositionGame} from '@/lib/preposition-game-retry';
 import {restartTensesGame} from '@/lib/tenses-game-retry';
 import {hasOldTensesSequence,hasNewTensesSequence} from '@/lib/tenses-sequence';
 import {updateStudentTensesSequence} from '@/lib/tenses-sequence-update';
@@ -69,6 +71,12 @@ export async function POST(req:Request){try{
   if(counts?.quiz!==12||!counts.game||counts.reads!==4)return reply({error:'أكمل المحطات الثلاث وابدأ اللعبة أولًا.'},400);
   if(!await restartTensesGame(student,course))return reply({error:'تغيّرت المحاولة. أعد تحميل تقدمك قبل إعادة اللعبة.'},409);
   const current=await context(req,courseId);return reply(await snapshot(current.student,current.course,current.grade));
+ }else if(body.action==='preposition-game-retry'){
+  const first=prepositionGameStart(course);if(first===null)return reply({error:'إعادة لعبة حروف الجر غير متاحة لهذا الدرس.'},400);
+  const counts=await db.prepare('SELECT (SELECT COUNT(*) FROM answers WHERE student=? AND question<?) AS quiz,(SELECT COUNT(*) FROM answers WHERE student=? AND question>=?) AS game,(SELECT COUNT(*) FROM reads WHERE student=?) AS reads').bind(id,first,id,first,id).first<{quiz:number;game:number;reads:number}>();
+  if(counts?.quiz!==questions.filter(q=>q.id<first).length||!counts.game||counts.reads!==lessons.length)return reply({error:'أكمل المحطات السابقة وابدأ اللعبة أولًا.'},400);
+  if(!await restartPrepositionGame(student,course))return reply({error:'تغيّرت المحاولة. أعد تحميل تقدمك.'},409);
+  const current=await context(req,courseId);return reply(await snapshot(current.student,current.course,current.grade));
  }else if(body.action==='dictation-answer'){
   if(courseId!==CHORES_COURSE_ID)return reply({error:'محطة الإملاء غير متاحة لهذا الدرس.'},400);
   const counts=await db.prepare('SELECT (SELECT COUNT(*) FROM answers WHERE student=?) AS answers,(SELECT COUNT(*) FROM reads WHERE student=?) AS reads').bind(id,id).first<{answers:number;reads:number}>();
@@ -84,7 +92,7 @@ export async function POST(req:Request){try{
   const current=await context(req,courseId);return reply(await snapshot(current.student,current.course,current.grade));
  }else if(body.action==='read'){
   if(!Number.isInteger(body.lesson)||!lessons[body.lesson])return reply({error:'درس غير صالح.'},400);
-  if(courseId===CHORES_COURSE_ID||courseId===TENSES_COURSE_ID){const previous=questions.filter(q=>q.lesson<body.lesson),done=await db.prepare('SELECT COUNT(*) AS n FROM answers WHERE student=? AND question<?').bind(id,questions.find(q=>q.lesson===body.lesson)?.id??Number.MAX_SAFE_INTEGER).first<{n:number}>();if(done?.n!==previous.length)return reply({error:'أكمل تدريب المشهد السابق أولًا.'},400);}
+  if(courseId===CHORES_COURSE_ID||courseId===TENSES_COURSE_ID||courseId===TIME_PLACE_COURSE_ID){const previous=questions.filter(q=>q.lesson<body.lesson),done=await db.prepare('SELECT COUNT(*) AS n FROM answers WHERE student=? AND question<?').bind(id,questions.find(q=>q.lesson===body.lesson)?.id??Number.MAX_SAFE_INTEGER).first<{n:number}>();if(done?.n!==previous.length)return reply({error:'أكمل تدريب المشهد السابق أولًا.'},400);}
   await db.prepare('INSERT OR IGNORE INTO reads(student,lesson) SELECT ?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?)').bind(id,body.lesson,id,attempt).run();
  }else if(body.action==='answer'){
   const q=questions.find(q=>q.id===body.question);if(!q||q.kind!=='sentence-build'&&(!Number.isInteger(body.choice)||!q.options[body.choice]))return reply({error:'إجابة غير صالحة.'},400);
@@ -95,7 +103,7 @@ export async function POST(req:Request){try{
   if(q.kind==='sentence-build'&&(!response||response.length>800||/[<>\x00-\x1f]/.test(response)))return reply({error:'رتّب كلمات الجملة قبل التحقق.'},400);
   const matched=response?q.options.findIndex(option=>normalizeSentence(option)===normalizeSentence(response)):order[body.choice];
   const choice=matched<0?q.options.findIndex((_,i)=>i!==q.answer):matched,correct=response?normalizeSentence(response)===normalizeSentence(q.options[q.answer]):choice===q.answer;
-  const elapsed=courseId===TENSES_COURSE_ID?null:parseSolveMs(body.elapsedMs);
+  const elapsed=courseId===TENSES_COURSE_ID||courseId===TIME_PLACE_COURSE_ID?null:parseSolveMs(body.elapsedMs);
   await db.batch([
    ...(response===null?[]:[db.prepare('INSERT OR IGNORE INTO student_sentence_answers(student,attempt,question,response) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?) AND NOT EXISTS(SELECT 1 FROM answers WHERE student=? AND question=?)').bind(id,attempt,q.id,response,id,attempt,id,q.id)]),
    ...(elapsed===null?[]:[db.prepare("INSERT OR IGNORE INTO student_answer_times(student,attempt,stage,question,elapsed_ms) SELECT ?,?,'quiz',?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?) AND NOT EXISTS(SELECT 1 FROM answers WHERE student=? AND question=?)").bind(id,attempt,q.id,elapsed,id,attempt,id,q.id)]),
