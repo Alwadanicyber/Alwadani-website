@@ -8,7 +8,7 @@ export function completeTimePlacePrompt(prompt:string,choice:string){
 }
 export const prepositionExamples={
  time:[
-  {word:'in',icon:'🗓️',title:'فترة واسعة',rule:'سنة، شهر، فصل أو جزء من اليوم',example:'in 2001 · in May · in winter · in the morning',arabic:'عام ٢٠٠١ · في مايو · في الشتاء · صباحًا'},
+  {word:'in',icon:'🗓️',title:'فترة واسعة',rule:'سنة، شهر، قرن، فصل أو جزء من اليوم',example:'in 2001 · in May · in the 20th century · in winter · in the morning',arabic:'عام ٢٠٠١ · في مايو · في القرن العشرين · في الشتاء · صباحًا'},
   {word:'on',icon:'📅',title:'يوم أو تاريخ',rule:'يوم محدد أو تاريخ يحتوي على يوم',example:'on Monday · on June 3rd · on May 25th, 2000',arabic:'يوم الاثنين · في ٣ يونيو · في ٢٥ مايو ٢٠٠٠'},
   {word:'at',icon:'🕗',title:'وقت محدد',rule:'ساعة محددة؛ وتعبيرات مثل at noon وat night',example:'at 8:00 a.m. · at noon · at night',arabic:'الساعة الثامنة صباحًا · عند الظهر · ليلًا'},
  ],
