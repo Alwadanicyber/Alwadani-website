@@ -1,9 +1,9 @@
 // Public learning support only. Canonical choices and answer keys stay in exam-prep-courses.ts.
 export const EXAM_PREP_SECTION='exam-prep';
 export const examUnits=[
- {id:'exam-prep-unit-1-grade-9',unit:1,title:'الوحدة الأولى · العادات والإنترنت',english:'Lifestyles & Internet Habits',topics:'المفردات · المضارع البسيط · الإملاء · القراءة',objectiveTotal:20,writingPoints:0,pdf:'/exam-models/unit-1.pdf',icon:'01'},
- {id:'exam-prep-unit-2-grade-9',unit:2,title:'الوحدة الثانية · قصة حياة',english:'Life Stories',topics:'المفردات · الماضي البسيط · القراءة · التعبير',objectiveTotal:14,writingPoints:6,pdf:'/exam-models/unit-2.pdf',icon:'02'},
- {id:'exam-prep-unit-3-grade-9',unit:3,title:'الوحدة الثالثة · السفر والخطط',english:'Travel & Future Plans',topics:'المفردات · المستمر والمستقبل · القراءة · البريد',objectiveTotal:15,writingPoints:5,pdf:'/exam-models/unit-3.pdf',icon:'03'},
+ {id:'exam-prep-unit-1-grade-9',unit:1,title:'الوحدة الأولى · العادات والإنترنت',english:'Lifestyles & Internet Habits',topics:'المفردات · المضارع البسيط · الإملاء · القراءة',objectiveTotal:20,writingPoints:0,icon:'01'},
+ {id:'exam-prep-unit-2-grade-9',unit:2,title:'الوحدة الثانية · قصة حياة',english:'Life Stories',topics:'المفردات · الماضي البسيط · القراءة · التعبير',objectiveTotal:14,writingPoints:6,icon:'02'},
+ {id:'exam-prep-unit-3-grade-9',unit:3,title:'الوحدة الثالثة · السفر والخطط',english:'Travel & Future Plans',topics:'المفردات · المستمر والمستقبل · القراءة · البريد',objectiveTotal:15,writingPoints:5,icon:'03'},
 ] as const;
 export const examUnit=(id:string)=>examUnits.find(u=>u.id===id);
 export const isExamPrep=(id:string)=>!!examUnit(id);

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync,mkdtempSync,rmSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdtempSync,rmSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -23,7 +23,8 @@ try{
   for(const q of def.questions){assert.equal(q.options.length,new Set(q.options).size);assert(q.options.length>=2&&q.options.length<=6);assert(q.answer>=0&&q.answer<q.options.length);assert(q.reason.length>=70);assert(q.prompt.length<=1200&&q.reason.length<=2000);assert(def.lessons[q.lesson]);}
   assert.deepEqual([...def.questions.map(q=>q.lesson)].sort((a,b)=>a-b),def.questions.map(q=>q.lesson));
   assert(examPassages[u.unit].paragraphs.length&&examPassages[u.unit].translation.length);
-  const bytes=readFileSync(new URL('../public'+u.pdf,import.meta.url));assert.equal(bytes.subarray(0,5).toString(),'%PDF-');
+  assert(!('pdf' in u),'Original paper URL exposed in public lesson metadata');
+  assert(!existsSync(new URL('../public/exam-models/unit-'+u.unit+'.pdf',import.meta.url)),'Original paper is still a public asset');
   if(u.writingPoints){assert(examWritingGuides[u.unit].steps.length===4);assert(examWritingGuides[u.unit].model&&examWritingGuides[u.unit].checklist.length>=5);}
  }
  assert.equal(examPrepCourses.reduce((sum,c)=>sum+c.definition.questions.length,0),49);
@@ -31,5 +32,5 @@ try{
  assert(examPrepCourses[1].definition.questions[11].reason.includes('لا يحدد مكان الميلاد'));
  assert(examPrepCourses[2].definition.questions[6].reason.includes('ترتيب للمستقبل'));
  assert(examPrepCourses[0].definition.questions[5].reason.includes('he / she / it'));
- console.log('PASS: all 49 keys independently matched to the supplied papers, ordered sections, 3 original PDFs, 3 reading passages with translations, complete rule guides, corrected birthplace wording, and both separate writing workshops.');
+ console.log('PASS: all 49 keys independently matched to the supplied papers, ordered sections, original papers excluded from public assets, 3 reading passages with translations, complete rule guides, corrected birthplace wording, and both separate writing workshops.');
 }finally{rmSync(dir,{recursive:true,force:true});}
