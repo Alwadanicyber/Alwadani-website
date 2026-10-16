@@ -1,0 +1,5 @@
+'use client';
+import {useRef} from 'react';
+import {ChevronLeft,ChevronRight} from 'lucide-react';
+import {TabsList} from '@/components/ui/tabs';
+export default function ClassroomTabs({children}:{children:React.ReactNode}){const ref=useRef<HTMLDivElement>(null);function move(delta:number){ref.current?.scrollBy({left:delta,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}return <div className="classroom-tabs-wrap"><div className="classroom-tabs-controls"><span>اسحب القائمة يمينًا ويسارًا لرؤية بقية الأقسام</span><button type="button" onClick={()=>move(220)} aria-label="تحريك قائمة الأقسام إلى اليمين"><ChevronRight size={18}/></button><button type="button" onClick={()=>move(-220)} aria-label="تحريك قائمة الأقسام إلى اليسار"><ChevronLeft size={18}/></button></div><TabsList ref={ref} className="main-tabs" onFocusCapture={e=>{const target=e.target as HTMLElement;if(target.getAttribute('role')==='tab')target.scrollIntoView({block:'nearest',inline:'nearest'});}}>{children}</TabsList></div>;}

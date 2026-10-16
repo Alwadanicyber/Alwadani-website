@@ -4,6 +4,7 @@ import {lessons,questions} from './course';
 import {grading} from './grading';
 import {choresCourse} from './chores-course';
 import {timePlaceCourse} from './time-place-course';
+import {examPrepCourses} from './exam-prep-courses';
 import {tensesCourse,upgradeLegacyTensesDefinition} from './tenses-course';
 import type {TeacherCourse,Definition,PublicCourse} from './course-types';
 import {COURSE_TRASHED} from './course-types';
@@ -12,7 +13,7 @@ import {defaultRankingMode} from './ranking-mode';
 import {courseStudentAccess,validateStudentAccess} from './student-access';
 export const originalDefinition:Definition={lessons,questions:questions.map(q=>({...q,...grading[q.id]}))};
 export const originalCourse:TeacherCourse={id:'life-stories',grade:'grade-9',title:'حكايات الماضي · Life Stories',description:'الماضي البسيط، الحديث عن الميلاد، المبني للمجهول في الماضي، وعادات الماضي.',published:1,definition:originalDefinition,updated:'2026-10-03'};
-export const builtInCourses:TeacherCourse[]=[originalCourse,choresCourse,tensesCourse,timePlaceCourse];
+export const builtInCourses:TeacherCourse[]=[originalCourse,choresCourse,tensesCourse,timePlaceCourse,...examPrepCourses];
 export const builtInCourse=(id:string)=>builtInCourses.find(c=>c.id===id);
 function parse(row:any):TeacherCourse{const definition=JSON.parse(row.definition),course={...row,definition,studentGender:validateGender(definition.studentGender),studentAccess:courseStudentAccess({id:row.id,definition})};if(course.id===tensesCourse.id)return {...course,definition:upgradeLegacyTensesDefinition(course.definition)};if(course.id===choresCourse.id&&[4,7].includes(course.definition.lessons.length)&&course.definition.lessons.slice(0,3).map((l:any)=>l.en).join('|')==='My Morning|On the Bus|Helping at Home')return {...course,definition:{...choresCourse.definition,studentGender:course.studentGender,studentAccess:course.studentAccess},description:choresCourse.description};return course;}
 export async function getCourse(id:string,teacher=false){const row=await database().prepare('SELECT * FROM courses WHERE id=?').bind(id).first();const course=row?parse(row):builtInCourse(id);return course&&course.published!==COURSE_TRASHED&&(teacher||course.published===1)?course:null;}

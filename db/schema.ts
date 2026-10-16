@@ -28,3 +28,5 @@ export const studentSentenceAnswers=sqliteTable('student_sentence_answers',{stud
 export const courseRankingSettings=sqliteTable('course_ranking_settings',{course:text('course').primaryKey(),mode:text('mode').notNull(),updated:text('updated').notNull()});
 
 export const studentSpeedClocks=sqliteTable('student_speed_clocks',{student:text('student').notNull().references(()=>students.id),attempt:integer('attempt').notNull(),run:text('run').notNull().default(''),elapsedMs:integer('elapsed_ms').notNull().default(0),prefixMs:integer('prefix_ms').notNull().default(0),runningSince:integer('running_since'),finishedAt:integer('finished_at'),valid:integer('valid').notNull().default(0)},t=>[primaryKey({columns:[t.student,t.attempt,t.run]})]);
+
+export const studentExamWriting=sqliteTable('student_exam_writing',{student:text('student').notNull().references(()=>students.id),attempt:integer('attempt').notNull(),response:text('response').notNull(),updated:text('updated').notNull()},t=>[primaryKey({columns:[t.student,t.attempt]})]);

@@ -106,6 +106,8 @@ try{
   const db=await mf.getD1Database('DB');
   for(const file of readdirSync(project+'drizzle').filter(x=>x.endsWith('.sql')&&!x.startsWith('0005_')).sort())for(const s of readFileSync(project+'drizzle/'+file,'utf8').split('--> statement-breakpoint'))if(s.trim())await db.prepare(s.trim()).run();
   for(const id of ['timing-test','chores-grade-4'])await db.prepare('INSERT INTO courses(id,title,description,definition,published,grade,updated) VALUES(?,?,?,?,1,?,?)').bind(id,'اختبار محلي','',JSON.stringify(definition),'grade-4','2026-10-10').run();
+  // This ranking fixture tests timings, independently of the real lesson's deadline.
+  await db.prepare("INSERT INTO course_competitions(course,enabled,show_countdown,ends_at,prize,updated) VALUES('chores-grade-4',0,1,NULL,'','2026-10-10')").run();
   const alice=client(),bob=client(),cara=client(),legacy=client(),partial=client();
   const a=await start(alice,'طالب أ');await finish(alice,[12_000,18_000]);
   const b=await start(bob,'طالب ب');let state=await finish(bob,[4000,6000]);

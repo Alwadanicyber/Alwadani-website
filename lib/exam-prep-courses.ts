@@ -1,0 +1,118 @@
+import type {Lesson,QuizQuestion,TeacherCourse} from './course-types';
+import {examUnits} from './exam-prep-content';
+function station(title:string,en:string,intro:string,formula:string,rules:string[][],note:string,example:string,translation:string):Lesson{return {title,en,tag:'',intro,formula,rules,note,example,translation};}
+const lessons:Record<number,Lesson[]>={
+ 1:[
+ station('المفردات في السياق','Vocabulary','اقرأ الجملة كاملة، وحدد الكلمة التي تكمل معناها. اربط الكلمة بدليل داخل الجملة بدل حفظ موضع الإجابة.','clue → meaning → best word',[
+ ['ابحث عن الدليل','من لا يأكل اللحم يوصف بأنه نباتي، ومن يقضي وقتًا مفرطًا على الإنترنت يوصف في النموذج بأنه مدمن عليه.','never eats meat → vegetarian · online all the time → internet addict'],
+ ['تعلم المعنى الدقيق','الأغلبية تعني أكثر من النصف، والمدينة الكبرى هي metropolis.','majority = more than half · metropolis = a big city'],
+ ['اختر أداة تناسب الاستخدام','إرسال البريد واستقباله يناسب الحاسوب، وليس الكوب أو الشاحنة.','I use my computer to send and receive email.']
+ ],'لا تعتمد على الترجمة وحدها: اقرأ الكلمات المحيطة بالفراغ لتعرف المقصود.','Ali never eats meat. He is a vegetarian.','علي لا يأكل اللحم أبدًا. إنه نباتي.'),
+ station('المضارع البسيط والتكرار','Simple Present','نستخدم المضارع البسيط للعادات والحقائق. always وevery day من دلائل العادة، لكن فهم المعنى أهم من وجود كلمة معينة.','He / She / It + verb-s | I / You / We / They + verb',[
+ ['الإثبات','مع he وshe وit أو اسم مفرد مثل Nora نضيف s أو es للفعل. مع I وyou وwe وthey نستخدم الفعل الأساسي.','Nora drinks tea. · I ride a bicycle.'],
+ ['النفي والسؤال','نستخدم does مع المفرد الغائب، وdo مع البقية. بعد does أو doesn’t يرجع الفعل إلى أصله دون s.','Does he play? · He doesn’t play. · Do they play?'],
+ ['موضع never','never تعني أبدًا، وتأتي قبل الفعل الأساسي؛ لا نضيف is قبلها مع فعل مثل smokes. أما مع be فتأتي بعده.','He never smokes. · He is never late.'],
+ ['السؤال عن التكرار','How often تسأل: كم مرة؟ ويأتي بعدها do أو does ثم الفاعل والفعل الأساسي.','How often do you use your cell phone?']
+ ],'Does he play صحيحة، وليس Does he plays؛ الأداة does تحمل علامة المفرد.','She reads every day. Does she read at night?','هي تقرأ كل يوم. هل تقرأ ليلًا؟'),
+ station('الحروف الناقصة','Orthography','كوّن الكلمة كاملة في ذهنك ثم اختر الحرف الناقص. اقرأ الكلمة بعد إكمالها لتتأكد من كتابتها ومعناها.','healthy · herbal tea · shopping · chatting · office',[
+ ['كلمات تحفظ كتابتها','healthy تعني صحي، وherbal tea تعني شاي الأعشاب.','healthy → a · herbal tea → b'],
+ ['تكرار الحرف قبل ing','في shop وchat نضاعف الحرف الأخير عند إضافة ing؛ لأن كلًا منهما فعل قصير ينتهي بحرف ساكن قبله صوت متحرك قصير واحد.','shop → shopping · chat → chatting'],
+ ['انتبه للحروف المكررة','office مكتوبة بحرفي f. لا نبدل الحرف بناءً على تشابه الصوت فقط.','office → ff']
+ ],'الاختيار هو حرف واحد، لكن الهدف تعلم كتابة الكلمة كاملة.','I am shopping and chatting in the office.','أنا أتسوق وأدردش في المكتب.'),
+ station('قراءة: عادات استخدام الإنترنت','Reading','اقرأ القطعة، ثم ابحث عن جملة تؤيد العبارة أو تناقضها. لا تعتمد على معرفتك العامة وحدها في سؤال الفهم.','statement → evidence → True / False',[
+ ['معنى True وFalse','True عندما توافق العبارة النص، وFalse عندما تخالفه.','check email → True'],
+ ['لاحظ النفي','can’t وdon’t قد تقلبان المعنى؛ القطعة تقول إن الناس يتحدثون مع الأصدقاء عبر الإنترنت.','chat with friends ≠ can’t chat with friends'],
+ ['الفكرة الرئيسة','الإفراط في الإنترنت قد يشغل الشخص عن الأسرة والواجبات، والرسالة الأساسية هي التوازن.','balance computer time with other activities']
+ ],'أسئلة العادات الستة داخل القطعة للتفكير الشخصي؛ الأسئلة المصححة هنا هي عبارات صح أو خطأ الخمس بعدها.','It is important to balance your time.','من المهم أن توازن وقتك.'),
+ ],
+ 2:[
+ station('مفردات قصة الحياة','Vocabulary','استخرج الدليل من الجملة: العمر، والجمع، والرياضة، والتبرع، والإنجاز.','context clue → matching word',[
+ ['العمر والعدد','infant رضيع، وtwins توأمان. الفعل were يناسب جمعًا مثل twins.','a tiny infant · The twins were born last night.'],
+ ['المهنة المناسبة','من ينجح في الرياضة يوصف بأنه athlete، أي رياضي.','good at sports → athlete'],
+ ['الفعل والاسم','donate فعل بمعنى يتبرع. award اسم بمعنى جائزة؛ بعد won a special نحتاج اسمًا.','donate blood · win an award']
+ ],'لا تختَر كلمة تبدو مألوفة فقط؛ تأكد أنها تلائم المعنى وتركيب الجملة.','The athlete won an award.','فاز الرياضي بجائزة.'),
+ station('الماضي البسيط والميلاد وعادات الماضي','Past Simple','الماضي يصف حدثًا انتهى. ابحث عن زمن سابق مثل when I was a kid، وافرق بين فعل عادي مثل live والفعل be.','did + subject + base verb | was / were born | used to + base verb',[
+ ['الماضي مع الفعل العادي','في الإثبات نستخدم الماضي مثل lived. في السؤال نستخدم did ثم الفاعل والفعل الأساسي.','I lived in Riyadh. · Where did you live?'],
+ ['الميلاد مع was أو were','نقول I / he / she / it was born، وyou / we / they were born. لا نستخدم did مع born بهذه الصيغة.','I was born in London. · Where were you born?'],
+ ['عادة انتهت في الماضي','used to يأتي بعدها الفعل الأساسي. عند السؤال والنفي بعد did أو didn’t نكتب use to دون d.','I used to play with toys. · Did you use to play? · I didn’t use to play.']
+ ],'أضفنا قرينة «عندما كنت صغيرًا» لبعض أسئلة الماضي لتكون دلالتها واضحة؛ بقيت القاعدة والإجابة المقصودة كما في النموذج.','When I was a kid, I used to play with toys.','عندما كنت طفلًا، كنت ألعب بالألعاب.'),
+ station('قراءة: كيف تعرّفت على يوسف؟','Reading','تتبع القصة بالترتيب: طالب جديد، ثم خجول، ثم أكثر ثقة، وأخيرًا أفضل لاعب. ميّز بين ما حدث أولًا وما يحدث الآن.','At first → then → now',[
+ ['بداية القصة','كان يوسف طالبًا جديدًا في الصف السادس؛ عرّفه الكاتب بالمدرسة والأصدقاء.','Yousef was a new 6th grade student.'],
+ ['النشأة والميلاد مختلفان','grew up تعني نشأ. was born تعني وُلد. النص يحدد النشأة في أبها، ولا يحدد مكان الميلاد.','Yousef grew up in Abha.'],
+ ['تطور الشخصية','shy في البداية، ثم confident، وأصبح best player الآن. السؤال هو الذي يحدد أي مرحلة تختار.','At first he was quite shy. · Now he is the best player.']
+ ],'بعد الأسئلة افتح «التعبير والكتابة» لتكتب قصة حياتك وتحفظها للمعلم. التعبير منفصل عن الدرجة التلقائية.','Yousef grew up in Abha, and his family moved to Jeddah.','نشأ يوسف في أبها، وانتقلت أسرته إلى جدة.'),
+ ],
+ 3:[
+ station('مفردات السفر','Vocabulary','حدد الموقف: وثائق سفر، أمواج، أمتعة، أم معنى كلمة. اختر الأنسب للسياق.','travel clue → suitable word',[
+ ['وثائق السفر','passport جواز السفر، ويأتي في موقف طلب التذكرة ووثيقة السفر.','May I see your ticket and passport?'],
+ ['النشاط والأمتعة','surf ركوب الأمواج، وsuitcase حقيبة السفر التي نضع عليها بطاقة اسم.','surf on the waves · a name tag on your suitcase'],
+ ['المعاني المتقاربة','rich وwealthy تعنيان غنيًا. unique تعني فريدًا، وspecial أقرب الخيارات لها بمعنى مميز.','rich ≈ wealthy · unique ≈ special']
+ ],'المرادف الأقرب في الخيارات قد لا يساوي الكلمة في كل سياق؛ unique أدق بمعنى فريد من نوعه.','Put a name tag on your suitcase.','ضع بطاقة اسم على حقيبة سفرك.'),
+ station('المستمر وخطط المستقبل','Present Continuous & Future','المضارع المستمر قد يصف ما يحدث الآن أو ترتيبًا للمستقبل عندما توجد قرينة مثل tomorrow. وهناك فرق في التركيب بينه وبين going to وwill.','am / is / are + verb-ing | am / is / are + going to + verb | will + verb',[
+ ['المضارع المستمر','نستخدم am مع I، وis مع he / she / it أو اسم مفرد، وare مع you / we / they. يأتي بعدها فعل ينتهي بـ ing.','My mom is waiting. · I am traveling tomorrow.'],
+ ['خطة باستخدام going to','نستخدم am / is / are + going to + الفعل الأساسي للتعبير عن خطة أو نية.','She is going to leave at 6 p.m. tonight.'],
+ ['الفعل بعد will','بعد will يأتي الفعل الأساسي مع جميع الضمائر؛ لا نضيف s أو ing ولا نحوله إلى الماضي.','I will stay. · He will buy a car.'],
+ ['النفي والسؤال','أضف not بعد be أو will للنفي، وقدّم be أو will على الفاعل في السؤال.','She is not waiting. · Is she waiting? · He will not travel. · Will he travel?']
+ ],'لا يكفي وجود tomorrow لاختيار تركيب واحد؛ اقرأ ما قبل الفراغ وما بعده لتعرف هل المطلوب am أم going أم فعل أساسي بعد will.','I am traveling tomorrow, and I will stay with my friends.','سأسافر غدًا، وسأقيم مع أصدقائي.'),
+ station('قراءة: نصائح للمسافرين','Reading','اقرأ كل نصيحة، ثم قارنها بعبارة السؤال. انتبه خصوصًا للنفي والأشياء المطلوب حملها.','Do / Do not → compare with the statement',[
+ ['المتعلقات وبطاقة الاسم','القطعة تطلب إبقاء المتعلقات معك، ووضع بطاقة اسم على الحقيبة.','Keep your belongings with you. · Put a name tag on your suitcase.'],
+ ['الأشياء من الغرباء والسوائل','القطعة ترفض وضع أشياء من الغرباء، وتطلب وضع السوائل في الأمتعة المشحونة. أجب وفق ما ورد فيها.','Do not agree to pack any items from strangers.'],
+ ['الوثائق','تأكد من الهوية المصورة والتذكرة وبطاقة الصعود. photo identification تعني هوية تحمل صورة.','Check that you have your photo identification.']
+ ],'بعد الأسئلة تدرب على كتابة بريد عن الدراسة في الخارج. درجة الكتابة تحتاج مراجعة المعلم ولا تدخل في الدرجة التلقائية.','Travelers should have their photo identification with them.','ينبغي للمسافرين حمل هوية تحمل صورة.'),
+ ],
+};
+const banks:Record<number,QuizQuestion[]>={1:[],2:[],3:[]};
+function q(u:number,lesson:number,prompt:string,options:string[],correct:string,reason:string){const answer=options.indexOf(correct);if(answer<0)throw new Error('Missing exam key');banks[u].push({id:banks[u].length+1,lesson,prompt,options,answer,reason});}
+// Unit 1 — original order: vocabulary, grammar, orthography, reading.
+q(1,0,'Ali never eats meat. He is ___.',['vegetarian','slim','devoted','shopping'],'vegetarian','الدليل never eats meat = لا يأكل اللحم أبدًا. vegetarian تعني نباتي. slim تعني نحيف، وdevoted مخلص، وshopping تسوق؛ لا تفسر الامتناع عن اللحم. المعنى: علي نباتي.');
+q(1,0,'“Metropolis” means ___.',['a kind of train','a big city','a small country','a kind of food'],'a big city','metropolis تعني مدينة كبرى، لذلك a big city هي الأقرب. ليست نوع قطار أو طعام ولا دولة صغيرة. ابحث عن معنى الكلمة نفسها، ولا تربطها بكلمة metro فقط.');
+q(1,0,'“Majority” means ___.',['less than half','half','more than half','none'],'more than half','majority = الأغلبية، أي أكثر من النصف. في مجموعة من عشرة، ستة أو أكثر يمثلون أغلبية. half نصف فقط، وless than half أقل من النصف، وnone لا أحد.');
+q(1,0,'I only use my ___ to send and receive email.',['cup','truck','puzzles','computer'],'computer','send and receive email = أرسل البريد الإلكتروني وأستقبله؛ الأداة المناسبة بين الخيارات هي computer = حاسوب. cup كوب، وtruck شاحنة، وpuzzles ألغاز، ولا تناسب هذا الاستخدام.');
+q(1,0,'Ali is online all the time, even in the park. He is an internet ___.',['addict','work out','problem','happy'],'addict','online all the time = متصل طوال الوقت؛ التعبير internet addict يعني مدمن إنترنت. الفراغ بعد an يحتاج اسمًا مناسبًا. happy صفة، وwork out يتدرب، وproblem مشكلة؛ لا تصف الشخص المقصود هنا.');
+q(1,1,'Nora always ___ tea in the morning.',['drinks','is drink','drink','are drink'],'drinks','always = دائمًا، وهي قرينة عادة في المضارع البسيط. Nora اسم مفرد مؤنث يعادل she؛ نضيف s إلى الفعل في الإثبات: drinks. مع he / she / it أو اسم مفرد مثل Ali نضيف s أو es، ومع I / you / we / they نستخدم الأصل. لا نقول is drink؛ المستمر يحتاج is drinking. المعنى: تشرب نورة الشاي كل صباح.');
+q(1,1,'I ___ a bicycle.',['riding','ride','is ride','am rode'],'ride','الفاعل I يأخذ الفعل الأساسي في إثبات المضارع البسيط: I ride a bicycle = أركب دراجة. riding وحدها تحتاج am قبلها، وis لا تأتي مع I، وam rode ليس تركيبًا صحيحًا لهذا المعنى.');
+q(1,1,'___ he play football?',['Do','don’t','Does','are'],'Does','هذا سؤال في المضارع البسيط بفاعل he. نستخدم Does + he + الفعل الأساسي: Does he play football? مع he / she / it أو اسم مفرد نستخدم does، ومع I / you / we / they نستخدم do. لا نضيف s إلى play بعد does. المعنى: هل يلعب كرة القدم؟');
+q(1,1,'He ___ smokes.',['is never','isn’t never','is never no','never'],'never','never = أبدًا، وتأتي قبل الفعل الأساسي: He never smokes = هو لا يدخن أبدًا. smokes فعل أساسي، فلا نضع is قبله. نستخدم is مع صفة مثل He is never late. كذلك never تحمل النفي فلا نضيف لها not أو no هنا.');
+q(1,1,'___ do you use your cell phone?',['How often','How are','How is','Often how'],'How often','How often تعني كم مرة / ما مدى التكرار. التركيب: How often + do / does + الفاعل + الفعل الأساسي. مع you نستخدم do. How are تسأل عن الحال، وHow is لا يناسب do، وترتيب Often how غير صحيح.');
+q(1,2,'Complete the word: he___lthy',['a','e','i','y'],'a','الكتابة الصحيحة healthy = صحي، وينقصها a: he + a + lthy. اقرأ الكلمة كاملة بعد وضع الحرف، ولا تختَر e لأن صوتها يبدو قريبًا.');
+q(1,2,'Complete the words: her___al tea',['p','b','k','g'],'b','الكلمتان herbal tea = شاي الأعشاب. الحرف الناقص b: her + b + al. قارن herbal مع herb = عشب لتتذكر الكتابة.');
+q(1,2,'Complete the word: shop___ing',['b','a','p','o'],'p','الكلمة shopping = تسوق، وفيها pp. الفعل shop قصير ينتهي بحرف ساكن بعد صوت متحرك قصير واحد؛ نضاعف p عند إضافة ing. لذلك shop + p + ing.');
+q(1,2,'Complete the word: chat___ing',['k','q','g','t'],'t','الكلمة chatting = دردشة، وفيها tt. مع الفعل القصير chat نضاعف t عند إضافة ing: chat + t + ing، ولا نكتب chating.');
+q(1,2,'Complete the word: of___ice',['f','v','t','h'],'f','الكلمة office = مكتب، وتكتب بحرفي f. الحرف الناقص f: of + f + ice. هذه كتابة كلمة ينبغي تثبيتها كما هي.');
+q(1,3,'People use the Internet to check email.',['True','False'],'True','العبارة صحيحة؛ الدليل من القطعة: They use it to check email. معناها: يستخدمونه لتفقد البريد الإلكتروني. تطابق الجملتين في المعنى يجعل الإجابة True.');
+q(1,3,'You can’t chat with friends when using the Internet.',['True','False'],'False','العبارة خاطئة. القطعة تقول chat with friends، أي يمكنك محادثة الأصدقاء. can’t = لا تستطيع، وهي عكس المعنى المذكور. التصحيح: You can chat with friends on the Internet.');
+q(1,3,'Using the Internet too much can lead to addiction.',['True','False'],'True','العبارة صحيحة وفق القطعة: some people use the Internet too much، ثم They become addicted to it. أي إن الإفراط قد يؤدي إلى الإدمان؛ too much هي قرينة الإفراط هنا.');
+q(1,3,'It is important to balance the time you spend on the computer.',['True','False'],'True','العبارة صحيحة؛ خاتمة القطعة تبدأ It is important to balance the time. balance = يوازن. المقصود موازنة وقت الحاسوب مع الأنشطة الأخرى، وليس قضاء الوقت كله على الإنترنت.');
+q(1,3,'Internet addicts spend a lot of time with their family and friends.',['True','False'],'False','العبارة خاطئة؛ النص يقول they stop spending time with their friends and family = يتوقفون عن قضاء الوقت مع الأصدقاء والأسرة. a lot of time في السؤال تعكس هذا المعنى. اقرأ الفعل stop قبل الحكم.');
+// Unit 2 — clarify past context and correct the unsupported birthplace inference.
+q(2,0,'She was a tiny ___. She only weighed 4 pounds when she was born.',['infant','news','woman','grown-up'],'infant','الدليل when she was born وtiny و4 pounds يشير إلى رضيعة صغيرة: infant. woman وgrown-up تصفان بالغة، وnews أخبار لا تصف إنسانًا. المعنى: كانت رضيعة صغيرة جدًا عند الميلاد.');
+q(2,0,'The ___ were born last night at 9 p.m.',['child','twins','baby','tiny'],'twins','were فعل جمع، وtwins = توأمان، وهي الكلمة المناسبة. child وbaby مفردان ويأخذان was، وtiny صفة صغيرة وليست اسمًا يكمل المعنى.');
+q(2,0,'My uncle was always good at sports. He was a successful ___.',['reporter','poet','athlete','scout'],'athlete','good at sports = جيد في الرياضة، وهذا دليل على athlete = رياضي. reporter مراسل، وpoet شاعر، وscout كشاف؛ لا يحدد أي منها التميز الرياضي المقصود.');
+q(2,0,'My brother will ___ his blood tomorrow.',['sell','buy','throw','donate'],'donate','التعبير المناسب donate blood = يتبرع بالدم. sell يبيع، وbuy يشتري، وthrow يرمي. بعد will نستخدم الفعل الأساسي donate دون s أو ing.');
+q(2,0,'Ahmed won a special ___ for his bravery in the rescue mission.',['award','outstanding','amazed','fantastic'],'award','won a special = فاز بـ... مميزة؛ نحتاج اسمًا: award = جائزة. الخيارات outstanding وamazed وfantastic صفات وليست اسم الجائزة. الدليل won ومعنى bravery = الشجاعة.');
+q(2,1,'Where ___ you live when you were young?',['did','does','done','don’t'],'did','when you were young = عندما كنت صغيرًا يحدد الماضي. السؤال مع فعل live العادي يكون Where + did + you + live. بعد did يعود الفعل إلى أصله، فلا نكتب lived. does للمضارع مع he / she / it، وdone ليس أداة سؤال، وdon’t ليس سؤال الماضي المطلوب.');
+q(2,1,'I ___ in Riyadh when I was young.',['lives','lived','living','were live'],'lived','when I was young قرينة ماضٍ. في الإثبات نستخدم الماضي: live → lived، فتكون I lived in Riyadh = كنت أعيش في الرياض. lives مضارع للمفرد الغائب، وliving تحتاج فعلًا مساعدًا، وwere live تركيب غير صحيح.');
+q(2,1,'Where ___ you born?',['was','is','were','am'],'were','السؤال عن الميلاد: Where were you born? مع you نستخدم were في الماضي. مع I / he / she / it نستخدم was. born هنا تأتي مع be؛ لا نستبدل were بأداة did. المعنى: أين وُلدت؟');
+q(2,1,'I ___ born in London.',['be','are','am','was'],'was','الفاعل I في جملة الميلاد الماضية يأخذ was: I was born in London = وُلدت في لندن. were مع you / we / they. be أصل الفعل، وare وam مضارع ولا يناسبان واقعة الميلاد الماضية المقصودة.');
+q(2,1,'When I was a kid, I ___ to play with toys.',['used','use','uses','using'],'used','When I was a kid يحدد مرحلة ماضية وعادة فيها. التركيب used to + الفعل الأساسي: I used to play. توجد to بعد الفراغ، لذلك نختار used فقط. في النفي والسؤال بعد didn’t أو did نستخدم use to دون d.');
+q(2,2,'When the writer first met Yousef, Yousef was a ___.',['new student','football player','pilot','teacher'],'new student','العبارة المطلوبة عن أول لقاء، والدليل Yousef was a new 6th grade student. كان طالبًا جديدًا. أصبح لاعبًا ممتازًا لاحقًا، لذلك لا نختار حالته النهائية بدل بداية القصة.');
+q(2,2,'Yousef grew up in ___.',['1990','Abha','2008','Jeddah'],'Abha','الدليل حرفيًا: Yousef grew up in Abha = نشأ يوسف في أبها. جدة مكان انتقال الأسرة بسبب وظيفة الأب، وليست الإجابة عن مكان النشأة. النموذج الأصلي سأل عن الميلاد، فصححنا الصياغة لأن النص لا يحدد مكان الميلاد؛ grew up لا تساوي was born.');
+q(2,2,'Yousef used to be ___.',['energetic','confident','shy','extroverted'],'shy','used to يسأل عن حالته القديمة. النص يقول At first he was quite shy = كان خجولًا في البداية، ثم grew more confident = أصبح أكثر ثقة. confident تصف تطوره اللاحق، وextroverted تعني اجتماعيًا منفتحًا وهي عكس الخجل هنا.');
+q(2,2,'Nowadays, Yousef is the ___ on the team.',['worst player','tired','bad player','best player'],'best player','Nowadays = هذه الأيام، فتوجهنا إلى نهاية القصة: now Yousef is the best player on the team. المعنى: أفضل لاعب في الفريق. لا نختار ضعفه في بداية التدريب لأن السؤال عن حاله الآن.');
+// Unit 3 — reading judgments follow the supplied passage.
+q(3,0,'May I see your ticket and ___, please?',['passport','photo','painting','letter'],'passport','السياق طلب تذكرة ووثيقة سفر: ticket and passport = التذكرة وجواز السفر. photo صورة، وpainting لوحة، وletter رسالة؛ passport هو الأنسب لموقف السفر.');
+q(3,0,'I’m going to Hawaii to ___ on the waves.',['climb','surf','jump','run'],'surf','الدليل on the waves = على الأمواج، والفعل المناسب surf = يركب الأمواج. climb يتسلق، وjump يقفز، وrun يجري. to هنا للغرض ويأتي بعدها الفعل الأساسي.');
+q(3,0,'Put a name tag on your ___ to identify it.',['shoes','belt','suitcase','sandals'],'suitcase','name tag = بطاقة اسم، ووضعها على suitcase = حقيبة سفر يساعدك على التعرف عليها. shoes أحذية، وbelt حزام، وsandals صنادل؛ المقصود في سياق السفر هو الحقيبة.');
+q(3,0,'“Unique” means ___.',['dirty','sand','strange','special'],'special','unique تعني فريدًا من نوعه، وspecial = مميز هو أقرب الخيارات. dirty متسخ، وsand رمل، وstrange غريب لا يساوي فريدًا بالضرورة. تذكر أن unique أدق من special وليستا بديلين في كل سياق.');
+q(3,0,'“Rich” means ___.',['wealthy','free','poor','hunger'],'wealthy','rich وwealthy تعنيان غنيًا / ثريًا. poor = فقير وهو العكس، وfree = مجاني أو حر، وhunger = الجوع وهو اسم لا يطابق المعنى.');
+q(3,1,'My mom is ___ for me at the airport.',['waiting','wait','waits','waited'],'waiting','قبل الفراغ is، والفعل المطلوب في المضارع المستمر ينتهي بـ ing: is waiting. My mom مفرد يعادل she فيأخذ is. wait أصل، وwaits مضارع بسيط، وwaited ماضٍ؛ لا تكمل هذا التركيب. المعنى: أمي تنتظرني في المطار.');
+q(3,1,'I ___ traveling tomorrow.',['does','am','is','are'],'am','traveling تنتهي بـ ing، ومع I نستخدم am: I am traveling tomorrow. المستمر هنا يعبّر عن ترتيب للمستقبل بسبب tomorrow، وليس بالضرورة فعلًا يحدث الآن. is مع he / she / it، وare مع you / we / they، وdoes لا يأتي قبل traveling بهذا التركيب.');
+q(3,1,'She is ___ to leave at 6 p.m. tonight.',['go','goes','going','went'],'going','is قبل الفراغ وto leave بعده؛ التركيب is going to + الفعل الأساسي يعبر عن خطة أو نية مستقبلية. الجملة She is going to leave... = ستغادر عند السادسة مساء الليلة. go وgoes وwent لا تكمل is ... to بهذه الصيغة.');
+q(3,1,'I will ___ with my friends.',['stays','staying','stayed','stay'],'stay','بعد will نستخدم الفعل الأساسي مع جميع الضمائر: will stay = سأقيم. لا نضيف s ولا ing ولا نستخدم الماضي stayed. قارن المستمر am staying مع المستقبل will stay.');
+q(3,1,'He will ___ a new car.',['buy','buys','bought','buying'],'buy','بعد will يأتي الفعل الأساسي buy حتى مع he. لا نقول will buys؛ s تستخدم في إثبات المضارع البسيط دون will. bought ماضٍ، وbuying صيغة ing. المعنى: سيشتري سيارة جديدة.');
+q(3,2,'Travelers should always keep their belongings with them.',['True','False'],'True','العبارة صحيحة؛ النص يقول Keep your belongings with you at all times. belongings = المتعلقات، وat all times = دائمًا، لذلك توافق العبارة النص.');
+q(3,2,'Travelers don’t need to put a name tag on their suitcases.',['True','False'],'False','العبارة خاطئة؛ القطعة تقول Put a name tag on your suitcase to identify it. أي ضع بطاقة اسم للتعرف على حقيبتك. don’t need = لا يحتاجون يناقض الأمر الوارد في النص.');
+q(3,2,'Travelers shouldn’t pack any items from strangers.',['True','False'],'True','العبارة صحيحة؛ Do not agree to pack any items from strangers تعني لا توافق على وضع أشياء من غرباء في أمتعتك. shouldn’t = ينبغي ألا، وهي توافق نهي النص.');
+q(3,2,'Travelers should carry containers with liquids with them.',['True','False'],'False','العبارة خاطئة وفق القطعة؛ فهي تقول Do not carry containers with liquids، ثم Place liquids in your checked baggage. أي تضع السوائل في الأمتعة المشحونة. السؤال يقول should carry، وهو عكس النهي Do not carry. هنا نجيب وفق تعليمات النص.');
+q(3,2,'Travelers should have their photo identification with them.',['True','False'],'True','العبارة صحيحة؛ الدليل Check that you have your photo identification. المقصود هوية تحمل صورة، وليس مجرد صورة عادية. ينص النص أيضًا على جواز السفر للسفر الدولي.');
+export const examPrepCourses:TeacherCourse[]=examUnits.map(u=>({id:u.id,grade:'grade-9',title:`الاستعداد للاختبار · النموذج ${u.icon} · Unit ${u.unit}`,description:`${u.title}: ${u.topics}. شرح مبسط وتصحيح مع السبب${u.writingPoints?'، وتدريب كتابة موجه منفصل عن الدرجة التلقائية':''}.`,published:1,definition:{lessons:lessons[u.unit].map((s,i)=>({...s,tag:String(i+1).padStart(2,'0')})),questions:banks[u.unit]},updated:'2026-10-16'}));

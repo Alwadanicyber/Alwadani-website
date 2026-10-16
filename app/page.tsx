@@ -1,14 +1,16 @@
 import type {Metadata} from 'next';
 import {SITE_TITLE,SITE_DESCRIPTION,pageMetadata} from '@/lib/site';
 import Catalog from './catalog';
+import {examHubHref} from '@/lib/exam-prep-content';
 import Classroom from './classroom';
 import {getCourse,publicCourse} from '@/lib/courses';
 import {getRankingMode} from '@/lib/course-ranking';
 export const dynamic='force-dynamic';
-export async function generateMetadata({searchParams}:{searchParams:Promise<{course?:string;grade?:string}>}):Promise<Metadata>{
+export async function generateMetadata({searchParams}:{searchParams:Promise<{course?:string;grade?:string;section?:string}>}):Promise<Metadata>{
   const params=await searchParams;
   if(params.course){try{const course=await getCourse(params.course);if(course)return pageMetadata(course.title+' | TeachCraft',course.description,'/?course='+encodeURIComponent(course.id));}catch{}return {title:'الدرس غير متاح | TeachCraft',robots:{index:false,follow:true}};}
+  if(params.grade==='grade-9'&&params.section==='exam-prep')return pageMetadata('الاستعداد للاختبار · الثالث المتوسط | TeachCraft','نماذج الوحدات ١ و٢ و٣ مرتبة مع شرح القواعد وتصحيح الأسئلة وقراءة القطع وتدريب الكتابة.',examHubHref);
   return pageMetadata(SITE_TITLE,SITE_DESCRIPTION,'/');
 }
 
-export default async function Page({searchParams}:{searchParams:Promise<{course?:string;grade?:string}>}){const params=await searchParams;if(!params.course)return <Catalog initialGrade={params.grade}/>;try{const course=await getCourse(params.course);if(!course)return <div className="standalone fallback" dir="rtl"><h1>الدرس غير متاح حاليًا</h1><p>قد يكون محفوظًا كمسودة أو غير منشور.</p><a className="primary" href="/">عرض جميع الدروس</a></div>;return <Classroom key={course.id} course={{...publicCourse(course),rankingMode:await getRankingMode(course.id)}}/>;}catch{return <div className="standalone fallback"><h2>تعذّر تحميل الدرس</h2><a href="/" className="primary">العودة إلى الدروس</a></div>;}}
+export default async function Page({searchParams}:{searchParams:Promise<{course?:string;grade?:string;section?:string}>}){const params=await searchParams;if(!params.course)return <Catalog initialGrade={params.grade} initialSection={params.section}/>;try{const course=await getCourse(params.course);if(!course)return <div className="standalone fallback" dir="rtl"><h1>الدرس غير متاح حاليًا</h1><p>قد يكون محفوظًا كمسودة أو غير منشور.</p><a className="primary" href="/">عرض جميع الدروس</a></div>;return <Classroom key={course.id} course={{...publicCourse(course),rankingMode:await getRankingMode(course.id)}}/>;}catch{return <div className="standalone fallback"><h2>تعذّر تحميل الدرس</h2><a href="/" className="primary">العودة إلى الدروس</a></div>;}}
