@@ -34,7 +34,10 @@ export default function Certificates(){
   useEffect(()=>setSelectedField(null),[student.id,student.design]);
   function selectPreviewField(event:MouseEvent<HTMLDivElement>|KeyboardEvent<HTMLDivElement>){
     if('key' in event&&event.key!=='Enter'&&event.key!==' ')return;
-    const field=(event.target as Element).closest<HTMLElement>('[data-cert-field]')?.dataset.certField;
+    const target=event.target as Element,direct=target.closest<HTMLElement>('[data-cert-field]'),children=target.querySelectorAll<HTMLElement>('[data-cert-field]');
+    // A multiline inline span has gaps between its line boxes. Accept the containing
+    // text block as well, while leaving shared containers and decorative artwork alone.
+    const field=(direct||(children.length===1?children[0]:null))?.dataset.certField;
     if(field&&isCertificateField(field)){event.preventDefault();setSelectedField(field);}
   }
   function editField(patch:CertificateFieldEdit|null){if(!selectedField)return;if(selectedField==='name'&&patch?.text!==undefined){const next=changeCertificateField(pack,index,false,selectedField,patch);setPack(next);setNames(next.draftNames||'');}else setPack(p=>changeCertificateField(p,index,all,selectedField,patch));}
