@@ -30,3 +30,7 @@ export const courseRankingSettings=sqliteTable('course_ranking_settings',{course
 export const studentSpeedClocks=sqliteTable('student_speed_clocks',{student:text('student').notNull().references(()=>students.id),attempt:integer('attempt').notNull(),run:text('run').notNull().default(''),elapsedMs:integer('elapsed_ms').notNull().default(0),prefixMs:integer('prefix_ms').notNull().default(0),runningSince:integer('running_since'),finishedAt:integer('finished_at'),valid:integer('valid').notNull().default(0)},t=>[primaryKey({columns:[t.student,t.attempt,t.run]})]);
 
 export const studentExamWriting=sqliteTable('student_exam_writing',{student:text('student').notNull().references(()=>students.id),attempt:integer('attempt').notNull(),response:text('response').notNull(),updated:text('updated').notNull()},t=>[primaryKey({columns:[t.student,t.attempt]})]);
+
+export const assistantSettings=sqliteTable('assistant_settings',{id:integer('id').primaryKey(),enabled:integer('enabled').notNull(),dailyLimit:integer('daily_limit').notNull(),visitorLimit:integer('visitor_limit').notNull(),updated:text('updated').notNull()});
+export const assistantUsage=sqliteTable('assistant_usage',{bucket:text('bucket').notNull(),window:integer('window').notNull(),count:integer('count').notNull().default(0),expires:integer('expires').notNull()},t=>[primaryKey({columns:[t.bucket,t.window]})]);
+export const assistantCalls=sqliteTable('assistant_calls',{request:text('request').primaryKey(),bucket:text('bucket').notNull(),created:integer('created').notNull()});
