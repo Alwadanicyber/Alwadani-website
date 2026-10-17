@@ -5,13 +5,16 @@ export const ASSISTANT_MAX_TOKENS=768;
 export const ASSISTANT_MAX_BYTES=10000;
 export type TutorMessage={role:'user'|'assistant';content:string};
 export type AssistantInput={course:string;lesson:number;topic:'lesson'|'writing';requestId:string;messages:TutorMessage[]};
-export type AssistantSettings={enabled:boolean;dailyLimit:number;visitorLimit:number};
-export const defaultAssistantSettings:AssistantSettings={enabled:true,dailyLimit:80,visitorLimit:15};
+export type AssistantSettings={enabled:boolean;dailyLimit:number;visitorLimit:number;courseMode:'all'|'selected';courseIds:string[]};
+export const defaultAssistantSettings:AssistantSettings={enabled:true,dailyLimit:80,visitorLimit:15,courseMode:'all',courseIds:[]};
 export function validateAssistantSettings(value:unknown):AssistantSettings{
  const b=value as Partial<AssistantSettings>|null;
  if(!b||typeof b.enabled!=='boolean'||!Number.isInteger(b.dailyLimit)||b.dailyLimit!<1||b.dailyLimit!>80||!Number.isInteger(b.visitorLimit)||b.visitorLimit!<1||b.visitorLimit!>30)throw new Error('اختر حد الموقع من ١ إلى ٨٠ رسالة وحد المتصفح من ١ إلى ٣٠ رسالة.');
- return {enabled:b.enabled,dailyLimit:b.dailyLimit!,visitorLimit:b.visitorLimit!};
+ const courseMode=b.courseMode===undefined?'all':b.courseMode,courseIds=b.courseIds===undefined?[]:b.courseIds;
+ if(!['all','selected'].includes(courseMode)||!Array.isArray(courseIds)||courseIds.length>300||courseIds.some(id=>typeof id!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(id)))throw new Error('اختر الدروس من القائمة، وبحد أقصى ٣٠٠ درس.');
+ return {enabled:b.enabled,dailyLimit:b.dailyLimit!,visitorLimit:b.visitorLimit!,courseMode,courseIds:[...new Set(courseIds)]};
 }
+export const assistantCourseEnabled=(settings:AssistantSettings,courseId:string)=>settings.enabled&&(settings.courseMode==='all'||settings.courseIds.includes(courseId));
 export function validateAssistantInput(raw:unknown):AssistantInput{
  const b=raw as Partial<AssistantInput>|null;
  if(!b||typeof b.course!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(b.course)||!Number.isInteger(b.lesson)||b.lesson!<0||b.lesson!>39||!['lesson','writing'].includes(b.topic||'')||typeof b.requestId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(b.requestId)||!Array.isArray(b.messages)||!b.messages.length||b.messages.length>7||b.messages.length%2!==1)throw new Error('راجع سؤالك والدرس ثم أرسله مجددًا.');

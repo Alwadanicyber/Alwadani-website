@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS assistant_course_scope(id INTEGER PRIMARY KEY CHECK(id=1),mode TEXT NOT NULL,course_ids TEXT NOT NULL,updated TEXT NOT NULL);

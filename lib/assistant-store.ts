@@ -4,11 +4,20 @@ export const assistantSchema=[
  'CREATE TABLE IF NOT EXISTS assistant_settings(id INTEGER PRIMARY KEY CHECK(id=1),enabled INTEGER NOT NULL,daily_limit INTEGER NOT NULL,visitor_limit INTEGER NOT NULL,updated TEXT NOT NULL)',
  'CREATE TABLE IF NOT EXISTS assistant_usage(bucket TEXT NOT NULL,window INTEGER NOT NULL,count INTEGER NOT NULL DEFAULT 0,expires INTEGER NOT NULL,PRIMARY KEY(bucket,window))',
  'CREATE TABLE IF NOT EXISTS assistant_calls(request TEXT PRIMARY KEY,bucket TEXT NOT NULL,created INTEGER NOT NULL)',
+ 'CREATE TABLE IF NOT EXISTS assistant_course_scope(id INTEGER PRIMARY KEY CHECK(id=1),mode TEXT NOT NULL,course_ids TEXT NOT NULL,updated TEXT NOT NULL)',
 ];
 const ready=new WeakMap<object,Promise<void>>();
 export async function ensureAssistant(){const db=database();let p=ready.get(db);if(!p){p=db.batch(assistantSchema.map(sql=>db.prepare(sql))).then(()=>{}).catch(e=>{ready.delete(db);throw e;});ready.set(db,p);}await p;}
-export async function assistantSettings():Promise<AssistantSettings>{await ensureAssistant();const row=await database().prepare('SELECT enabled,daily_limit,visitor_limit FROM assistant_settings WHERE id=1').first<{enabled:number;daily_limit:number;visitor_limit:number}>();return row?{enabled:!!row.enabled,dailyLimit:Math.min(row.daily_limit,80),visitorLimit:row.visitor_limit}:defaultAssistantSettings;}
-export async function saveAssistantSettings(s:AssistantSettings){await ensureAssistant();await database().prepare('INSERT INTO assistant_settings(id,enabled,daily_limit,visitor_limit,updated) VALUES(1,?,?,?,?) ON CONFLICT(id) DO UPDATE SET enabled=excluded.enabled,daily_limit=excluded.daily_limit,visitor_limit=excluded.visitor_limit,updated=excluded.updated').bind(Number(s.enabled),s.dailyLimit,s.visitorLimit,new Date().toISOString()).run();return s;}
+export async function assistantSettings():Promise<AssistantSettings>{
+ await ensureAssistant();
+ const row=await database().prepare('SELECT s.enabled,s.daily_limit,s.visitor_limit,c.mode,c.course_ids FROM (SELECT 1 AS id) AS defaults LEFT JOIN assistant_settings s ON s.id=defaults.id LEFT JOIN assistant_course_scope c ON c.id=defaults.id').first<{enabled:number|null;daily_limit:number;visitor_limit:number;mode:string|null;course_ids:string|null}>();
+ return {...defaultAssistantSettings,...(row?.enabled!==null&&row?.enabled!==undefined?{enabled:!!row.enabled,dailyLimit:Math.min(row.daily_limit,80),visitorLimit:row.visitor_limit}:{}),courseMode:row?.mode==='selected'?'selected':'all',courseIds:row?.course_ids?JSON.parse(row.course_ids):[]};
+}
+export async function saveAssistantSettings(s:AssistantSettings){
+ await ensureAssistant();const db=database(),updated=new Date().toISOString();
+ await db.batch([db.prepare('INSERT INTO assistant_settings(id,enabled,daily_limit,visitor_limit,updated) VALUES(1,?,?,?,?) ON CONFLICT(id) DO UPDATE SET enabled=excluded.enabled,daily_limit=excluded.daily_limit,visitor_limit=excluded.visitor_limit,updated=excluded.updated').bind(Number(s.enabled),s.dailyLimit,s.visitorLimit,updated),db.prepare('INSERT INTO assistant_course_scope(id,mode,course_ids,updated) VALUES(1,?,?,?) ON CONFLICT(id) DO UPDATE SET mode=excluded.mode,course_ids=excluded.course_ids,updated=excluded.updated').bind(s.courseMode,JSON.stringify(s.courseIds),updated)]);
+ return s;
+}
 export const dayWindow=(now:number)=>Math.floor(now/86400000)*86400000;
 export async function assistantUsage(now=Date.now()){await ensureAssistant();return (await database().prepare("SELECT count FROM assistant_usage WHERE bucket='global' AND window=?").bind(dayWindow(now)).first<{count:number}>())?.count||0;}
 export class AssistantLimit extends Error{constructor(message:string,public status=429,public retryAfter=60){super(message);}}

@@ -34,3 +34,4 @@ export const studentExamWriting=sqliteTable('student_exam_writing',{student:text
 export const assistantSettings=sqliteTable('assistant_settings',{id:integer('id').primaryKey(),enabled:integer('enabled').notNull(),dailyLimit:integer('daily_limit').notNull(),visitorLimit:integer('visitor_limit').notNull(),updated:text('updated').notNull()});
 export const assistantUsage=sqliteTable('assistant_usage',{bucket:text('bucket').notNull(),window:integer('window').notNull(),count:integer('count').notNull().default(0),expires:integer('expires').notNull()},t=>[primaryKey({columns:[t.bucket,t.window]})]);
 export const assistantCalls=sqliteTable('assistant_calls',{request:text('request').primaryKey(),bucket:text('bucket').notNull(),created:integer('created').notNull()});
+export const assistantCourseScope=sqliteTable('assistant_course_scope',{id:integer('id').primaryKey(),mode:text('mode').notNull(),courseIds:text('course_ids').notNull(),updated:text('updated').notNull()});
