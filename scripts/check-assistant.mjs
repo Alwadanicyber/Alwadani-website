@@ -17,13 +17,15 @@ try{
  const lesson={title:'المضارع',en:'Grammar',tag:'01',intro:'شرح للمضارع',formula:'He + verb-s',rules:[['المفرد','مع he نضيف s','He goes.']],note:'افهم السبب.',example:'She works.',translation:'هي تعمل.'};
  const course={id:input.course,title:'الدرس',grade:'grade-9',definition:{lessons:[lesson],questions:[{id:1,prompt:'PRIVATE_QUESTION_SENTINEL',answer:7,reason:'PRIVATE_REASON_SENTINEL',options:['PRIVATE_CHOICE_SENTINEL']}]},students:[{name:'PRIVATE_NAME_SENTINEL'}],savedWriting:'PRIVATE_WRITING_SENTINEL'};
  const messages=buildAssistantMessages(course,input),encoded=JSON.stringify(messages);
- assert(messages[0].role==='system'&&messages.at(-1).content.includes('/no_think'));
+ assert(messages[0].role==='system'&&messages.at(-1).content===input.messages.at(-1).content);
  for(const secret of ['PRIVATE_QUESTION_SENTINEL','PRIVATE_REASON_SENTINEL','PRIVATE_CHOICE_SENTINEL','PRIVATE_NAME_SENTINEL','PRIVATE_WRITING_SENTINEL'])assert(!encoded.includes(secret),'Private classroom data reached model context');
  const writing=buildAssistantMessages(course,{...input,topic:'writing'});assert(JSON.stringify(writing).includes('Write your life story'));
  const long={...input,messages:Array.from({length:7},(_,i)=>({role:i%2?'assistant':'user',content:(i%2?'س':'ع').repeat(i%2?4000:1400)}))};
  const limited=buildAssistantMessages(course,validateAssistantInput(long));assert(new TextEncoder().encode(JSON.stringify(limited)).length<=core.ASSISTANT_MAX_BYTES);assert(limited[1].role==='user'&&limited.at(-1).role==='user');
  assert.equal(assistantReply({choices:[{message:{content:'<think>hidden</think>He goes to school.'}}]}),'He goes to school.');
  assert.equal(assistantReply({response:'A useful answer.'}),'A useful answer.');
+ assert.equal(assistantReply({result:{choices:[{message:{content:'A real wrapped response.'}}]}}),'A real wrapped response.');
+ assert.equal(assistantReply({choices:[{message:{content:[{type:'text',text:'A text block.'}]}}]}),'A text block.');
  assert.throws(()=>assistantReply({choices:[{message:{content:'<think>unfinished internal analysis'}}]}));
  assert.throws(()=>assistantReply({choices:[{message:{reasoning_content:'only internal reasoning'}}]}));
  assert.equal(assistantFailure(new Error('3036: PRIVATE_ERROR_TEXT')).code,'PROVIDER_QUOTA');
@@ -39,7 +41,7 @@ const paths=readdirSync(root,{recursive:true}).filter(p=>p.endsWith('.js')||p.en
 const modules=['index.js',...paths.filter(p=>p!=='index.js')].map(p=>({type:'ESModule',path:root+'/'+p}));
 const stub=`import {WorkerEntrypoint} from 'cloudflare:workers';
 export class FakeAI extends WorkerEntrypoint {async run(model,input){
- if(model!=='@cf/qwen/qwen3-30b-a3b-fp8'||input.max_tokens!==768||input.stream!==false||input.messages[0].role!=='system')throw new Error('wrong model contract');
+ if(model!=='@cf/google/gemma-4-26b-a4b-it'||input.max_completion_tokens!==768||input.stream!==false||input.messages[0].role!=='system')throw new Error('wrong model contract');
  const content=input.messages.at(-1).content;if(content.includes('PROVIDER_FAILURE'))throw new Error('simulated provider outage');
  if(content.includes('EMPTY_RESPONSE'))return {choices:[{message:{role:'assistant',content:''}}]};
  return {choices:[{message:{role:'assistant',content:'He goes to school every day.\\nالسبب: مع he في المضارع البسيط نضيف s أو es.'}}]};
@@ -72,15 +74,15 @@ try{
  assert.equal((await db.prepare('SELECT COUNT(*) n FROM students').first()).n,beforeStudents,'Chat created student result records');
  const stored=(await db.prepare("SELECT sql FROM sqlite_master WHERE name LIKE 'assistant_%'").all()).results.map(r=>r.sql).join(' ');assert(!/\b(content|message|response|prompt)\b/i.test(stored),'Conversation text is persisted');
  await call('/api/teacher/assistant',null,403,{cookie:''});
- await call('/api/teacher/assistant',{enabled:false,dailyLimit:100,visitorLimit:15},403,{cookie:ownerCookie,origin:'https://evil.test'},'PUT');
+ await call('/api/teacher/assistant',{enabled:false,dailyLimit:80,visitorLimit:15},403,{cookie:ownerCookie,origin:'https://evil.test'},'PUT');
  await call('/api/teacher/assistant',{enabled:true,dailyLimit:101,visitorLimit:15},400,{cookie:ownerCookie},'PUT');
- await call('/api/teacher/assistant',{enabled:false,dailyLimit:100,visitorLimit:15},200,{cookie:ownerCookie},'PUT');
+ await call('/api/teacher/assistant',{enabled:false,dailyLimit:80,visitorLimit:15},200,{cookie:ownerCookie},'PUT');
  await call('/api/assistant',request(),503);
  await call('/api/teacher/assistant',{enabled:true,dailyLimit:1,visitorLimit:15},200,{cookie:ownerCookie},'PUT');
  await db.prepare('DELETE FROM assistant_usage').run();await call('/api/assistant',request());
  const limited=await call('/api/assistant',request(),429);assert(limited.data.error.includes('اليومي للموقع'));
  const stats=(await call('/api/teacher/assistant',null,200,{cookie:ownerCookie})).data;assert.equal(stats.used,1);assert.equal(stats.settings.dailyLimit,1);
- await call('/api/teacher/assistant',{enabled:true,dailyLimit:100,visitorLimit:1},200,{cookie:ownerCookie},'PUT');
+ await call('/api/teacher/assistant',{enabled:true,dailyLimit:80,visitorLimit:1},200,{cookie:ownerCookie},'PUT');
  await db.prepare('DELETE FROM assistant_usage').run();await call('/api/assistant',request());const visitorLimit=await call('/api/assistant',request(),429);assert(visitorLimit.data.error.includes('لهذا المتصفح'));
  // A fresh visitor can ask, but an empty model reply is a visible error, not fabricated help.
  cookie='';await call('/api/assistant?course=exam-prep-unit-1-grade-9');await call('/api/assistant',request({messages:[{role:'user',content:'EMPTY_RESPONSE'}]}),503);

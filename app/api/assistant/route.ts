@@ -18,7 +18,7 @@ export async function POST(req:Request){
   let messages;try{messages=buildAssistantMessages(course,input);}catch(e){return reply({error:(e as Error).message},400);}
   const buckets=await assistantBuckets(token,req.headers.get('cf-connecting-ip')||'local',env.TEACHER_SETUP_KEY||'local-only');
   await reserveAssistant({...buckets,requestId:input.requestId,settings});
-  const options={messages,max_tokens:ASSISTANT_MAX_TOKENS,temperature:0.3,top_p:0.9,stream:false,chat_template_kwargs:{enable_thinking:false}};
+  const options={messages,max_completion_tokens:ASSISTANT_MAX_TOKENS,temperature:0.3,store:false,stream:false,chat_template_kwargs:{enable_thinking:false}};
   let timeout:ReturnType<typeof setTimeout>|undefined;
   try{const raw=await Promise.race([env.AI.run(ASSISTANT_MODEL,options),new Promise<never>((_,reject)=>{timeout=setTimeout(()=>reject(new Error('TIMEOUT')),45000);})]);return reply({message:assistantReply(raw)});}finally{if(timeout)clearTimeout(timeout);}
  }catch(e){if(e instanceof AssistantLimit)return reply({error:e.message},e.status,{'Retry-After':String(e.retryAfter)});const fault=assistantFailure(e);return reply({error:fault.message,code:fault.code},503);}
