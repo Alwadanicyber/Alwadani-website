@@ -48,3 +48,15 @@ export function assistantReply(raw:unknown){
  if(!clean||clean.length>12000)throw new Error('EMPTY_AI_RESPONSE');
  return clean;
 }
+// Return only fixed diagnostics, never provider messages, prompts, credentials or raw output.
+export function assistantFailure(error:unknown){
+ const e=error as {message?:unknown;code?:unknown}|null,text=typeof e?.message==='string'?e.message:'';
+ if(text==='EMPTY_AI_RESPONSE')return {code:'EMPTY_REPLY',message:'لم يكتمل رد المساعد. حاول بسؤال أقصر أو أعد المحاولة لاحقًا.'};
+ if(text==='TIMEOUT')return {code:'TIMEOUT',message:'استغرق الرد وقتًا طويلًا. حاول لاحقًا بسؤال قصير.'};
+ const n=typeof e?.code==='number'?String(e.code):text.match(/\b(30\d{2}|50\d{2})\b/)?.[1];
+ if(n==='5016'||/agree|terms|activation required/i.test(text))return {code:'ACTIVATION_REQUIRED',message:'تحتاج خدمة الذكاء الاصطناعي إلى تفعيل من حساب الموقع. يرجى إبلاغ المعلم.'};
+ if(n==='3036')return {code:'PROVIDER_QUOTA',message:'وصل حساب الموقع إلى حصة الذكاء الاصطناعي اليومية. يتجدد الاستخدام لاحقًا، وتبقى الدروس متاحة.'};
+ if(n==='3040')return {code:'PROVIDER_BUSY',message:'خدمة الذكاء الاصطناعي مشغولة مؤقتًا. حاول بعد قليل.'};
+ if(['5018','3023','3041','5035'].includes(n||'')||/unauthori[sz]ed|forbidden|permission/i.test(text))return {code:'ACCOUNT_ACCESS',message:'تعذّر استخدام خدمة الذكاء الاصطناعي من حساب الموقع. يحتاج المعلم إلى مراجعة تفعيل الخدمة.'};
+ return {code:n?'UPSTREAM_'+n:'PROVIDER_ERROR',message:'تعذّر الحصول على رد من الخدمة الآن. حاول لاحقًا؛ لم تتغير درجتك.'};
+}

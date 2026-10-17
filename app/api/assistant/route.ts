@@ -1,6 +1,6 @@
 import {env} from 'cloudflare:workers';
 import {getCourse} from '@/lib/courses';
-import {ASSISTANT_MODEL,ASSISTANT_MAX_TOKENS,validateAssistantInput,buildAssistantMessages,assistantReply} from '@/lib/assistant-core';
+import {ASSISTANT_MODEL,ASSISTANT_MAX_TOKENS,validateAssistantInput,buildAssistantMessages,assistantReply,assistantFailure} from '@/lib/assistant-core';
 import {assistantSettings,reserveAssistant,AssistantLimit} from '@/lib/assistant-store';
 import {assistantSession,assistantToken,assistantBuckets} from '@/lib/assistant-session';
 export const dynamic='force-dynamic';
@@ -21,5 +21,5 @@ export async function POST(req:Request){
   const options={messages,max_tokens:ASSISTANT_MAX_TOKENS,temperature:0.3,top_p:0.9,stream:false,chat_template_kwargs:{enable_thinking:false}};
   let timeout:ReturnType<typeof setTimeout>|undefined;
   try{const raw=await Promise.race([env.AI.run(ASSISTANT_MODEL,options),new Promise<never>((_,reject)=>{timeout=setTimeout(()=>reject(new Error('TIMEOUT')),45000);})]);return reply({message:assistantReply(raw)});}finally{if(timeout)clearTimeout(timeout);}
- }catch(e){if(e instanceof AssistantLimit)return reply({error:e.message},e.status,{'Retry-After':String(e.retryAfter)});return reply({error:'تعذّر الحصول على رد الآن. قد تكون الخدمة مشغولة أو وصلت إلى حصتها. حاول لاحقًا؛ لم تتغير درجتك.'},503);}
+ }catch(e){if(e instanceof AssistantLimit)return reply({error:e.message},e.status,{'Retry-After':String(e.retryAfter)});const fault=assistantFailure(e);return reply({error:fault.message,code:fault.code},503);}
 }
