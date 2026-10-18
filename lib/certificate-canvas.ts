@@ -1,11 +1,13 @@
 import type {CertificatePack,CertificateStudent} from './certificates';
 import {isCertificateField,type CertificateField} from './certificate-fields';
 import {marbleCertificateArt} from './certificate-marble-art';
+import {editableMarbleArt} from './certificate-marble-editable-art';
+import {ornamentLabels,ornamentImages,type CertificateOrnament} from './certificate-ornaments';
 import {visionLogo} from './education-brand';
 import {ministryTransparentLogo} from './ministry-logo';
 export const canvasFonts=['Tahoma','Arial','Georgia','Times New Roman'] as const;
-export type CanvasElement={id:string;kind:'text'|'ministry'|'vision';label:string;text:string;binding?:CertificateField;presetField?:CertificateField;x:number;y:number;width:number;height:number;fontSize:number;font:typeof canvasFonts[number];color:string;align:'right'|'center'|'left';bold:boolean;italic:boolean;underline:boolean;rotation:number;autoFit:boolean;hidden:boolean};
-export type CertificateCanvas={version:1;height:number;elements:CanvasElement[]};
+export type CanvasElement={id:string;kind:'text'|'ministry'|'vision'|CertificateOrnament;label:string;text:string;binding?:CertificateField;presetField?:CertificateField;x:number;y:number;width:number;height:number;fontSize:number;font:typeof canvasFonts[number];color:string;align:'right'|'center'|'left';bold:boolean;italic:boolean;underline:boolean;rotation:number;autoFit:boolean;hidden:boolean};
+export type CertificateCanvas={version:1;height:number;marbleSeparated?:boolean;elements:CanvasElement[]};
 export type CanvasValues=Record<CertificateField,string>;
 export function certificateCanvasValues(pack:CertificatePack,student:CertificateStudent,copy:{title:string;intro:string;reason:string;wish:string;subtitle?:string;language?:string}):CanvasValues{
  const english=copy.language==='en'&&student.design==='marbleEnglish';
@@ -24,15 +26,27 @@ export function validateCertificateCanvas(value:unknown):CertificateCanvas|undef
   if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new Error('عنصر شهادة غير صالح.');
   const e=raw as Record<string,unknown>;
   for(const [key,min,max] of [['x',0,100],['y',0,100],['width',4,100],['height',2,100],['fontSize',8,120],['rotation',-180,180]] as const)if(typeof e[key]!=='number'||!Number.isFinite(e[key])||e[key]<min||e[key]>max)throw new Error('موضع العنصر أو حجمه غير صالح.');
-  if(typeof e.id!=='string'||!e.id||e.id.length>80||ids.has(e.id)||!['text','ministry','vision'].includes(e.kind as string)||typeof e.text!=='string'||e.text.length>1500||typeof e.label!=='string'||e.label.length>120||!canvasFonts.includes(e.font as typeof canvasFonts[number])||typeof e.color!=='string'||!/^#[0-9a-f]{6}$/i.test(e.color)||!['left','right','center'].includes(e.align as string)||['bold','italic','underline','autoFit','hidden'].some(key=>typeof e[key]!=='boolean')||(e.binding!==undefined&&(typeof e.binding!=='string'||!isCertificateField(e.binding)))||(e.x as number)+(e.width as number)>100.01||(e.y as number)+(e.height as number)>100.01)throw new Error('راجع بيانات عنصر الشهادة.');
+  if(typeof e.id!=='string'||!e.id||e.id.length>80||ids.has(e.id)||!['text','ministry','vision',...Object.keys(ornamentLabels)].includes(e.kind as string)||typeof e.text!=='string'||e.text.length>1500||typeof e.label!=='string'||e.label.length>120||!canvasFonts.includes(e.font as typeof canvasFonts[number])||typeof e.color!=='string'||!/^#[0-9a-f]{6}$/i.test(e.color)||!['left','right','center'].includes(e.align as string)||['bold','italic','underline','autoFit','hidden'].some(key=>typeof e[key]!=='boolean')||(e.binding!==undefined&&(typeof e.binding!=='string'||!isCertificateField(e.binding)))||(e.x as number)+(e.width as number)>100.01||(e.y as number)+(e.height as number)>100.01)throw new Error('راجع بيانات عنصر الشهادة.');
   ids.add(e.id);
   if(e.presetField!==undefined&&(typeof e.presetField!=='string'||!isCertificateField(e.presetField)))throw new Error('حقل النص الجاهز غير صالح.');
   return {id:e.id,kind:e.kind,label:e.label,text:e.text,binding:e.binding,presetField:e.presetField,x:e.x,y:e.y,width:e.width,height:e.height,fontSize:e.fontSize,font:e.font,color:e.color,align:e.align,bold:e.bold,italic:e.italic,underline:e.underline,rotation:e.rotation,autoFit:e.autoFit,hidden:e.hidden} as CanvasElement;
  });
- return {version:1,height:c.height,elements};
+ if(c.marbleSeparated!==undefined&&typeof c.marbleSeparated!=='boolean')throw new Error('إعداد زخارف الرخام غير صالح.');
+ return {version:1,height:c.height,...(c.marbleSeparated!==undefined?{marbleSeparated:c.marbleSeparated}:{}),elements};
 }
 export function newCanvasElement(id:string,kind:CanvasElement['kind']='text',binding?:CertificateField):CanvasElement{
- return {id,kind,label:kind==='ministry'?'شعار وزارة التعليم':kind==='vision'?'شعار رؤية 2030':binding==='name'?'اسم الطالب / الطالبة':'نص جديد',text:'',binding,presetField:binding,x:12,y:25,width:48,height:14,fontSize:32,font:'Tahoma',color:'#223c39',align:'center',bold:false,italic:false,underline:false,rotation:0,autoFit:true,hidden:false};
+ return {id,kind,label:kind==='ministry'?'شعار وزارة التعليم':kind==='vision'?'شعار رؤية 2030':kind in ornamentLabels?ornamentLabels[kind as CertificateOrnament]:binding==='name'?'اسم الطالب / الطالبة':'نص جديد',text:'',binding,presetField:binding,x:12,y:25,width:48,height:14,fontSize:32,font:'Tahoma',color:'#223c39',align:'center',bold:false,italic:false,underline:false,rotation:0,autoFit:true,hidden:false};
+}
+/** Textarea and inspector use the same plain-text update, keeping per-student names bound. */
+export function editCanvasText(element:CanvasElement,text:string):CanvasElement{
+ return element.kind==='text'&&element.binding!=='name'?{...element,text:text.slice(0,1500),binding:undefined}:element;
+}
+export function separateMarbleOrnaments(canvas:CertificateCanvas):CertificateCanvas{
+ if(canvas.marbleSeparated)return canvas;
+ if(canvas.elements.length>58)throw new Error('اترك مكانًا لعنصرين قبل فصل زخارف الخلفية.');
+ const ids=new Set(canvas.elements.map(e=>e.id));
+ const make=(kind:'medal'|'diploma',x:number,y:number,width:number,height:number)=>{let id='marble-'+kind;while(ids.has(id))id+='-copy';ids.add(id);return {...newCanvasElement(id,kind),x,y,width,height};};
+ return {...canvas,marbleSeparated:true,elements:[make('medal',57,11,13,24),make('diploma',66,24,26,34),...canvas.elements]};
 }
 export const canvasElementText=(element:CanvasElement,values:CanvasValues)=>element.binding?values[element.binding]:element.text;
 export function moveCanvasElement(element:CanvasElement,dx:number,dy:number,resize=false):CanvasElement{
@@ -66,14 +80,14 @@ const escape=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;
 export function canvasElementStyle(element:CanvasElement,text:string,height:number){return 'left:'+element.x+'%;top:'+element.y+'%;width:'+element.width+'%;height:'+element.height+'%;transform:rotate('+element.rotation+'deg);font-size:'+(canvasFontSize(element,text,height)/10.5)+'cqw;font-family:'+element.font+';color:'+element.color+';text-align:'+element.align+';font-weight:'+(element.bold?700:400)+';font-style:'+(element.italic?'italic':'normal')+';text-decoration:'+(element.underline?'underline':'none');}
 export function certificateCanvasBackground(pack:CertificatePack,student:CertificateStudent){
  let background:string;
- if(student.design==='marbleEnglish')background=pack.ornaments===false?'':'<img class="cert-canvas-art" src="'+marbleCertificateArt+'" alt="">';
+ if(student.design==='marbleEnglish')background=pack.ornaments===false?'':'<img class="cert-canvas-art" src="'+(student.canvas?.marbleSeparated?editableMarbleArt:marbleCertificateArt)+'" alt="">';
  else if(student.design==='custom')background=pack.image?'<img class="cert-canvas-art" src="'+pack.image+'" alt="">':'';
  else background='<div class="cert-canvas-background canvas-'+student.design+'"></div>';
  // A blank marble canvas stays free of automatically inserted wording.
  if(pack.decorate&&student.design!=='marbleEnglish')background+='<div class="cert-motifs" aria-hidden="true">'+(pack.subject==='english'?['A','B','Read','Learn','ABC']:pack.subject==='math'?['π','√','×','1 + 2']:['علم','نجاح','تميز']).map((text,i)=>'<span style="left:'+([5,84,12,72,45][i])+'%;top:'+([15,18,73,76,9][i])+'%">'+text+'</span>').join('')+'</div>';
  return background;
 }
-export const canvasImage=(kind:CanvasElement['kind'])=>kind==='ministry'?ministryTransparentLogo:visionLogo;
+export const canvasImage=(kind:CanvasElement['kind'])=>kind==='ministry'?ministryTransparentLogo:kind==='vision'?visionLogo:kind in ornamentImages?ornamentImages[kind as CertificateOrnament]:'';
 export function certificateCanvasBody(pack:CertificatePack,student:CertificateStudent,values:CanvasValues){
  const canvas=student.canvas!;
  return '<article class="cert-paper cert-canvas" style="aspect-ratio:1050/'+canvas.height+'">'+certificateCanvasBackground(pack,student)+canvas.elements.filter(element=>!element.hidden).map(element=>{const text=canvasElementText(element,values);return '<div class="cert-canvas-element" style="'+canvasElementStyle(element,text,canvas.height)+'">'+(element.kind==='text'?'<div class="cert-canvas-text" dir="auto">'+escape(text)+'</div>':'<img src="'+canvasImage(element.kind)+'" alt="'+escape(element.label)+'">')+'</div>';}).join('')+'</article>';

@@ -1,0 +1,12 @@
+/** Independent vector artwork stays crisp when resized, printed, or exported. */
+export const ornamentLabels={medal:'ميدالية ذهبية',diploma:'شهادة ملفوفة',star:'نجمة',book:'كتاب مفتوح',circle:'دائرة زخرفية'};
+export type CertificateOrnament=keyof typeof ornamentLabels;
+const svg=(body:string,viewBox='0 0 200 200')=>'data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+viewBox+'">'+body+'</svg>');
+const rosette=Array.from({length:20},(_,i)=>'<path d="M90 10 105 8 112 36 93 39Z" fill="'+(i%2?'#ffc524':'#f1a715')+'" stroke="#dc921b" stroke-width="2" transform="rotate('+i*18+' 100 95)"/>').join('');
+export const ornamentImages:Record<CertificateOrnament,string>={
+ medal:svg('<defs><linearGradient id="gold" x2="1" y2="1"><stop stop-color="#fff28b"/><stop offset=".5" stop-color="#ffd23c"/><stop offset="1" stop-color="#e7a016"/></linearGradient></defs><path d="M66 140 25 267 62 245 76 280 104 156M111 149 116 278 141 251 169 266 139 139" fill="#ffc51f"/>'+rosette+'<circle cx="100" cy="95" r="66" fill="url(#gold)" stroke="#d99516" stroke-width="5"/><circle cx="100" cy="95" r="55" fill="none" stroke="#fff5b4" stroke-width="5"/><path d="M56 63Q95 30 139 72L53 107Z" fill="#fff6b4" opacity=".35"/>','0 0 200 285'),
+ diploma:svg('<path d="M53 215 231 25Q251 22 272 54L105 252Z" fill="#f8d8c9" stroke="#332f2f" stroke-width="3"/><path d="M53 215Q23 231 49 255Q83 289 105 252Q105 233 69 217Q52 210 51 226Q52 244 77 256L86 242Q69 226 66 234L73 243" fill="#f8d8c9" stroke="#332f2f" stroke-width="3"/><path d="m150 141 48 9-22 12 21 24-27-7-4 29-36-51Z" fill="#b73d46" stroke="#332f2f" stroke-width="3"/><path d="m139 121 27 16Q176 145 164 163L150 178 121 159Z" fill="#c8494b" stroke="#332f2f" stroke-width="3"/>','0 0 300 290'),
+ star:svg('<path d="m100 12 25 55 61 7-45 41 13 60-54-31-54 31 13-60-45-41 61-7Z" fill="#f5ca53" stroke="#bf902b" stroke-width="5"/><path d="m100 37 17 40 43 5-32 29 9 42-37-22-37 22 9-42-32-29 43-5Z" fill="#ffe593"/>'),
+ book:svg('<path d="M100 48Q59 17 14 36V156Q61 143 100 174Q139 143 186 156V36Q141 17 100 48Z" fill="#fff7df" stroke="#267c81" stroke-width="7" stroke-linejoin="round"/><path d="M100 49V171M30 58Q62 48 83 65M30 81Q62 71 83 88M117 65Q145 48 171 58M117 88Q145 71 171 81" fill="none" stroke="#e4ad45" stroke-width="5" stroke-linecap="round"/>'),
+ circle:svg('<circle cx="100" cy="100" r="87" fill="none" stroke="#d8b456" stroke-width="5"/><circle cx="100" cy="100" r="73" fill="none" stroke="#e8d293" stroke-width="2" stroke-dasharray="6 8"/>')
+};
