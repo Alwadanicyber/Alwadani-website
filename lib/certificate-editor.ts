@@ -42,7 +42,11 @@ function applyCertificateCopy(pack:CertificatePack,before:CertificateStudent,stu
  const edits={...student.edits};
  for(const field of fields){const edit=edits[field];if(edit){if(edit.size!==undefined)edits[field]={size:edit.size};else delete edits[field];}}
  const next={...student,edits},values=canvasValuesFor(pack,next),canvas=canvasFor(pack,before),defaults=defaultCertificateCanvas(pack,next,values,false);
- if(!canvas.elements.length)return {...next,canvas:{...defaults,height:canvas.height}};
+ if(!canvas.elements.some(element=>element.kind==='text')){
+  const elements=[...canvas.elements],ids=new Set(elements.map(e=>e.id));
+  for(const element of defaults.elements){if(element.kind!=='text'&&elements.some(e=>e.kind===element.kind))continue;let id=element.id;while(ids.has(id))id+='-preset';ids.add(id);elements.push({...element,id});}
+  return {...next,canvas:{...defaults,...canvas,elements}};
+ }
  const previous=defaultCertificateCanvas(pack,before,canvasValuesFor(pack,before),false),seen=new Set<string>();
  const elements=canvas.elements.map(element=>{
   const field=copyField(element);if(!field||!fields.includes(field))return element;
