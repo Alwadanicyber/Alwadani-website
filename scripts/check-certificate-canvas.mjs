@@ -1,0 +1,30 @@
+import {readFileSync,writeFileSync,mkdtempSync,rmSync} from 'node:fs';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import assert from 'node:assert/strict';
+import ts from 'typescript';
+const directory=mkdtempSync(new URL('../.certificate-canvas-check-',import.meta.url));
+try{
+ for(const name of ['audience','grades','education-brand','ministry-logo','certificate-marble-art','certificate-fields','certificate-school','certificate-marble','certificate-canvas','certificates','certificate-editor','certificate-image'])writeFileSync(join(directory,name+'.mjs'),ts.transpileModule(readFileSync(new URL('../lib/'+name+'.ts',import.meta.url),'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText.replace(/from '\.\/([\w-]+)'/g,"from './$1.mjs'"));
+ const {emptyPack,certificateBody,certificatesHtml,validateCertificatePack}=await import(pathToFileURL(join(directory,'certificates.mjs'))),{newCanvasElement,moveCanvasElement,canvasFontSize,validateCertificateCanvas}=await import(pathToFileURL(join(directory,'certificate-canvas.mjs'))),{chooseCertificateDesign,changeCertificateCanvas,upgradeCertificateCanvases,createCertificateStudents,changeCertificateField,canvasFor}=await import(pathToFileURL(join(directory,'certificate-editor.mjs')));
+ const base={...emptyPack,teacher:'معلم تجريبي',principal:'مدير تجريبي',draftNames:'أحمد محمد\nخالد عبدالله'};let n=0;
+ let pack=upgradeCertificateCanvases(createCertificateStudents(base,['أحمد محمد','خالد عبدالله'],()=>String(++n)));
+ const old={...base,students:pack.students.map(({canvas,...student})=>({...student,edits:{title:{text:'عنوان خاص كامل'},reason:{text:'تقديراً للتميز '.repeat(35)}}}))};
+ const migrated=upgradeCertificateCanvases(validateCertificatePack(old));assert.equal(migrated.students[0].canvas.elements.find(e=>e.binding==='title').text,'');assert(certificateBody(migrated,migrated.students[0]).includes('عنوان خاص كامل'));
+ pack=chooseCertificateDesign(pack,0,true,'marbleEnglish');assert(pack.students.every(s=>s.design==='marbleEnglish'&&s.canvas.elements.length===0));
+ const blank=certificateBody(pack,pack.students[0]);assert(blank.includes('data:image/webp;base64,'));assert(!blank.includes('أحمد محمد'));assert(!blank.includes('CERTIFICATE'));assert(!blank.includes('وزارة التعليم'));
+ const title={...newCanvasElement('award-title'),label:'عنوان الشهادة',text:'المركز الأول <img src=x onerror=alert(1)>',x:7,y:18,width:50,height:12,fontSize:42,color:'#234567',rotation:8};
+ const name={...newCanvasElement('student-name','text','name'),y:43,fontSize:38,bold:true};
+ pack=changeCertificateCanvas(pack,0,true,c=>({...c,elements:[title,name]}));
+ const reload=validateCertificatePack(JSON.parse(JSON.stringify(pack)));assert.deepEqual(reload.students[0].canvas,pack.students[0].canvas);
+ const first=certificateBody(reload,reload.students[0]),second=certificateBody(reload,reload.students[1]);assert(first.includes('أحمد محمد'));assert(!first.includes('خالد عبدالله'));assert(second.includes('خالد عبدالله'));assert(first.includes('&lt;img'));assert(!first.includes('<img src=x'));assert(first.includes('rotate(8deg)'));assert(first.includes('color:#234567'));assert(first.includes('left:7%'));
+ pack=changeCertificateField(pack,0,false,'name',{text:'أحمد الجديد'});assert(certificateBody(pack,pack.students[0]).includes('أحمد الجديد'));assert.equal(pack.students[1].name,'خالد عبدالله');
+ const shifted=moveCanvasElement(title,10,5);assert.equal(shifted.x,17);assert.equal(shifted.y,23);assert.equal(moveCanvasElement(title,-1000,-1000).x,0);assert.equal(moveCanvasElement(title,1000,1000).x,50);assert.equal(moveCanvasElement(title,1000,1000).y,88);
+ const resized=moveCanvasElement(title,1000,1000,true);assert.equal(resized.width,93);assert.equal(resized.height,82);assert.equal(moveCanvasElement(title,-1000,-1000,true).width,4);
+ pack=changeCertificateCanvas(pack,0,false,c=>({...c,elements:c.elements.map(e=>e.id===title.id?shifted:e)}));assert.equal(pack.students[0].canvas.elements[0].x,17);assert.equal(pack.students[1].canvas.elements[0].x,7);
+ const long={...title,width:40,height:12,autoFit:true};assert(canvasFontSize(long,'تقدير '.repeat(90),742)<long.fontSize);assert.equal(canvasFontSize({...long,autoFit:false},'تقدير '.repeat(90),742),long.fontSize);
+ const html=certificatesHtml(pack);assert.equal((html.match(/class="cert-paper cert-canvas"/g)||[]).length,2);for(const value of ['data-canvas-id','cert-resize-handle','مصمم الشهادات بالسحب','role="button"','is-selected'])assert(!html.includes(value));
+ const valid=pack.students[0].canvas;for(const patch of [{x:NaN},{x:99,width:50},{font:'Arial;display:none'},{color:'red'},{text:'x'.repeat(1501)},{binding:'not-a-field'},{rotation:190},{fontSize:121},{hidden:'true'}])assert.throws(()=>validateCertificateCanvas({...valid,elements:[{...title,...patch}]}));assert.throws(()=>validateCertificateCanvas({...valid,elements:[title,title]}));assert.throws(()=>validateCertificateCanvas({...valid,elements:Array.from({length:61},(_,i)=>({...title,id:String(i)}))}));
+ assert.equal(canvasFor(pack,pack.students[0]).elements[0].x,17);assert.equal(validateCertificateCanvas(undefined),undefined);
+ console.log('PASS: blank marble, complete editable titles, independent draggable geometry, resizing bounds, font fitting, batch student names, migration, JSON restore, escaped clean exports and canvas validation.');
+}finally{rmSync(directory,{recursive:true,force:true});}

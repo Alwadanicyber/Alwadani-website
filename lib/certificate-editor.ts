@@ -1,3 +1,4 @@
+import {defaultCertificateCanvas,certificateCanvasValues,type CertificateCanvas} from './certificate-canvas';
 import {certificateCopy,type CertificatePack,type CertificateStudent} from './certificates';
 import type {CertificateField,CertificateFieldEdit} from './certificate-fields';
 export function certificatePreviewStudent(pack:CertificatePack,index=0):CertificateStudent{
@@ -27,3 +28,18 @@ export function certificateFieldValue(pack:CertificatePack,student:CertificateSt
 }
 /** Position changes never select a different background. */
 export function changeCertificatePlacement(pack:CertificatePack,patch:Partial<Pick<CertificatePack,'nameY'|'textY'|'signY'|'showTitle'>>):CertificatePack{return {...pack,...patch};}
+
+export const canvasValuesFor=(pack:CertificatePack,student:CertificateStudent)=>certificateCanvasValues(pack,student,certificateCopy(pack,student));
+export const canvasFor=(pack:CertificatePack,student:CertificateStudent)=>student.canvas||defaultCertificateCanvas(pack,student,canvasValuesFor(pack,student),false);
+export function changeCertificateCanvas(pack:CertificatePack,index:number,all:boolean,change:(canvas:CertificateCanvas)=>CertificateCanvas):CertificatePack{
+ const apply=(student:CertificateStudent)=>({...student,canvas:change(canvasFor(pack,student))});
+ return {...pack,draftCertificate:draft(apply(certificatePreviewStudent(pack,index))),students:pack.students.map((s,i)=>all||i===index?apply(s):s)};
+}
+export function chooseCertificateDesign(pack:CertificatePack,index:number,all:boolean,design:CertificateStudent['design']):CertificatePack{
+ const next=changeCertificateStudent(pack,index,all,{design});
+ return changeCertificateCanvas(next,index,all,()=>defaultCertificateCanvas(next,certificatePreviewStudent(next,index),canvasValuesFor(next,certificatePreviewStudent(next,index)),design==='marbleEnglish'));
+}
+export function upgradeCertificateCanvases(pack:CertificatePack):CertificatePack{
+ const preview=certificatePreviewStudent(pack);
+ return {...pack,draftCertificate:{...draft(preview),canvas:canvasFor(pack,preview)},students:pack.students.map(student=>({...student,canvas:canvasFor(pack,student)}))};
+}
