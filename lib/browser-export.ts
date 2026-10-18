@@ -4,7 +4,7 @@ import {isSchoolBlank} from './manual-record';
 import type {RecordContent} from './records';
 import {ministryReferenceLogo,visionLogo} from './education-brand';
 import {portraitRecord} from './record-layout';
-import {centeredPageImage} from './export-page';
+import {centeredPageImage,certificatePageSize} from './export-page';
 import {recordNameLines} from './record-name-layout';
 export type ExportProgress=(message:string)=>void;
 export function downloadBlob(blob:Blob,name:string){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
@@ -88,6 +88,15 @@ async function pdfFromHtml(html:string,selector:string,portrait:boolean,progress
   return pdf.output('blob');
 }
 export const recordPdf=(record:RecordContent,progress:ExportProgress)=>pdfFromHtml(recordHtml(record),isSchoolBlank(record)?'.manual-sheet':'.record-print-page',portraitRecord(record),progress,true);
-export const certificatesPdf=(pack:CertificatePack,students:CertificateStudent[],progress:ExportProgress)=>pdfFromHtml(certificatesHtml(pack,students),'.cert-paper',false,progress);
+export async function certificatesPdf(pack:CertificatePack,students:CertificateStudent[],progress:ExportProgress){
+  const {jsPDF}=await import('jspdf');let pdf:InstanceType<typeof jsPDF>|undefined;
+  await capturePages(certificatesHtml(pack,students),'.cert-paper',1160,progress,page=>{
+    const {width,height,orientation}=certificatePageSize(page.width,page.height),format:[number,number]=[width,height];
+    if(pdf)pdf.addPage(format,orientation);else pdf=new jsPDF({orientation,unit:'mm',format,compress:true});
+    pdf.addImage(page.data,'PNG',0,0,width,height,undefined,'FAST');
+  });
+  if(!pdf)throw new Error('لا توجد شهادات للتنزيل.');
+  return pdf.output('blob');
+}
 export async function certificatePng(pack:CertificatePack,student:CertificateStudent,progress:ExportProgress){let result:Blob|undefined;await capturePages(certificatesHtml(pack,[student]),'.cert-paper',1120,progress,async page=>{result=await(await fetch(page.data)).blob();});if(!result)throw new Error('تعذّر تجهيز الصورة.');return result;}
 export async function certificateImages(pack:CertificatePack,students:CertificateStudent[],progress:ExportProgress){const images:CapturedPage[]=[];await capturePages(certificatesHtml(pack,students),'.cert-paper',1120,progress,page=>{images.push(page);});return images;}
