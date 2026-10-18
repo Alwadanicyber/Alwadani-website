@@ -10,6 +10,7 @@ export default function CertificateCanvasEditor({pack,student,onCanvas,onName,on
  const canvas=canvasFor(pack,student),values=canvasValuesFor(pack,student);
  const [selection,setSelection]=useState<string|null>(null),[moving,setMoving]=useState<CertificateCanvas|null>(null),[previewOnly,setPreviewOnly]=useState(false),[editing,setEditing]=useState<string|null>(null),[message,setMessage]=useState('');
  const gesture=useRef<{id:string;pointer:number;x:number;y:number;width:number;height:number;initial:CanvasElement;resize:boolean;moved:boolean}|null>(null);
+ const lastTap=useRef<{id:string;time:number;x:number;y:number}|null>(null);
  const active=canvas.elements.find(element=>element.id===selection)||null,shown=moving||canvas;
  function change(patch:Partial<CanvasElement>){if(!active)return;onCanvas(c=>({...c,elements:c.elements.map(e=>e.id===active.id?{...e,...patch}:e)}));}
  function textChange(element:CanvasElement,text:string){if(element.binding==='name')onName(text);else onCanvas(c=>({...c,elements:c.elements.map(e=>e.id===element.id?editCanvasText(e,text):e)}));}
@@ -34,7 +35,7 @@ export default function CertificateCanvasEditor({pack,student,onCanvas,onName,on
   event.currentTarget.setPointerCapture(event.pointerId);
  }
  function drag(event:PointerEvent<HTMLDivElement>){const g=gesture.current;if(!g||g.pointer!==event.pointerId)return;const dx=event.clientX-g.x,dy=event.clientY-g.y;if(Math.abs(dx)+Math.abs(dy)<3&&!g.moved)return;g.moved=true;const element=moveCanvasElement(g.initial,dx/g.width*100,dy/g.height*100,g.resize);setMoving({...canvas,elements:canvas.elements.map(e=>e.id===g.id?element:e)});}
- function finish(event:PointerEvent<HTMLDivElement>,cancel=false){const g=gesture.current;if(!g||g.pointer!==event.pointerId)return;if(!cancel&&g.moved){const element=moveCanvasElement(g.initial,(event.clientX-g.x)/g.width*100,(event.clientY-g.y)/g.height*100,g.resize);onCanvas(c=>({...c,elements:c.elements.map(e=>e.id===g.id?element:e)}));}gesture.current=null;setMoving(null);if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);}
+ function finish(event:PointerEvent<HTMLDivElement>,cancel=false){const g=gesture.current;if(!g||g.pointer!==event.pointerId)return;if(!cancel&&g.moved){const element=moveCanvasElement(g.initial,(event.clientX-g.x)/g.width*100,(event.clientY-g.y)/g.height*100,g.resize);onCanvas(c=>({...c,elements:c.elements.map(e=>e.id===g.id?element:e)}));lastTap.current=null;}else if(!cancel&&!g.resize&&g.initial.kind==='text'&&!(event.target as Element).closest('[data-canvas-drag]')){const now=performance.now(),tap=lastTap.current;if(tap?.id===g.id&&now-tap.time<500&&Math.abs(event.clientX-tap.x)+Math.abs(event.clientY-tap.y)<16){setEditing(g.id);lastTap.current=null;}else lastTap.current={id:g.id,time:now,x:event.clientX,y:event.clientY};}else lastTap.current=null;gesture.current=null;setMoving(null);if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);}
  function keyboard(event:KeyboardEvent<HTMLDivElement>){
   if((event.target as Element).closest('textarea,[data-canvas-control]'))return;
   const target=(event.target as Element).closest<HTMLElement>('[data-canvas-id]');if(!target||previewOnly)return;
