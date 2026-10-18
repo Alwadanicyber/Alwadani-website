@@ -4,7 +4,7 @@ import {marbleCertificateArt} from './certificate-marble-art';
 import {visionLogo} from './education-brand';
 import {ministryTransparentLogo} from './ministry-logo';
 export const canvasFonts=['Tahoma','Arial','Georgia','Times New Roman'] as const;
-export type CanvasElement={id:string;kind:'text'|'ministry'|'vision';label:string;text:string;binding?:CertificateField;x:number;y:number;width:number;height:number;fontSize:number;font:typeof canvasFonts[number];color:string;align:'right'|'center'|'left';bold:boolean;italic:boolean;underline:boolean;rotation:number;autoFit:boolean;hidden:boolean};
+export type CanvasElement={id:string;kind:'text'|'ministry'|'vision';label:string;text:string;binding?:CertificateField;presetField?:CertificateField;x:number;y:number;width:number;height:number;fontSize:number;font:typeof canvasFonts[number];color:string;align:'right'|'center'|'left';bold:boolean;italic:boolean;underline:boolean;rotation:number;autoFit:boolean;hidden:boolean};
 export type CertificateCanvas={version:1;height:number;elements:CanvasElement[]};
 export type CanvasValues=Record<CertificateField,string>;
 export function certificateCanvasValues(pack:CertificatePack,student:CertificateStudent,copy:{title:string;intro:string;reason:string;wish:string;subtitle?:string;language?:string}):CanvasValues{
@@ -26,12 +26,13 @@ export function validateCertificateCanvas(value:unknown):CertificateCanvas|undef
   for(const [key,min,max] of [['x',0,100],['y',0,100],['width',4,100],['height',2,100],['fontSize',8,120],['rotation',-180,180]] as const)if(typeof e[key]!=='number'||!Number.isFinite(e[key])||e[key]<min||e[key]>max)throw new Error('موضع العنصر أو حجمه غير صالح.');
   if(typeof e.id!=='string'||!e.id||e.id.length>80||ids.has(e.id)||!['text','ministry','vision'].includes(e.kind as string)||typeof e.text!=='string'||e.text.length>1500||typeof e.label!=='string'||e.label.length>120||!canvasFonts.includes(e.font as typeof canvasFonts[number])||typeof e.color!=='string'||!/^#[0-9a-f]{6}$/i.test(e.color)||!['left','right','center'].includes(e.align as string)||['bold','italic','underline','autoFit','hidden'].some(key=>typeof e[key]!=='boolean')||(e.binding!==undefined&&(typeof e.binding!=='string'||!isCertificateField(e.binding)))||(e.x as number)+(e.width as number)>100.01||(e.y as number)+(e.height as number)>100.01)throw new Error('راجع بيانات عنصر الشهادة.');
   ids.add(e.id);
-  return {id:e.id,kind:e.kind,label:e.label,text:e.text,binding:e.binding,x:e.x,y:e.y,width:e.width,height:e.height,fontSize:e.fontSize,font:e.font,color:e.color,align:e.align,bold:e.bold,italic:e.italic,underline:e.underline,rotation:e.rotation,autoFit:e.autoFit,hidden:e.hidden} as CanvasElement;
+  if(e.presetField!==undefined&&(typeof e.presetField!=='string'||!isCertificateField(e.presetField)))throw new Error('حقل النص الجاهز غير صالح.');
+  return {id:e.id,kind:e.kind,label:e.label,text:e.text,binding:e.binding,presetField:e.presetField,x:e.x,y:e.y,width:e.width,height:e.height,fontSize:e.fontSize,font:e.font,color:e.color,align:e.align,bold:e.bold,italic:e.italic,underline:e.underline,rotation:e.rotation,autoFit:e.autoFit,hidden:e.hidden} as CanvasElement;
  });
  return {version:1,height:c.height,elements};
 }
 export function newCanvasElement(id:string,kind:CanvasElement['kind']='text',binding?:CertificateField):CanvasElement{
- return {id,kind,label:kind==='ministry'?'شعار وزارة التعليم':kind==='vision'?'شعار رؤية 2030':binding==='name'?'اسم الطالب / الطالبة':'نص جديد',text:'',binding,x:12,y:25,width:48,height:14,fontSize:32,font:'Tahoma',color:'#223c39',align:'center',bold:false,italic:false,underline:false,rotation:0,autoFit:true,hidden:false};
+ return {id,kind,label:kind==='ministry'?'شعار وزارة التعليم':kind==='vision'?'شعار رؤية 2030':binding==='name'?'اسم الطالب / الطالبة':'نص جديد',text:'',binding,presetField:binding,x:12,y:25,width:48,height:14,fontSize:32,font:'Tahoma',color:'#223c39',align:'center',bold:false,italic:false,underline:false,rotation:0,autoFit:true,hidden:false};
 }
 export const canvasElementText=(element:CanvasElement,values:CanvasValues)=>element.binding?values[element.binding]:element.text;
 export function moveCanvasElement(element:CanvasElement,dx:number,dy:number,resize=false):CanvasElement{
