@@ -2,7 +2,7 @@
 export const EXAM_PREP_SECTION='exam-prep';
 export const examUnits=[
  {id:'exam-prep-unit-1-grade-9',unit:1,title:'الوحدة الأولى · العادات والإنترنت',english:'Lifestyles & Internet Habits',topics:'المفردات · المضارع البسيط · الإملاء · القراءة',objectiveTotal:20,writingPoints:0,icon:'01'},
- {id:'exam-prep-unit-2-grade-9',unit:2,title:'الوحدة الثانية · قصة حياة',english:'Life Stories',topics:'المفردات · الماضي البسيط · القراءة · التعبير',objectiveTotal:14,writingPoints:6,icon:'02'},
+ {id:'exam-prep-unit-2-grade-9',unit:2,title:'الوحدة الثانية · قصة حياة',english:'Life Stories',topics:'المفردات والتعابير · الماضي البسيط · القراءة · التعبير',objectiveTotal:19,writingPoints:6,icon:'02'},
  {id:'exam-prep-unit-3-grade-9',unit:3,title:'الوحدة الثالثة · السفر والخطط',english:'Travel & Future Plans',topics:'المفردات · المستمر والمستقبل · القراءة · البريد',objectiveTotal:15,writingPoints:5,icon:'03'},
 ] as const;
 export const examUnit=(id:string)=>examUnits.find(u=>u.id===id);
@@ -52,6 +52,16 @@ export const examVocabulary:Record<number,[string,string,string][]>={
 };
 export const examSourceNotes:Record<number,string>={
  2:'ورد في النموذج سؤال عن مكان ميلاد يوسف، لكن القطعة تذكر أنه نشأ في أبها ولا تحدد مكان ميلاده. لذلك صيغ سؤال التدريب: «أين نشأ يوسف؟». grew up لا تعني was born.',
+};
+export type ExamVocabularyExpression={word:string;meaning:string;expression:string;expressionMeaning:string;example:string;exampleMeaning:string;note:string};
+export const examVocabularyExpressions:Record<number,ExamVocabularyExpression[]>={
+ 2:[
+ {word:'donated',meaning:'تبرّعَ',expression:'gave to charity',expressionMeaning:'تبرّع للأعمال الخيرية',example:'He donated money to charity.',exampleMeaning:'تبرّع بالمال للأعمال الخيرية.',note:'donated فعل ماضٍ من donate. كلمة gave هي الماضي من give؛ والعبارة هنا تتحدث عن العطاء للأعمال الخيرية.'},
+ {word:'appointment',meaning:'موعد',expression:'an arrangement to meet',expressionMeaning:'ترتيب للقاء في موعد محدد',example:'I have an appointment with my teacher.',exampleMeaning:'لدي موعد مع معلمي.',note:'appointment اسم يدل هنا على موعد مرتب للقاء، وليس فعل التشجيع أو التبرع.'},
+ {word:'outstanding',meaning:'متميّز / ممتاز جدًا',expression:'excellent',expressionMeaning:'ممتاز',example:'She is an outstanding athlete.',exampleMeaning:'هي رياضية متميزة.',note:'outstanding تصف شخصًا أو عملًا ممتازًا جدًا في هذا السياق، وهي أقرب معنى لكلمة excellent.'},
+ {word:'encouraged',meaning:'شجّعَ',expression:'supported someone to succeed',expressionMeaning:'ساند شخصًا وشجّعه لينجح',example:'My teacher encouraged me to succeed.',exampleMeaning:'شجّعني معلمي على النجاح.',note:'encouraged فعل ماضٍ من encourage. المقصود هنا التشجيع والدعم لتحقيق النجاح، ولا تعني العبارة بالضرورة إعطاء المال.'},
+ {word:'infant / newborn',meaning:'رضيع / مولود حديث الولادة',expression:'a baby',expressionMeaning:'طفل رضيع',example:'The newborn is sleeping.',exampleMeaning:'المولود حديث الولادة نائم.',note:'infant تعني رضيعًا، وnewborn أدق: مولود حديث الولادة. كلاهما يناسب a baby في خيارات هذا التدريب، لكنهما لا يتطابقان في كل سياق.'},
+ ],
 };
 export type WritingGuide={prompt:string;arabic:string;steps:{title:string;hint:string;example:string}[];model:string;checklist:string[]};
 export const examWritingGuides:Record<number,WritingGuide>={
