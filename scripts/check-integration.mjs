@@ -9,10 +9,10 @@ import {readFileSync,readdirSync} from 'node:fs';
 const root=project+'dist/server';
 const paths=readdirSync(root,{recursive:true}).filter(p=>p.endsWith('.js')||p.endsWith('.mjs'));
 const modules=['index.js',...paths.filter(p=>p!=='index.js')].map(p=>({type:'ESModule',path:root+'/'+p}));
-const mf=new Miniflare({modules,modulesRoot:root,compatibilityDate:'2026-05-15',compatibilityFlags:['nodejs_compat'],bindings:{TEACHER_SETUP_KEY:'test-owner-key-never-use-in-production-123456789'},d1Databases:{DB:'test'},cf:false});
+const ownerKey=crypto.randomUUID()+crypto.randomUUID();
+const mf=new Miniflare({modules,modulesRoot:root,compatibilityDate:'2026-05-15',compatibilityFlags:['nodejs_compat'],bindings:{TEACHER_SETUP_KEY:ownerKey},d1Databases:{DB:'test'},cf:false});
 let auth={};
-const ownerKey='test-owner-key-never-use-in-production-123456789';
-const password='Teacher-Test-Only-123!';
+const password=crypto.randomUUID()+'Aa1!',recoveryPassword=crypto.randomUUID()+'Aa1!',incorrectPassword=crypto.randomUUID()+'Aa1!';
 const forged={'oai-authenticated-user-id':'test-owner','oai-authenticated-user-email':'teacher@test.example'};
 let cookies={};
 const courseAttempts={};
@@ -50,9 +50,9 @@ auth={cookie:cookie.split(';')[0]};
 const account=await db.prepare('SELECT * FROM teacher_account').first();assert(account.username==='alwadani'&&!account.password_hash.includes(password)&&account.password_hash.startsWith('pbkdf2-sha256-hmac-v1:'),'Password storage incorrect');
 assert(!JSON.stringify((await db.prepare('SELECT * FROM teacher_sessions').all()).results).includes(auth.cookie.split('=')[1]),'Raw session stored');
 await req('/api/teacher/auth',{action:'setup',username:'intruder',password,setupKey:ownerKey},409,{'cf-connecting-ip':'198.51.100.2'});
-await req('/api/teacher/auth',{action:'login',username:'alwadani',password:'Wrong-Password-123!'},401,{'cf-connecting-ip':'198.51.100.3'});
+await req('/api/teacher/auth',{action:'login',username:'alwadani',password:incorrectPassword},401,{'cf-connecting-ip':'198.51.100.3'});
 await req('/api/teacher/auth',{action:'login',username:'wrong',password},401,{'cf-connecting-ip':'198.51.100.3'});
-for(let i=0;i<5;i++)await req('/api/teacher/auth',{action:'login',username:'alwadani',password:'Wrong-Password-123!'},401,{'cf-connecting-ip':'198.51.100.5'});
+for(let i=0;i<5;i++)await req('/api/teacher/auth',{action:'login',username:'alwadani',password:incorrectPassword},401,{'cf-connecting-ip':'198.51.100.5'});
 await req('/api/teacher/auth',{action:'login',username:'alwadani',password},429,{'cf-connecting-ip':'198.51.100.5'});
 assert((await db.prepare('SELECT COUNT(*) AS n FROM teacher_account').first()).n===1,'Extra owner created');
 await req('/api/teacher',null,403);await req('/api/teacher',{},403);await req('/api/teacher',null,403,{'oai-authenticated-user-id':'other','oai-authenticated-user-email':'other@test.example'});
@@ -553,7 +553,7 @@ const oversizedRecord=await mf.dispatchFetch('https://course.test'+recordsPath,{
 for(const file of readdirSync(project+'drizzle').filter(x=>x.startsWith('0005_')&&x.endsWith('.sql'))){for(const statement of readFileSync(project+'drizzle/'+file,'utf8').split('--> statement-breakpoint'))await db.prepare(statement.trim()).run();}
 assert((await req(recordsPath,null,200,auth)).records.length===2,'Migration removed saved records');
 assert(await studentRecords()===studentRecordsBefore,'Record feature changed lesson student data');
-for(const [path,text] of [['/teacher/records','كشوفك، في مكان واحد'],['/teacher/settings','إعدادات المظهر'],['/teacher/classes','صفوفك الدراسية'],['/teacher?grade=grade-9','الصف الثالث المتوسط']]){const response=await mf.dispatchFetch('https://course.test'+path,{headers:auth});const html=await response.text();assert(response.status===200&&html.includes(text)&&html.includes('قائمة المعلم'),'New teacher page failed '+path);}
+for(const [path,text] of [['/teacher/records','كشوفك، في مكان واحد'],['/teacher/settings','الإعدادات'],['/teacher/classes','صفوفك الدراسية'],['/teacher?grade=grade-9','الصف الثالث المتوسط']]){const response=await mf.dispatchFetch('https://course.test'+path,{headers:auth});const html=await response.text();assert(response.status===200&&html.includes(text)&&html.includes('قائمة المعلم'),'New teacher page failed '+path);}
 for(const path of ['/teacher/records','/teacher/settings','/teacher/classes']){const response=await mf.dispatchFetch('https://course.test'+path);const html=await response.text();assert((response.status>=300&&response.status<400&&response.headers.get('location')?.endsWith('/teacher'))||(response.status===200&&html.includes('مرحبًا بعودتك')&&!html.includes('كشوفك، في مكان واحد')),'Private teacher page exposed '+path+' '+JSON.stringify({status:response.status,location:response.headers.get('location'),html:html.slice(0,500)}));}
 
 
@@ -1078,13 +1078,13 @@ console.log('PASS: continuous full-journey timing, wrong-answer correction, requ
 
 // Recovery revokes existing sessions, expiration denies access, logout revokes.
 const oldAuth={...auth};
-await req('/api/teacher/auth',{action:'recover',username:'alwadani',password:'New-Teacher-Password-456!',setupKey:'wrong'},403,{'cf-connecting-ip':'198.51.100.10'});
+await req('/api/teacher/auth',{action:'recover',username:'alwadani',password:recoveryPassword,setupKey:'wrong'},403,{'cf-connecting-ip':'198.51.100.10'});
 await req('/api/teacher',null,200,auth);
-const recovered=await mf.dispatchFetch('https://course.test/api/teacher/auth',{method:'POST',headers:{'Content-Type':'application/json',origin:'https://course.test','cf-connecting-ip':'198.51.100.10'},body:JSON.stringify({action:'recover',username:'alwadani',password:'New-Teacher-Password-456!',setupKey:ownerKey})});
+const recovered=await mf.dispatchFetch('https://course.test/api/teacher/auth',{method:'POST',headers:{'Content-Type':'application/json',origin:'https://course.test','cf-connecting-ip':'198.51.100.10'},body:JSON.stringify({action:'recover',username:'alwadani',password:recoveryPassword,setupKey:ownerKey})});
 assert(recovered.status===200,'Recovery failed');auth={cookie:recovered.headers.get('set-cookie').split(';')[0]};
 await req('/api/teacher',null,403,oldAuth);await req('/api/teacher',null,200,auth);
 await req('/api/teacher/auth',{action:'login',username:'alwadani',password},401,{'cf-connecting-ip':'198.51.100.20'});
-const loggedIn=await mf.dispatchFetch('https://course.test/api/teacher/auth',{method:'POST',headers:{'Content-Type':'application/json',origin:'https://course.test','cf-connecting-ip':'198.51.100.20'},body:JSON.stringify({action:'login',username:'alwadani',password:'New-Teacher-Password-456!'})});
+const loggedIn=await mf.dispatchFetch('https://course.test/api/teacher/auth',{method:'POST',headers:{'Content-Type':'application/json',origin:'https://course.test','cf-connecting-ip':'198.51.100.20'},body:JSON.stringify({action:'login',username:'alwadani',password:recoveryPassword})});
 assert(loggedIn.status===200,'Password login failed');
 const loginCookie=loggedIn.headers.get('set-cookie').split(';')[0];
 await req('/api/teacher/auth',{action:'logout'},200,auth);await req('/api/teacher',null,403,auth);
