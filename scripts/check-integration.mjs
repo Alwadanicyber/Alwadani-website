@@ -166,11 +166,12 @@ console.log('PASS: three ordered exam models, all 54 server-graded questions, co
 
 // Helping at Home + CAN uses real shuffled server grading and an isolated local D1.
 const homeId='helping-at-home-can-grade-4',homeOwner=admin.courses.find(c=>c.id===homeId);
-assert(homeOwner.grade==='grade-4'&&homeOwner.definition.lessons.length===3&&homeOwner.definition.questions.length===24,'Home CAN course missing or wrong grade');
+assert(homeOwner.grade==='grade-4'&&homeOwner.definition.lessons.length===4&&homeOwner.definition.questions.length===32,'Home CAN course missing or wrong grade');
 const homeHTML=await(await mf.dispatchFetch('https://course.test/?course='+homeId)).text();
 assert(homeHTML.includes('أعمال المنزل بالصور')&&homeHTML.includes('home-chore-picture')&&homeHTML.includes('تمارين الكتاب'),'Home CAN visual explanation or workbook missing');
 let home=await req('/api/classroom',{action:'start',course:homeId,name:'تجربة مساعدة المنزل'});
 assert(home.course.rankingMode==='accuracy'&&home.course.questions.every(q=>!('answer' in q)&&!('reason' in q)),'Home CAN timing default or private keys wrong');
+assert(home.course.questions.filter(q=>q.kind==='audio-write').length===8&&home.course.questions.filter(q=>q.kind==='audio-write').every(q=>q.options.length===0),'Dictation options exposed before writing');
 const homeOptions=JSON.stringify(home.course.questions.map(q=>q.options));
 assert(JSON.stringify((await req('/api/classroom?course='+homeId)).course.questions.map(q=>q.options))===homeOptions,'Home choice order changed on reload');
 await req('/api/classroom',{action:'read',course:homeId,lesson:1},400);
@@ -179,31 +180,60 @@ await req('/api/classroom',{action:'complete',course:homeId},400);
 await req('/api/classroom',{action:'preposition-game-retry',course:homeId},400);
 for(const source of homeOwner.definition.questions){
  if(!home.reads.includes(source.lesson))home=await req('/api/classroom',{action:'read',course:homeId,lesson:source.lesson});
- if(source.id===17)await req('/api/classroom',{action:'complete',course:homeId},400);
- const visible=home.course.questions.find(q=>q.id===source.id),correct=source.options[source.answer],chosen=source.id===17?source.options.find(o=>o!==correct):correct;
- home=await req('/api/classroom',{action:'answer',course:homeId,question:source.id,...(source.kind==='sentence-build'?{text:correct.toLowerCase().replace('?','')}:{choice:visible.options.indexOf(chosen)})});
+ if(source.id===25)await req('/api/classroom',{action:'complete',course:homeId},400);
+ const visible=home.course.questions.find(q=>q.id===source.id),correct=source.options[source.answer],chosen=source.id===25?source.options.find(o=>o!==correct):correct;
+ home=await req('/api/classroom',{action:'answer',course:homeId,question:source.id,...(source.kind==='audio-write'?{text:source.id===17?'set the tabel':correct.toUpperCase().replaceAll(' ','  ')}:source.kind==='sentence-build'?{text:correct.toLowerCase().replace('?','')}:{choice:visible.options.indexOf(chosen)})});
  const checked=home.answers.find(a=>a.question===source.id);
- assert(checked.correct===(source.id===17?0:1)&&checked.answerText===correct&&checked.reason===source.reason,'Home CAN correction or sentence grading failed');
- if(source.id===17){const again=await req('/api/classroom',{action:'answer',course:homeId,question:17,choice:visible.options.indexOf(correct)});assert(again.answers.find(a=>a.question===17).correct===0,'Repeated home balloon click overwrote first grade');}
+ assert(checked.correct===([17,25].includes(source.id)?0:1)&&checked.answerText===correct&&checked.reason===source.reason,'Home CAN correction or sentence grading failed');
+ if(source.id===17){const again=await req('/api/classroom',{action:'answer',course:homeId,question:17,text:correct});assert(again.answers.find(a=>a.question===17).correct===0&&again.answers.find(a=>a.question===17).response==='set the tabel','Repeated dictation answer changed the first grade or original spelling');}
+ if(source.id===25){const again=await req('/api/classroom',{action:'answer',course:homeId,question:25,choice:visible.options.indexOf(correct)});assert(again.answers.find(a=>a.question===25).correct===0,'Repeated home balloon click overwrote first grade');}
 }
 home=await req('/api/classroom',{action:'complete',course:homeId});
-assert(home.certificate.score===23&&home.certificate.total===24&&home.student.completed,'Eight home balloons were not required/counted');
-const homeStudent=home.student.id,homeAttempt=home.student.attempt,homePrefix=JSON.stringify(home.answers.filter(a=>a.question<17).map(({question,correct,answerText,reason,response})=>({question,correct,answerText,reason,response})));
+assert(home.certificate.score===30&&home.certificate.total===32&&home.student.completed,'Eight home balloons were not required/counted');
+const homeStudent=home.student.id,homeAttempt=home.student.attempt,homePrefix=JSON.stringify(home.answers.filter(a=>a.question<25).map(({question,correct,answerText,reason,response})=>({question,correct,answerText,reason,response})));
 home=await req('/api/classroom',{action:'preposition-game-retry',course:homeId});
-assert(home.student.attempt===homeAttempt+1&&home.answers.length===16&&home.reads.length===3&&!home.student.completed&&home.certificate.score===23,'Home game restart lost exercises or best result');
+assert(home.student.attempt===homeAttempt+1&&home.answers.length===24&&home.reads.length===4&&!home.student.completed&&home.certificate.score===30,'Home game restart lost exercises or best result');
 assert(JSON.stringify(home.answers.map(({question,correct,answerText,reason,response})=>({question,correct,answerText,reason,response})))===homePrefix,'Home game replay rewrote exercise corrections or sentence responses');
 assert(JSON.stringify(home.course.questions.map(q=>q.options))!==homeOptions,'Home game replay did not reshuffle');
-await req('/api/classroom',{action:'answer',course:homeId,question:17,choice:0,attempt:homeAttempt},409);
-for(const source of homeOwner.definition.questions.slice(16)){
+await req('/api/classroom',{action:'answer',course:homeId,question:25,choice:0,attempt:homeAttempt},409);
+for(const source of homeOwner.definition.questions.slice(24)){
  const visible=home.course.questions.find(q=>q.id===source.id);
  home=await req('/api/classroom',{action:'answer',course:homeId,question:source.id,choice:visible.options.indexOf(source.options[source.answer])});
 }
 home=await req('/api/classroom',{action:'complete',course:homeId});
-assert(home.certificate.score===24&&home.certificate.total===24&&home.leaderboard.find(r=>r.id===homeStudent)?.score===24,'Improved home game did not update best result');
+assert(home.certificate.score===31&&home.certificate.total===32&&home.leaderboard.find(r=>r.id===homeStudent)?.score===31,'Improved home game did not update best result');
 await req('/api/teacher',homeOwner,200,auth);
 const homeSaved=(await req('/api/teacher',null,200,auth)).courses.find(c=>c.id===homeId);
-assert(homeSaved.definition.questions.slice(16).every(q=>q.kind==='home-balloon')&&homeSaved.definition.questions[11].kind==='sentence-build','Teacher save stripped home question kinds');
-console.log('PASS: new fourth-grade CAN course, 24 private server answer keys, shuffled picture choices, sentence building, strict station order, required scored balloons, explained errors, reload, game-only replay preserving 16 exercises, stale attempts rejected and improved certificate/leaderboard.');
+assert(homeSaved.definition.questions.slice(24).every(q=>q.kind==='home-balloon')&&homeSaved.definition.questions.slice(16,24).every(q=>q.kind==='audio-write')&&homeSaved.definition.questions[11].kind==='sentence-build','Teacher save stripped home question kinds');
+console.log('PASS: new fourth-grade CAN course, 32 private server answer keys, hidden dictation options and strict written spelling, shuffled picture choices, sentence building, strict station order, required scored balloons, explained errors, reload, game-only replay preserving 16 exercises and all 8 typed dictations, stale attempts rejected and improved certificate/leaderboard.');
+
+// A learner who started the old 24-point version keeps the 16 exercises and certificate.
+const oldHome=JSON.parse(readFileSync(project+'scripts/fixtures/home-can-v1.json','utf8'));
+let legacyHome=await req('/api/classroom',{action:'start',course:homeId,name:'تجربة تحديث إملاء المنزل'});
+const legacyHomeId=legacyHome.student.id,legacyHomeSaved=JSON.stringify(oldHome),legacyHomeDone='2026-10-19T15:00:00.000Z';
+await db.prepare('UPDATE students SET snapshot=?,completed=? WHERE id=?').bind(legacyHomeSaved,legacyHomeDone,legacyHomeId).run();
+await db.batch(oldHome.definition.questions.map(q=>db.prepare('INSERT INTO answers(student,question,choice,correct) VALUES(?,?,?,?)').bind(legacyHomeId,q.id,q.id===17?(q.answer+1)%q.options.length:q.answer,q.id===17?0:1)));
+await db.batch([0,1,2].map(lesson=>db.prepare('INSERT INTO reads(student,lesson) VALUES(?,?)').bind(legacyHomeId,lesson)));
+await db.batch(oldHome.definition.questions.filter(q=>q.kind==='sentence-build').map(q=>db.prepare('INSERT INTO student_sentence_answers(student,attempt,question,response) VALUES(?,1,?,?)').bind(legacyHomeId,q.id,q.options[q.answer])));
+const migratedHome=await Promise.all([req('/api/classroom?course='+homeId),req('/api/classroom?course='+homeId)]);
+legacyHome=migratedHome[0];assert(migratedHome.every(d=>d.student.attempt===2&&d.course.lessons.length===4&&d.course.questions.length===32&&d.answers.length===16),'Legacy home upgrade raced, lost exercises, or used the old definition');
+assert(migratedHome.some(d=>d.notice)&&legacyHome.reads.join(',')==='0,1'&&legacyHome.certificate.score===23&&legacyHome.certificate.total===24&&!legacyHome.student.completed,'Legacy certificate, sequence or update notice wrong');
+assert(legacyHome.answers.filter(a=>a.question===12||a.question===13).every(a=>a.response),'Legacy typed sentences were not retained');
+assert((await db.prepare('SELECT COUNT(*) AS n FROM student_attempts WHERE student=?').bind(legacyHomeId).first()).n===1,'Legacy migration archived more than once');
+assert((await req('/api/classroom?course='+homeId)).student.attempt===2,'Legacy update is not idempotent');
+await req('/api/classroom',{action:'read',course:homeId,lesson:3},400);
+await req('/api/classroom',{action:'complete',course:homeId},400);
+await req('/api/classroom',{action:'answer',course:homeId,question:17,text:'set the table',attempt:1},409);
+for(const source of homeOwner.definition.questions.slice(16)){
+ if(!legacyHome.reads.includes(source.lesson))legacyHome=await req('/api/classroom',{action:'read',course:homeId,lesson:source.lesson});
+ const visible=legacyHome.course.questions.find(q=>q.id===source.id),expected=source.options[source.answer];
+ legacyHome=await req('/api/classroom',{action:'answer',course:homeId,question:source.id,...(source.kind==='audio-write'?{text:expected}:{choice:visible.options.indexOf(expected)})});
+}
+legacyHome=await req('/api/classroom',{action:'complete',course:homeId});assert(legacyHome.certificate.score===32&&legacyHome.certificate.total===32,'New dictation result cannot improve an archived 24-point certificate');
+await db.prepare('UPDATE courses SET definition=? WHERE id=?').bind(JSON.stringify(oldHome.definition),homeId).run();
+const upgradedOwner=(await req('/api/teacher',null,200,auth)).courses.find(c=>c.id===homeId);assert(upgradedOwner.definition.lessons.length===4&&upgradedOwner.definition.questions.length===32,'Saved teacher lesson shadowed the new dictation');
+await req('/api/teacher',upgradedOwner,200,auth);
+console.log('PASS: concurrent legacy home migration, original grades and typed sentences retained, prior certificate archived, new dictation/game gated, stale requests rejected, 32-point completion, idempotence and saved teacher-definition upgrade.');
 
 const originalStart=await req('/api/classroom',{action:'start',name:'طالب القصة'});const originalDefinition=admin.courses.find(c=>c.id==='life-stories').definition;const keys=[0,1,2,1,2,1,1,2,1,0,1,2,1,0,2,1,0,2,0,1,1,2,0,1,2,0,1,2];
 for(let i=1;i<=28;i++){const l=i<=3?0:i<=6?1:i<=9?2:i<=12?3:4;if([1,4,7,10,13].includes(i))await req('/api/classroom',{action:'read',lesson:l});await req('/api/classroom',{action:'answer',question:i,choice:originalStart.course.questions[i-1].options.indexOf(originalDefinition.questions[i-1].options[keys[i-1]])});}

@@ -1,5 +1,6 @@
 // Public explanation and illustrations; scored answer keys remain server-side.
 export const HOME_CAN_COURSE_ID='helping-at-home-can-grade-4';
+export const normalizeHomeSpelling=(value:string)=>value.trim().toLowerCase().replace(/[’‘]/g,"'").replace(/[.!?]+$/,'').replace(/\s+/g,' ');
 export type HomeChore={en:string;ar:string;scene:string;col:number;row:number;example:string;translation:string;tip:string};
 export const homeChores:HomeChore[]=[
  {en:'set the table',ar:'أجهّز المائدة',scene:'set-table',col:0,row:0,example:'I set the table before lunch.',translation:'أجهّز المائدة قبل الغداء.',tip:'أضع الأطباق والملاعق قبل الأكل. set لا تعني تنظيف المائدة.'},

@@ -1,0 +1,433 @@
+{
+  "id": "helping-at-home-can-grade-4",
+  "grade": "grade-4",
+  "title": "أساعد في المنزل · CAN والعرض والطلب",
+  "description": "أعمال المنزل بالصور والنطق، شرح can وcan’t والإثبات والنفي والسؤال، الفرق بين عرض المساعدة وطلبها، تدريبات الكتاب المترجمة ولعبة بالونات تدخل ضمن النتيجة.",
+  "published": 1,
+  "definition": {
+    "lessons": [
+      {
+        "title": "أعمال المنزل بالصور",
+        "en": "Helping at Home",
+        "tag": "01",
+        "intro": "شاهد العمل، واسمع اسمه بالإنجليزية، ثم افتح معناه ومثاله. تعلّم الفرق بين تجهيز المائدة ورفع الأطباق وتنظيفها.",
+        "formula": "set → eat → clear → clean",
+        "rules": [
+          [
+            "قبل الأكل وبعده",
+            "set the table تجهيز المائدة قبل الأكل. clear the table رفع الأطباق بعدها. clean the table مسح سطح المائدة وتنظيفه.",
+            "I set the table before lunch. I clear it after lunch."
+          ],
+          [
+            "احفظ العبارة كاملة",
+            "make the bed تعني ترتيب السرير، وtake out the trash تعني إخراج القمامة. الترجمة الحرفية لكلمة واحدة قد تربكك.",
+            "make the bed · take out the trash"
+          ],
+          [
+            "العادة مع المفرد",
+            "مع he / she / it أو اسم مفرد مثل Sahar نضيف s في إثبات المضارع البسيط: feeds، makes، cuts. مع I نستخدم الفعل الأساسي.",
+            "I feed the animals. Sahar feeds the animals."
+          ],
+          [
+            "بعد to يعود الفعل إلى أصله",
+            "نقول doesn’t like to wash، دون s بعد to. وسؤال How often يسأل عن التكرار: دائمًا أم عادةً أم أحيانًا؟",
+            "How often do you sweep the floor? I sometimes sweep the floor."
+          ]
+        ],
+        "note": "كل أعمال المنزل ليست مناسبة لكل الأعمار؛ اختر المساعدة المناسبة مع أسرتك. في الصورة، الشخص الكبير هو الذي يقص العشب.",
+        "example": "I help my family. I make my bed and feed the animals.",
+        "translation": "أساعد أسرتي. أرتّب سريري وأُطعم الحيوانات."
+      },
+      {
+        "title": "أستطيع، أعرض، وأطلب المساعدة",
+        "en": "Can · Offers & Requests",
+        "tag": "02",
+        "intro": "can تعني يستطيع أو يمكن. نستخدمها للقدرة، ونستخدم السؤال بها لعرض المساعدة أو طلبها حسب الموقف.",
+        "formula": "subject + can / can’t + base verb | Can + subject + base verb?",
+        "rules": [
+          [
+            "الإثبات: أستطيع",
+            "ضع can بعد الفاعل، ثم الفعل الأساسي. القاعدة نفسها مع I / you / he / she / it / we / they ومع الأسماء. لا نضيف s للفعل بعد can حتى مع he أو اسم مفرد.",
+            "I can help. She can help. Ali can help."
+          ],
+          [
+            "النفي: لا أستطيع",
+            "can’t هي اختصار cannot، ونكتب cannot كلمة واحدة. لا نستخدم don’t أو doesn’t مع can. يبقى الفعل بعدها أساسيًا بلا s أو ing أو to.",
+            "He can’t sweep the floor. He cannot sweep the floor."
+          ],
+          [
+            "السؤال والرد",
+            "قدّم Can على الفاعل، ثم الفعل الأساسي. لا نضيف Do أو Does. مع Can you نجيب عن أنفسنا: Yes, I can. أو No, I can’t. ومع Can she نقول Yes, she can.",
+            "Can you help? Yes, I can. Can she help? No, she can’t."
+          ],
+          [
+            "عرض المساعدة: أنا سأساعدك",
+            "في مواقف هذا الدرس نبدأ عرض المساعدة بـ Can I، مثل: هل أجهّز المائدة لك؟ يمكن قبول العرض بـ Yes, please. ورفضه بأدب بـ No, thanks.",
+            "Can I set the table for you? Yes, please."
+          ],
+          [
+            "طلب المساعدة: أطلب منك أن تساعدني",
+            "نستخدم Can you لطلب المساعدة من المخاطب. ويمكن السؤال عن شخص آخر مثل Can Grandma أو Can your mom. انتبه إلى الضمير في الجواب.",
+            "Can you wash the dishes, please? Yes, I can."
+          ]
+        ],
+        "note": "لا نحدد العرض من Can I وحدها في كل المواقف؛ فقد تسأل عن الإذن مثل Can I go out? في هذا الدرس، عرض المساعدة هو أن تتطوع للقيام بالعمل لشخص آخر.",
+        "example": "Can I help you with your homework? — Yes, please.",
+        "translation": "هل أساعدك في واجبك؟ — نعم، من فضلك."
+      },
+      {
+        "title": "تحدي بالونات المساعدة",
+        "en": "Helping Balloon Challenge",
+        "tag": "03",
+        "intro": "اقرأ الموقف أو اسمعه، ثم أطلق السهم على البالونة المناسبة. تجمع اللعبة أعمال المنزل وقاعدة can والعرض والطلب.",
+        "formula": "Read / listen → choose → learn → next balloon",
+        "rules": [
+          [
+            "ماذا أختار؟",
+            "بعض الجولات تطلب فعل العمل المنزلي، وبعضها كلمة can أو الرد المناسب، وبعضها التمييز بين Offer وRequest.",
+            "Offer = عرض مساعدة · Request = طلب مساعدة"
+          ],
+          [
+            "الصحيح ينتقل تلقائيًا",
+            "تنفجر البالونة مع صوت وحركة، وتنتقل الجولة الصحيحة إلى السؤال التالي دون زر إضافي.",
+            "Can she ___? → help"
+          ],
+          [
+            "عند الخطأ نفهم السبب",
+            "تتوقف اللعبة، وتظهر الإجابة الصحيحة مع الترجمة والسبب. بعد فهم التصحيح اضغط «فهمت، أكمل اللعب».",
+            "can + base verb; not helps / helping / to help"
+          ]
+        ],
+        "note": "اللعبة مطلوبة ودرجاتها ضمن النتيجة. يمكنك إعادة اللعبة بإجابات فارغة؛ نحفظ أفضل نتيجة مكتملة باسمك.",
+        "example": "Can you help me? — Yes, I can.",
+        "translation": "هل يمكنك مساعدتي؟ — نعم، أستطيع."
+      }
+    ],
+    "questions": [
+      {
+        "id": 1,
+        "lesson": 0,
+        "prompt": "set the table",
+        "options": [
+          "set the table",
+          "clear the table",
+          "clean the table"
+        ],
+        "answer": 0,
+        "reason": "نجهّز المائدة قبل الطعام بوضع الأطباق والملاعق: set the table. أما clear the table فرفع الأطباق بعد الأكل، وclean the table فمسح السطح. المعنى: أجهّز المائدة.",
+        "kind": "picture-choice",
+        "audio": "set the table"
+      },
+      {
+        "id": 2,
+        "lesson": 0,
+        "prompt": "sweep the floor",
+        "options": [
+          "make the bed",
+          "sweep the floor",
+          "wash the dishes"
+        ],
+        "answer": 1,
+        "reason": "المكنسة والأرض دليلان على sweep the floor = أكنس الأرض. make the bed ترتيب السرير، وwash the dishes غسل الأطباق؛ انظر إلى الأداة والعمل معًا.",
+        "kind": "picture-choice",
+        "audio": "sweep the floor"
+      },
+      {
+        "id": 3,
+        "lesson": 0,
+        "prompt": "wash the dishes",
+        "options": [
+          "wash the dishes",
+          "feed the animals",
+          "clean the table"
+        ],
+        "answer": 0,
+        "reason": "الماء والصابون والأطباق تدل على wash the dishes = أغسل الأطباق. clean the table تعني تنظيف سطح المائدة، وليس غسل الأطباق في المغسلة.",
+        "kind": "picture-choice",
+        "audio": "wash the dishes"
+      },
+      {
+        "id": 4,
+        "lesson": 0,
+        "prompt": "clear the table",
+        "options": [
+          "set the table",
+          "clear the table",
+          "wash the dishes"
+        ],
+        "answer": 1,
+        "reason": "clear the table = أرفع الأطباق عن المائدة بعد الطعام. في الصورة تحمل الأطباق بعيدًا عن المائدة؛ لا تجهزها للأكل مثل set، ولا تغسلها بالماء مثل wash.",
+        "kind": "picture-choice",
+        "audio": "clear the table"
+      },
+      {
+        "id": 5,
+        "lesson": 0,
+        "prompt": "take out the trash",
+        "options": [
+          "take out the trash",
+          "make the bed",
+          "sweep the floor"
+        ],
+        "answer": 0,
+        "reason": "كيس النفايات والحاوية يدلان على take out the trash = أُخرج القمامة. take out هنا عبارة واحدة معناها ينقل إلى الخارج؛ ليست ترتيب السرير أو كنس الأرض.",
+        "kind": "picture-choice",
+        "audio": "take out the trash"
+      },
+      {
+        "id": 6,
+        "lesson": 0,
+        "prompt": "make the bed",
+        "options": [
+          "set the table",
+          "make the bed",
+          "clear the table"
+        ],
+        "answer": 1,
+        "reason": "الغطاء والوسادة دليلان على make the bed = أرتّب السرير. العبارة لا تعني صنع سرير جديد؛ إنها ترتيب الغطاء والوسائد بعد النهوض.",
+        "kind": "picture-choice",
+        "audio": "make the bed"
+      },
+      {
+        "id": 7,
+        "lesson": 0,
+        "prompt": "cut the grass",
+        "options": [
+          "take out the trash",
+          "cut the grass",
+          "feed the animals"
+        ],
+        "answer": 1,
+        "reason": "grass = العشب، وcut = يقص. الشخص الكبير في الصورة يقص العشب، لذلك نختار cut the grass. لا يحمل قمامة ولا يطعم حيوانات.",
+        "kind": "picture-choice",
+        "audio": "cut the grass"
+      },
+      {
+        "id": 8,
+        "lesson": 0,
+        "prompt": "feed the animals",
+        "options": [
+          "sweep the floor",
+          "wash the dishes",
+          "feed the animals"
+        ],
+        "answer": 2,
+        "reason": "feed = يطعم، وanimals = الحيوانات. تقديم الطعام للحيوانات هو feed the animals. ويمكن تخصيص العبارة: feed the cat = يطعم القطة، وfeed the chickens = يطعم الدجاج.",
+        "kind": "picture-choice",
+        "audio": "feed the animals"
+      },
+      {
+        "id": 9,
+        "lesson": 1,
+        "prompt": "She can ___ the dishes.",
+        "options": [
+          "wash",
+          "washes",
+          "washing",
+          "to wash"
+        ],
+        "answer": 0,
+        "reason": "بعد can نستخدم الفعل الأساسي wash، حتى مع She أو اسم مفرد مثل Nora. لا نضيف s أو ing أو to بعد can. الجملة: She can wash the dishes. = تستطيع غسل الأطباق. قارن: She washes the dishes. بدون can."
+      },
+      {
+        "id": 10,
+        "lesson": 1,
+        "prompt": "اختر النفي الصحيح: لا يستطيع علي كنس الأرض.",
+        "options": [
+          "Ali can’t sweep the floor.",
+          "Ali doesn’t can sweep the floor.",
+          "Ali can’t sweeps the floor."
+        ],
+        "answer": 0,
+        "reason": "النفي الصحيح can’t أو cannot ثم الفعل الأساسي sweep. لا نجمع doesn’t مع can، ولا نضيف s إلى sweep بعدها. Ali can’t sweep the floor. = لا يستطيع علي كنس الأرض."
+      },
+      {
+        "id": 11,
+        "lesson": 1,
+        "prompt": "اختر السؤال الصحيح: هل يمكنك إطعام الحيوانات؟",
+        "options": [
+          "Can you feed the animals?",
+          "Do you can feed the animals?",
+          "Can you feeds the animals?"
+        ],
+        "answer": 0,
+        "reason": "للسؤال نكتب Can ثم you ثم الفعل الأساسي feed. لا نستخدم Do مع can، ولا نضيف s إلى feed. Can you feed the animals? = هل يمكنك إطعام الحيوانات؟"
+      },
+      {
+        "id": 12,
+        "lesson": 1,
+        "prompt": "رتّب السؤال: هل يمكنك مساعدتي في غسل سيارتي؟",
+        "options": [
+          "Can you help me wash my car?",
+          "You can help me wash my car.",
+          "Can you helps me wash my car?"
+        ],
+        "answer": 0,
+        "reason": "السؤال يبدأ بـ Can ثم you ثم help دون s. help me wash = ساعدني في غسل. الجملة Can you help me wash my car? طلب مساعدة، لأنني أطلب منك أداء العمل معي.",
+        "kind": "sentence-build"
+      },
+      {
+        "id": 13,
+        "lesson": 1,
+        "prompt": "رتّب عرض المساعدة: هل أجهّز المائدة لك؟",
+        "options": [
+          "Can I set the table for you?",
+          "I can set the table for you.",
+          "Can I sets the table for you?"
+        ],
+        "answer": 0,
+        "reason": "أعرض أن أقوم أنا بالمساعدة، فأبدأ بـ Can I ثم الفعل الأساسي set. for you = من أجلك. Can I set the table for you? = هل أجهّز المائدة لك؟ يمكن قبول العرض بقول Yes, please.",
+        "kind": "sentence-build"
+      },
+      {
+        "id": 14,
+        "lesson": 1,
+        "prompt": "Can I help you with your homework? — اقبل عرض المساعدة بأدب.",
+        "options": [
+          "Yes, please.",
+          "No, thanks.",
+          "Yes, she can."
+        ],
+        "answer": 0,
+        "reason": "المتحدث يعرض مساعدتك: هل أساعدك في واجبك؟ عندما تقبل العرض تقول Yes, please. = نعم، من فضلك. No, thanks. رفض مهذب، وYes, she can. جواب عن قدرة شخص آخر وليس قبولًا لهذا العرض."
+      },
+      {
+        "id": 15,
+        "lesson": 1,
+        "prompt": "Can you wash the dishes? — وافق على طلب المساعدة.",
+        "options": [
+          "Yes, I can.",
+          "Yes, she can.",
+          "No, I can’t."
+        ],
+        "answer": 0,
+        "reason": "السؤال موجّه إليك بـ you، وعندما تجيب عن نفسك تستخدم I: Yes, I can. = نعم، أستطيع. لا نجيب she عن أنفسنا. No, I can’t. تعني لا أستطيع، وهي لا توافق المطلوب هنا."
+      },
+      {
+        "id": 16,
+        "lesson": 1,
+        "prompt": "Can Grandma make a cake for my graduation? — نعم، تستطيع.",
+        "options": [
+          "Yes, she can.",
+          "Yes, he can.",
+          "Yes, I can."
+        ],
+        "answer": 0,
+        "reason": "Grandma = الجدة، فنعود عليها بالضمير she: Yes, she can. = نعم، تستطيع. graduation = تخرج. لا نستخدم he للجدة، ولا I لأن السؤال عن الجدة وليس عن المتحدث."
+      },
+      {
+        "id": 17,
+        "lesson": 2,
+        "prompt": "Before lunch, I ___ the table.",
+        "options": [
+          "set",
+          "clear",
+          "clean"
+        ],
+        "answer": 0,
+        "reason": "before lunch = قبل الغداء؛ أضع الأطباق وأجهز المائدة، لذلك set the table. clear رفع الأطباق بعد الطعام، وclean تنظيف السطح. الجملة: قبل الغداء أجهّز المائدة.",
+        "kind": "home-balloon",
+        "picture": "set-table"
+      },
+      {
+        "id": 18,
+        "lesson": 2,
+        "prompt": "After lunch, I ___ the plates from the table.",
+        "options": [
+          "clear",
+          "set",
+          "feed"
+        ],
+        "answer": 0,
+        "reason": "after lunch = بعد الغداء، وthe plates = الأطباق. أرفع الأطباق عن المائدة، لذلك clear. لا نقول feed the plates لأن feed تعني يطعم. المعنى: بعد الغداء أرفع الأطباق عن المائدة.",
+        "kind": "home-balloon",
+        "picture": "clear-table"
+      },
+      {
+        "id": 19,
+        "lesson": 2,
+        "prompt": "He can ___ the floor.",
+        "options": [
+          "sweep",
+          "sweeps",
+          "sweeping"
+        ],
+        "answer": 0,
+        "reason": "حتى مع He يبقى الفعل بعد can أساسيًا: sweep، دون s أو ing. He can sweep the floor. = يستطيع كنس الأرض. وجود can هو الدليل؛ He sweeps صحيحة فقط عندما لا توجد can في هذا التركيب.",
+        "kind": "home-balloon",
+        "picture": "sweep-floor"
+      },
+      {
+        "id": 20,
+        "lesson": 2,
+        "prompt": "اختر صيغة النفي الصحيحة: She ___ help.",
+        "options": [
+          "can’t",
+          "doesn’t can",
+          "cans not"
+        ],
+        "answer": 0,
+        "reason": "نفي can هو can’t أو cannot، وليس doesn’t can ولا cans not. can ثابتة مع جميع الفاعلين ولا تأخذ s. She can’t help. = لا تستطيع المساعدة.",
+        "kind": "home-balloon"
+      },
+      {
+        "id": 21,
+        "lesson": 2,
+        "prompt": "Can I help you wash the dishes? — هل هذا عرض أم طلب؟",
+        "options": [
+          "Offer",
+          "Request"
+        ],
+        "answer": 0,
+        "reason": "Offer = عرض مساعدة. أقول Can I help you…? لأنني أتطوع أنا لمساعدتك في غسل الأطباق. Request = طلب، مثل Can you help me…? عندما أطلب منك أن تساعدني.",
+        "kind": "home-balloon",
+        "picture": "wash-dishes",
+        "audio": "Can I help you wash the dishes?"
+      },
+      {
+        "id": 22,
+        "lesson": 2,
+        "prompt": "Can you feed the chickens, please? — هل هذا عرض أم طلب؟",
+        "options": [
+          "Offer",
+          "Request"
+        ],
+        "answer": 1,
+        "reason": "Request = طلب مساعدة. السؤال موجّه إلى you: أطلب منك إطعام الدجاج. please = من فضلك، وfeed the chickens = يطعم الدجاج. لو عرضت المساعدة بنفسي لقلت Can I feed the chickens for you?",
+        "kind": "home-balloon",
+        "picture": "feed-animals",
+        "audio": "Can you feed the chickens, please?"
+      },
+      {
+        "id": 23,
+        "lesson": 2,
+        "prompt": "Can I help you? — ارفض العرض بأدب.",
+        "options": [
+          "No, thanks.",
+          "Yes, please.",
+          "No, she can’t."
+        ],
+        "answer": 0,
+        "reason": "عندما يعرض شخص المساعدة وتريد رفضها بأدب تقول No, thanks. = لا، شكرًا. Yes, please. قبول العرض. أما No, she can’t. فهو نفي قدرة شخص آخر، ولا يناسب هذا الموقف.",
+        "kind": "home-balloon",
+        "audio": "Can I help you?"
+      },
+      {
+        "id": 24,
+        "lesson": 2,
+        "prompt": "Can you make your bed? — نعم، أستطيع.",
+        "options": [
+          "Yes, I can.",
+          "Yes, he can.",
+          "Yes, I do."
+        ],
+        "answer": 0,
+        "reason": "السؤال بـ Can you، فجوابي عن نفسي: Yes, I can. = نعم، أستطيع. نستخدم can في الجواب القصير لأن السؤال بها، وليس do. make your bed = ترتب سريرك، وyour = الخاص بك.",
+        "kind": "home-balloon",
+        "picture": "make-bed",
+        "audio": "Can you make your bed?"
+      }
+    ]
+  },
+  "updated": "2026-10-19"
+}

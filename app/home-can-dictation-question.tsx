@@ -1,0 +1,15 @@
+'use client';
+import {useRef,useState} from 'react';
+import {Volume2,Keyboard,ArrowLeft,CheckCircle2} from 'lucide-react';
+import type {PublicCourse} from '@/lib/course-types';
+import {homeChoreByScene} from '@/lib/home-can-learning';
+import {HomeCanPicture} from './home-can-study';
+import LearningText from './learning-text';
+import {useLearningAudio} from './learning-audio';
+type Answer={response?:string;correct:number;answerText:string;reason:string};
+export default function HomeCanDictationQuestion({question,answer,busy,last,onSubmit,onContinue}:{question:PublicCourse['questions'][number];answer?:Answer;busy:boolean;last:boolean;onSubmit:(text:string)=>Promise<void>;onContinue:()=>void}){
+ const [text,setText]=useState(''),pending=useRef(false),audio=useLearningAudio();
+ const word=answer&&question.picture?homeChoreByScene(question.picture):undefined;
+ async function submit(e:React.FormEvent){e.preventDefault();if(busy||answer||pending.current||!text.trim())return;pending.current=true;try{await onSubmit(text);}finally{pending.current=false;}}
+ return <section className="home-audio-write" aria-label="إملاء صوتي: اسمع واكتب"><div className="home-dictation-title"><Keyboard size={27}/><div><small>LISTEN · WRITE · DISCOVER</small><h3>اسمع، اكتب، ثم اكتشف الصورة</h3></div></div><p>استمع للعبارة الإنجليزية واكتبها كاملة. ستظهر الصورة ومعناها بعد التحقق.</p><button type="button" className={'home-dictation-speaker'+(audio.speaking?' speaking':'')} onClick={()=>{audio.unlock();audio.pronounce(question.audio||'');}} aria-label="استمع إلى عبارة الإملاء"><Volume2 size={35}/><strong>{audio.speaking?'استمع جيدًا…':'اسمع العبارة'}</strong><small>يمكنك سماعها أكثر من مرة</small></button><form onSubmit={submit}><label htmlFor={'home-dictation-'+question.id}>اكتب ما سمعت بالإنجليزية</label><input id={'home-dictation-'+question.id} dir="ltr" lang="en" value={answer?.response??text} onChange={e=>setText(e.target.value)} disabled={busy||!!answer} maxLength={120} autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false} placeholder="Write what you hear…" required/>{!answer&&<button className="primary" disabled={busy||!text.trim()}><CheckCircle2 size={18}/>{busy?'جارٍ التصحيح…':'تحقق واعرض الصورة والمعنى'}</button>}</form><p className="home-dictation-hint">اكتب الكلمات كاملة وبينها مسافات. الحروف الكبيرة والصغيرة مقبولة.</p>{answer&&<div className={'home-dictation-reveal '+(answer.correct?'correct':'review')} role="status">{word&&<HomeCanPicture scene={word.scene}/>}<div><strong>{answer.correct?'إملاء صحيح، أحسنت!':'لنراجع الإملاء معًا'}</strong><p className="home-dictation-expected" dir="ltr">{answer.answerText}</p>{word&&<p className="home-dictation-meaning">{word.ar}</p>}<p><LearningText text={answer.reason}/></p><button className="primary" disabled={busy} onClick={onContinue}>{last?'انتقل إلى لعبة البالونات':'فهمت، العبارة التالية'}<ArrowLeft size={18}/></button></div></div>}{audio.audioNotice&&<p className="audio-notice" role="status">{audio.audioNotice}</p>}</section>;
+}

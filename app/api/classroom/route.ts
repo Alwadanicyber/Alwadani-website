@@ -1,4 +1,6 @@
-import {HOME_CAN_COURSE_ID} from '@/lib/home-can-learning';
+import {updateStudentHomeDictation} from '@/lib/home-can-dictation-update';
+import {hasLegacyHomeCanDefinition} from '@/lib/home-can-course';
+import {HOME_CAN_COURSE_ID,normalizeHomeSpelling} from '@/lib/home-can-learning';
 import {isExamPrep} from '@/lib/exam-prep-content';
 import {database} from '@/lib/database';
 import {parseSolveMs,SolveTimeError} from '@/lib/solve-time';
@@ -39,6 +41,7 @@ async function context(req:Request,courseId:string){
   student=await readStudent();course=JSON.parse(student.snapshot);
   if(updated)migrated=sequence?'تحدّث ترتيب الشرح: البسيط، ثم المستمر، ثم المقارنة. إجاباتك ونتائجك السابقة محفوظة؛ تابع من أول سؤال لم تجب عنه.':'تحدّثت لعبة محقق الزمن: جمل إنجليزية مع دلائل. إجابات التدريب ونتيجتك السابقة محفوظة؛ تابع اللعبة الجديدة.';
  }
+ if(student&&courseId===HOME_CAN_COURSE_ID&&hasLegacyHomeCanDefinition(course.definition)){const changed=await updateStudentHomeDictation(student,stableCourse(course));student=await readStudent();course=JSON.parse(student.snapshot);if(changed)migrated='أضفنا محطة إملاء صوتي قبل البالونات. إجابات تدريباتك السابقة محفوظة، وكذلك نتيجتك السابقة؛ تابع من محطتك الحالية، ثم أكمل الإملاء واللعبة المحدثة.';}
  // Wording follows the teacher's latest setting; saved questions and grades stay intact.
  const rankingMode=await getRankingMode(courseId),presentation:TeacherCourse={...stableCourse(course),studentGender:publicCourse(latest).studentGender,studentAccess:courseStudentAccess(latest),rankingMode};
  return {id,student,course:presentation,latest:{...stableCourse(latest),rankingMode},grade:latest.grade||'general',migrated};
@@ -47,7 +50,7 @@ async function snapshot(student:any,course:TeacherCourse,grade='general',migrate
  const db=database(),id=student?.id;let answers:any[]=[],reads:any[]=[],responses=new Map<number,string>();
  if(id){const [a,r,w]=await Promise.all([db.prepare('SELECT question,choice,correct FROM answers WHERE student=? ORDER BY question').bind(id).all(),db.prepare('SELECT lesson FROM reads WHERE student=?').bind(id).all(),db.prepare('SELECT question,response FROM student_sentence_answers WHERE student=? AND attempt=?').bind(id,student.attempt||1).all<{question:number;response:string}>()]);answers=a.results;reads=r.results;responses=new Map(w.results.map(row=>[row.question,row.response]));}
  const visible=publicCourse(course),orders=new Map<number,number[]>();
- if(id)visible.questions=await Promise.all(visible.questions.map(async q=>{const order=await answerOrder(student.attempt>1?id+':attempt:'+student.attempt:id,course.id,q.id,q.options.length);orders.set(q.id,order);return {...q,options:order.map(i=>q.options[i])};}));
+ if(id)visible.questions=await Promise.all(visible.questions.map(async q=>{if(q.kind==='audio-write')return q;const order=await answerOrder(student.attempt>1?id+':attempt:'+student.attempt:id,course.id,q.id,q.options.length);orders.set(q.id,order);return {...q,options:order.map(i=>q.options[i])};}));
  const results=await classroomResults(course,id),gameRequired=course.id===CHORES_COURSE_ID,gameData=gameRequired&&id?await gameSnapshot(id,student.attempt):{game:null,gameBest:null};
  const dictation=gameRequired?await dictationSnapshot(id,student?.attempt):null,dictationReady=!!id&&answers.length===course.definition.questions.length&&reads.length===course.definition.lessons.length,gameReady=dictationReady&&!!dictation?.completed;
  return {student:student?{id:student.id,name:student.name,completed:gameRequired&&(!gameData.gameBest||!dictation?.completed)?null:student.completed,attempt:student.attempt||1}:null,course:{...visible,grade},answers:answers.map(a=>{const q=course.definition.questions.find(q=>q.id===a.question),order=orders.get(a.question);return {...a,...(responses.has(a.question)?{response:responses.get(a.question)}:{}),choice:order?order.indexOf(a.choice):a.choice,answer:order&&q?order.indexOf(q.answer):q?.answer,reason:q?.reason,answerText:q?.options[q.answer]};}),reads:reads.map(r=>r.lesson),...results,...(gameRequired?{gameRequired:true,gameTotal:BALLOON_POINTS,dictationReady,dictation,gameReady,...gameData}:{}),...(migrated?{notice:typeof migrated==='string'?migrated:'أصبح الدرس 3 مشاهد قصيرة. نتيجتك السابقة محفوظة، ويمكنك تحسينها في المحاولة الجديدة.'}:{})};
@@ -111,14 +114,15 @@ export async function POST(req:Request){const receivedAt=Date.now();try{
   if(course.rankingMode==='speed'&&body.lesson===lessons.length-1&&(courseId===TIME_PLACE_COURSE_ID||courseId===TENSES_COURSE_ID||courseId===HOME_CAN_COURSE_ID))await markSpeedPrefix(id,attempt,receivedAt);
   await db.prepare('INSERT OR IGNORE INTO reads(student,lesson) SELECT ?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?)').bind(id,body.lesson,id,attempt).run();
  }else if(body.action==='answer'){
-  const q=questions.find(q=>q.id===body.question);if(!q||q.kind!=='sentence-build'&&(!Number.isInteger(body.choice)||!q.options[body.choice]))return reply({error:'إجابة غير صالحة.'},400);
+  const q=questions.find(q=>q.id===body.question);if(!q||!['sentence-build','audio-write'].includes(q.kind||'')&&(!Number.isInteger(body.choice)||!q.options[body.choice]))return reply({error:'إجابة غير صالحة.'},400);
   if(!await db.prepare('SELECT lesson FROM reads WHERE student=? AND lesson=?').bind(id,q.lesson).first())return reply({error:'أكمل مشاهدة شرح الدرس أولًا.'},400);
   const count=await db.prepare('SELECT COUNT(*) AS n FROM answers WHERE student=? AND question<?').bind(id,q.id).first<{n:number}>();if(count?.n!==questions.filter(x=>x.id<q.id).length)return reply({error:'أكمل الأسئلة بالترتيب.'},400);
   const order=await answerOrder(student.attempt>1?id+':attempt:'+student.attempt:id,course.id,q.id,q.options.length);
-  const response=q.kind==='sentence-build'&&typeof body.text==='string'?body.text.trim():null;
-  if(q.kind==='sentence-build'&&(!response||response.length>800||/[<>\x00-\x1f]/.test(response)))return reply({error:'رتّب كلمات الجملة قبل التحقق.'},400);
-  const matched=response?q.options.findIndex(option=>normalizeSentence(option)===normalizeSentence(response)):order[body.choice];
-  const choice=matched<0?q.options.findIndex((_,i)=>i!==q.answer):matched,correct=response?normalizeSentence(response)===normalizeSentence(q.options[q.answer]):choice===q.answer;
+  const textQuestion=q.kind==='sentence-build'||q.kind==='audio-write',response=textQuestion&&typeof body.text==='string'?body.text.trim():null;
+  const normalize=q.kind==='audio-write'?normalizeHomeSpelling:normalizeSentence;
+  if(textQuestion&&(!response||response.length>(q.kind==='audio-write'?120:800)||/[<>\x00-\x1f]/.test(response)))return reply({error:q.kind==='audio-write'?'اكتب العبارة التي سمعتها قبل التحقق.':'رتّب كلمات الجملة قبل التحقق.'},400);
+  const matched=response?q.options.findIndex(option=>normalize(option)===normalize(response)):order[body.choice];
+  const choice=matched<0?q.options.findIndex((_,i)=>i!==q.answer):matched,correct=response?normalize(response)===normalize(q.options[q.answer]):choice===q.answer;
   const elapsed=rankingUsesTime(course.rankingMode!)?parseSolveMs(body.elapsedMs):null;
   await db.batch([
    ...(response===null?[]:[db.prepare('INSERT OR IGNORE INTO student_sentence_answers(student,attempt,question,response) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?) AND NOT EXISTS(SELECT 1 FROM answers WHERE student=? AND question=?)').bind(id,attempt,q.id,response,id,attempt,id,q.id)]),
