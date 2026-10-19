@@ -26,9 +26,10 @@ function harness(saved){
   if(name==='@/lib/chores-learning')return bank;
   if(name==='./chores-picture')return {default:'picture'};
   if(name==='./learning-audio')return {useLearningAudio:()=>audio};
+  if(name==='./use-solve-timer')return {useSolveTimer:()=>()=>0};
   throw new Error('Unexpected import '+name);
  }).default;
- const props={game:saved,gameBest:null,busy:false,quizTotal:12,dictationTotal:6,onFinish(){},onAction(body){requests.push(body);return new Promise(resolve=>{resolveSave=resolve;});}};
+ const props={game:saved,gameBest:null,busy:false,timingScope:'local-feedback-test',active:true,quizTotal:12,dictationTotal:6,onFinish(){},onAction(body){requests.push(body);return new Promise(resolve=>{resolveSave=resolve;});}};
  return {props,requests,sounds,render(){cursor=0;return Component(props);},finish(game){if(game)props.game=game;resolveSave(game?{kind:'game-update',game}:null);}};
 }
 function find(node,test){if(Array.isArray(node)){for(const child of node){const found=find(child,test);if(found)return found;}}else if(node&&typeof node==='object'){if(test(node))return node;return find(node.props?.children,test);}}

@@ -20,6 +20,24 @@ try{
  assert.equal((pictures.match(/viewBox="0 0 318 342"/g)||[]).length,9);assert.equal((pictures.match(/<rect width="318" height="342"/g)||[]).length,9);assert.equal((pictures.match(/<g clip-path="url\(#/g)||[]).length,9);
  const guide=renderToStaticMarkup(createElement(Study,{station:1,unit:homeCanCourse.definition.lessons[1],busy:false,onPractice:()=>{}}));
  assert(guide.includes('Can I help you?')&&guide.includes('Can you help me?')&&guide.includes('لأنه الفاعل')&&guide.includes('ليست قاعدة عامة'));
+ const {default:Prompt}=await import(pathToFileURL(compile(join(project,'app/learning-prompt.tsx')))),{default:Balloons}=await import(pathToFileURL(compile(join(project,'app/preposition-balloon-question.tsx')))),{default:WordGame}=await import(pathToFileURL(compile(join(project,'app/tenses-game-question.tsx')))),{learningPromptParts}=await import(pathToFileURL(compile(join(project,'lib/learning-text.ts'))));
+ for(const text of ['اختر صيغة النفي الصحيحة: She ___ help.','She can ___ the dishes.','Can I help you? — ارفض العرض بأدب.','___ she help?','He can’t help.','He was born ___ Riyadh ___ June 27, 1956.','اختر النفي الصحيح: لا يستطيع علي كنس الأرض.']){
+  const parts=learningPromptParts(text);assert.equal(parts.map(p=>p.text).join(''),text);
+  for(const part of parts.filter(p=>p.english)){assert(!/[\u0600-\u06ff]/.test(part.text));const html=renderToStaticMarkup(createElement(Prompt,{text:part.text}));assert.equal((html.match(/class="learning-prompt-english" dir="ltr" lang="en"/g)||[]).length,1,'English sentence split into multiple direction islands');}
+ }
+ const label='class="learning-prompt-english" dir="ltr" lang="en"';
+ const screenshotQuestion=homeCanCourse.definition.questions.find(q=>q.prompt==='اختر صيغة النفي الصحيحة: She ___ help.');assert(screenshotQuestion);
+ const before=renderToStaticMarkup(createElement(Balloons,{question:screenshotQuestion,busy:false,last:false,onChoice:()=>{},onContinue:()=>{},subject:'home'}));
+ assert(before.includes(label+'>She ___ help.</span>'),'Screenshot regression: keep subject, blank, verb and period in a single LTR block');
+ const corrected=renderToStaticMarkup(createElement(Balloons,{question:screenshotQuestion,answer:{choice:1,correct:0,answerText:'can’t',reason:screenshotQuestion.reason},busy:false,last:false,onChoice:()=>{},onContinue:()=>{},subject:'home'}));
+ assert(corrected.includes(label+'>She can’t help.</span>'),'Correction must preserve the same English sentence order');
+ for(const q of homeCanCourse.definition.questions.filter(q=>q.kind==='home-balloon')){
+  const markup=renderToStaticMarkup(createElement(Balloons,{question:q,busy:false,last:false,onChoice:()=>{},onContinue:()=>{},subject:'home'}));
+  for(const part of learningPromptParts(q.prompt).filter(p=>p.english))assert(markup.includes(renderToStaticMarkup(createElement('span',{className:'learning-prompt-english',dir:'ltr',lang:'en'},part.text.trim()))));
+ }
+ const wordQuestion=homeCanCourse.definition.questions.find(q=>q.kind==='sentence-build'&&q.options.some(o=>o.startsWith('Can I')));
+ const wordPool=renderToStaticMarkup(createElement(WordGame,{question:wordQuestion,topic:'home',busy:false,onChoice:()=>{},onSentence:()=>{}}));
+ assert(wordPool.includes('>I</button>')&&!wordPool.includes('>i</button>'),'The subject I must retain its capital letter');
  for(const q of homeCanCourse.definition.questions.filter(q=>q.kind==='audio-write')){
   const {answer,reason,...question}=q;question.options=[];
   const props={question,busy:false,last:q.id===24,onSubmit:async()=>{},onContinue:()=>{}};
@@ -27,5 +45,5 @@ try{
   assert(!untouched.includes('<image')&&!untouched.includes(q.options[q.answer])&&!untouched.includes('home-dictation-reveal'),'Picture or expected phrase visible before submission');
   for(const correct of [0,1]){const checked=renderToStaticMarkup(createElement(Dictation,{...props,answer:{correct,response:'student spelling',answerText:q.options[q.answer],reason:q.reason}}));assert(checked.includes('<image')&&checked.includes('home-dictation-meaning')&&checked.includes(q.options[q.answer])&&checked.includes('student spelling'));assert(checked.includes(q.id===24?'انتقل إلى لعبة البالونات':'فهمت، العبارة التالية'));}
  }
- console.log('PASS: nine isolated, uniquely clipped illustrations; concise offer/request guide and I/you subject explanation; all eight dictations hide the picture and phrase until submission, then reveal picture, meaning and spelling with manual review.');
+ console.log('PASS: screenshot She ___ help and its correction stay in complete LTR blocks; all eight balloon prompts retain word order; Arabic instructions have separate RTL blocks; I stays capitalized; nine clipped illustrations and all eight dictation reveals remain correct.');
 }finally{rmSync(dir,{recursive:true,force:true});}
