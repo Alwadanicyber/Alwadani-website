@@ -26,6 +26,7 @@
     "test:competition": "node --experimental-strip-types scripts/check-competition.mjs",
     "test:tenses": "node --experimental-strip-types scripts/check-tenses.mjs",
     "test:time-place": "node --experimental-strip-types scripts/check-time-place.mjs",
+    "test:home-can": "node scripts/check-home-can.mjs",
     "test:exam-prep": "node --experimental-strip-types scripts/check-exam-prep.mjs",
     "test:assistant": "node scripts/check-assistant.mjs"
   },

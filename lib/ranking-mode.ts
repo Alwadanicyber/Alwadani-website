@@ -2,7 +2,7 @@ import type {Result} from './result-ranking';
 export type RankingMode='accuracy'|'speed'|'balanced'|'participation';
 export type RankingChoice='accuracy'|'speed'|'default';
 export function defaultRankingMode(course:string):RankingMode{
- return /^exam-prep-unit-[123]-grade-9$/.test(course)?'participation':course==='life-stories-time-place-grade-9'?'accuracy':course==='present-tenses-grade-4-02'?'participation':'balanced';
+ return /^exam-prep-unit-[123]-grade-9$/.test(course)?'participation':['life-stories-time-place-grade-9','helping-at-home-can-grade-4'].includes(course)?'accuracy':course==='present-tenses-grade-4-02'?'participation':'balanced';
 }
 export function parseRankingChoice(value:unknown):RankingChoice{
  if(value!=='accuracy'&&value!=='speed'&&value!=='default')throw new Error('اختر المنافسة بالأسرع أو بالأدق.');

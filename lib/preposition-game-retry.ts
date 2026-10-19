@@ -2,9 +2,11 @@ import {database} from './database';
 import {ensureContinuousSpeed} from './continuous-speed';
 import type {TeacherCourse} from './course-types';
 import {TIME_PLACE_COURSE_ID} from './time-place-learning';
+import {HOME_CAN_COURSE_ID} from './home-can-learning';
 export function prepositionGameStart(course:TeacherCourse){
- const questions=course.definition.questions,index=questions.findIndex(q=>q.kind==='preposition-balloon');
- return course.id===TIME_PLACE_COURSE_ID&&index>0&&questions.slice(index).every(q=>q.kind==='preposition-balloon'&&q.lesson===course.definition.lessons.length-1)?questions[index].id:null;
+ const kind=course.id===TIME_PLACE_COURSE_ID?'preposition-balloon':course.id===HOME_CAN_COURSE_ID?'home-balloon':null;
+ const questions=course.definition.questions,index=questions.findIndex(q=>q.kind===kind);
+ return kind&&index>0&&questions.slice(index).every(q=>q.kind===kind&&q.lesson===course.definition.lessons.length-1)?questions[index].id:null;
 }
 export async function restartPrepositionGame(student:{id:string;attempt:number;snapshot:string},course:TeacherCourse){
  const first=prepositionGameStart(course);if(first===null)return false;
@@ -17,6 +19,7 @@ export async function restartPrepositionGame(student:{id:string;attempt:number;s
   db.prepare('DELETE FROM answers WHERE student=? AND question>=? AND EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?) AND EXISTS(SELECT 1 FROM students WHERE id=? AND snapshot IS ?)').bind(id,first,id,attempt,id,old),
   db.prepare('UPDATE students SET snapshot=?,completed=NULL WHERE id=? AND snapshot IS ? AND EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?)').bind(saved,id,old,id,attempt),
   db.prepare('UPDATE student_sessions SET attempt=attempt+1,started=? WHERE student=? AND attempt=? AND EXISTS(SELECT 1 FROM students WHERE id=? AND snapshot=?)').bind(now,id,attempt,id,saved),
+  db.prepare('INSERT OR IGNORE INTO student_sentence_answers(student,attempt,question,response) SELECT student,attempt+1,question,response FROM student_sentence_answers WHERE student=? AND attempt=? AND question<? AND EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?)').bind(id,attempt,first,id,attempt+1),
   db.prepare("INSERT OR IGNORE INTO student_speed_clocks(student,attempt,run,elapsed_ms,prefix_ms,running_since,valid) SELECT student,attempt+1,'',prefix_ms,prefix_ms,?,CASE WHEN valid=1 AND prefix_ms>0 THEN 1 ELSE 0 END FROM student_speed_clocks WHERE student=? AND attempt=? AND run='' AND EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?)").bind(Date.parse(now),id,attempt,id,attempt+1),
- ]);return results[results.length-2].meta.changes===1;
+ ]);return results[3].meta.changes===1;
 }

@@ -1,3 +1,4 @@
+import {HOME_CAN_COURSE_ID} from '@/lib/home-can-learning';
 import {isExamPrep} from '@/lib/exam-prep-content';
 import {database} from '@/lib/database';
 import {parseSolveMs,SolveTimeError} from '@/lib/solve-time';
@@ -78,7 +79,7 @@ export async function POST(req:Request){const receivedAt=Date.now();try{
   if(!await restartTensesGame(student,course))return reply({error:'تغيّرت المحاولة. أعد تحميل تقدمك قبل إعادة اللعبة.'},409);
   const current=await context(req,courseId);return reply(await snapshot(current.student,current.course,current.grade));
  }else if(body.action==='preposition-game-retry'){
-  const first=prepositionGameStart(course);if(first===null)return reply({error:'إعادة لعبة حروف الجر غير متاحة لهذا الدرس.'},400);
+  const first=prepositionGameStart(course);if(first===null)return reply({error:'إعادة لعبة البالونات غير متاحة لهذا الدرس.'},400);
   const counts=await db.prepare('SELECT (SELECT COUNT(*) FROM answers WHERE student=? AND question<?) AS quiz,(SELECT COUNT(*) FROM answers WHERE student=? AND question>=?) AS game,(SELECT COUNT(*) FROM reads WHERE student=?) AS reads').bind(id,first,id,first,id).first<{quiz:number;game:number;reads:number}>();
   if(counts?.quiz!==questions.filter(q=>q.id<first).length||!counts.game||counts.reads!==lessons.length)return reply({error:'أكمل المحطات السابقة وابدأ اللعبة أولًا.'},400);
   if(!await restartPrepositionGame(student,course))return reply({error:'تغيّرت المحاولة. أعد تحميل تقدمك.'},409);
@@ -105,9 +106,9 @@ export async function POST(req:Request){const receivedAt=Date.now();try{
   const current=await context(req,courseId);return reply(await snapshot(current.student,current.course,current.grade));
  }else if(body.action==='read'){
   if(!Number.isInteger(body.lesson)||!lessons[body.lesson])return reply({error:'درس غير صالح.'},400);
-  if(courseId===CHORES_COURSE_ID||courseId===TENSES_COURSE_ID||courseId===TIME_PLACE_COURSE_ID||isExamPrep(courseId)){const previous=questions.filter(q=>q.lesson<body.lesson),done=await db.prepare('SELECT COUNT(*) AS n FROM answers WHERE student=? AND question<?').bind(id,questions.find(q=>q.lesson===body.lesson)?.id??Number.MAX_SAFE_INTEGER).first<{n:number}>();if(done?.n!==previous.length)return reply({error:'أكمل تدريب المشهد السابق أولًا.'},400);}
+  if(courseId===CHORES_COURSE_ID||courseId===TENSES_COURSE_ID||courseId===TIME_PLACE_COURSE_ID||courseId===HOME_CAN_COURSE_ID||isExamPrep(courseId)){const previous=questions.filter(q=>q.lesson<body.lesson),done=await db.prepare('SELECT COUNT(*) AS n FROM answers WHERE student=? AND question<?').bind(id,questions.find(q=>q.lesson===body.lesson)?.id??Number.MAX_SAFE_INTEGER).first<{n:number}>();if(done?.n!==previous.length)return reply({error:'أكمل تدريب المشهد السابق أولًا.'},400);}
   if(course.rankingMode==='speed'&&!student.completed)await resumeSpeedClock(id,attempt,receivedAt);
-  if(course.rankingMode==='speed'&&body.lesson===lessons.length-1&&(courseId===TIME_PLACE_COURSE_ID||courseId===TENSES_COURSE_ID))await markSpeedPrefix(id,attempt,receivedAt);
+  if(course.rankingMode==='speed'&&body.lesson===lessons.length-1&&(courseId===TIME_PLACE_COURSE_ID||courseId===TENSES_COURSE_ID||courseId===HOME_CAN_COURSE_ID))await markSpeedPrefix(id,attempt,receivedAt);
   await db.prepare('INSERT OR IGNORE INTO reads(student,lesson) SELECT ?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?)').bind(id,body.lesson,id,attempt).run();
  }else if(body.action==='answer'){
   const q=questions.find(q=>q.id===body.question);if(!q||q.kind!=='sentence-build'&&(!Number.isInteger(body.choice)||!q.options[body.choice]))return reply({error:'إجابة غير صالحة.'},400);
