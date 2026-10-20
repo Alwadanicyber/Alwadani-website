@@ -1,6 +1,7 @@
 import { setupKey, teacherAccount, teacherIdentity } from '@/lib/teacher';
 import TeacherDashboard from './dashboard';
 import TeacherLogin from './login';
+import {databaseFailure,logDatabaseFailure} from '@/lib/database-error';
 import {grades} from '@/lib/grades';
 export const dynamic = 'force-dynamic';
 export default async function TeacherPage({searchParams}:{searchParams:Promise<{grade?:string}>}) {
@@ -10,7 +11,8 @@ export default async function TeacherPage({searchParams}:{searchParams:Promise<{
     const identity = await teacherIdentity();
     if (identity) return <TeacherDashboard username={identity.username} gradeFilter={gradeFilter} />;
     return <TeacherLogin mode={await teacherAccount() ? 'login' : 'setup'} />;
-  } catch {
-    return <TeacherLogin mode="unconfigured" />;
+  } catch (error) {
+    logDatabaseFailure('teacher.page',error);
+    return <TeacherLogin mode="unavailable" availabilityMessage={databaseFailure(error).error} />;
   }
 }

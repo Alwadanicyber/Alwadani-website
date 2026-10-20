@@ -1,3 +1,4 @@
+import {databaseFailure,logDatabaseFailure} from '@/lib/database-error';
 import { cookies } from 'next/headers';
 import { database } from '@/lib/database';
 import { cookieFor, createTeacherSession, hashPassword, localTeacherCookie, matchesSetupKey, rateLimit, setupKey, teacherAccount, teacherCookie, tokenHash, validCredentials, verifyPassword } from '@/lib/teacher';
@@ -47,7 +48,8 @@ export async function POST(request: Request) {
     }
     return reply({ ok: true }, 200, cookieFor(request, await createTeacherSession(accountUpdated)));
   } catch (error) {
-    console.error('Teacher authentication request failed', error instanceof SyntaxError ? 'invalid JSON' : 'database or crypto error');
-    return reply({ error: 'تعذّر إتمام الدخول. تأكد من إعداد القاعدة في الاستضافة ثم حاول مجددًا.' }, 503);
+    if(error instanceof SyntaxError)return reply({error:'طلب غير صالح.'},400);
+    logDatabaseFailure('teacher.auth',error);
+    return reply(databaseFailure(error),503);
   }
 }
