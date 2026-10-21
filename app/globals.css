@@ -189,3 +189,4 @@
 .record-list-search>p{margin-top:9px;font-size:12px;line-height:1.9;color:var(--muted-foreground)}
 .record-card .record-card-details{font-size:12px;line-height:1.9;margin-top:-7px}
 @media(max-width:760px){.record-list-search{padding:15px 13px}.record-list-search-input input{font-size:16px}.record-list-toolbar>label:not(.secondary),.record-list-toolbar select{width:100%}}
+.record-cell-value.mark-done .record-value-button{color:inherit}
