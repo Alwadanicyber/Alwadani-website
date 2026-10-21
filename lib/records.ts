@@ -16,7 +16,7 @@ export type RecordMark=null|'done'|'missing'|'absent'|'ungraded'|number|`choice:
 export const recordDesigns={white:'أبيض رسمي',green:'أخضر هادئ',blue:'أزرق أنيق',gold:'إطار ذهبي'};
 export type RecordContent=AudienceSettings&{title:string;format?:keyof typeof recordFormats;blankLayout?:'simple'|'school';grade:string;className:string;classLabel?:string;schoolName?:string;subjectName?:string;design?:keyof typeof recordDesigns;educationArea?:string;educationOffice?:string;schoolYear?:string;academicTerm?:string;teacherName:string;principalName:string;studentOrder?:StudentOrder;students:RecordStudent[];tasks:RecordTask[];marks:Record<string,Record<string,RecordMark>>};
 export type TeacherRecord=RecordContent&{id:string;version:number;created:string;updated:string};
-export type RecordSummary=AudienceSettings&{id:string;title:string;format?:RecordContent['format'];grade:string;className:string;teacherName:string;studentCount:number;taskCount:number;version:number;updated:string};
+export type RecordSummary=AudienceSettings&{id:string;title:string;format?:RecordContent['format'];grade:string;className:string;classLabel?:string;subjectName?:string;schoolName?:string;teacherName:string;studentCount:number;taskCount:number;version:number;updated:string};
 export const taskLabels:Record<TaskType,string>={performance:'مهمة أدائية','performance-score':'مهمة أدائية +',homework:'واجب',exam:'اختبار',custom:'مخصص'};
 export const validRecordId=(id:unknown):id is string=>typeof id==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id);
 

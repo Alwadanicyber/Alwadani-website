@@ -177,3 +177,15 @@
 .device-access-help p{line-height:1.9}.device-access-bulk{margin-block:24px}.device-access-bulk form,.device-access-course form{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.device-access-bulk select,.device-access-course select{min-width:230px;max-width:100%;padding:10px 12px;border:1px solid var(--border,#d6ddd9);border-radius:9px;background:var(--card,#fff);color:inherit;font:inherit}.device-access-lessons{display:grid;gap:16px}.device-access-course{display:flex;justify-content:space-between;align-items:center;gap:20px;margin:0}.device-access-course h3{margin-block:10px}.device-access-course p{margin:0;line-height:1.7}.device-access-course form{flex-shrink:0}.device-access-course form label{width:100%}@media(max-width:760px){.device-access-course{align-items:stretch;flex-direction:column}.device-access-course form,.device-access-bulk form{align-items:stretch;flex-direction:column}.device-access-course select,.device-access-bulk select{width:100%;min-width:0}.device-access-course form{flex-shrink:1}}
 
 .device-access-bulk select:focus-visible,.device-access-course select:focus-visible{outline:3px solid #b89449;outline-offset:3px}.device-access-course>div{min-width:0}.device-access-course h3{overflow-wrap:anywhere}@media(min-width:761px){.device-access-course form{max-width:52%;flex-shrink:1}}
+
+/* Search saved record metadata without loading student marks or changing data. */
+.record-list-search{padding:18px 20px;margin-bottom:18px;border:1px solid var(--border);border-radius:14px;background:var(--card)}
+.record-list-search>label{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;margin-bottom:10px;color:var(--foreground)}
+.record-list-search-input{display:flex;align-items:center;gap:8px;background:var(--background);border:1px solid var(--input);border-radius:9px;padding-inline:12px}
+.record-list-search-input:focus-within{outline:2px solid var(--primary);outline-offset:2px}
+.record-list-search-input input{width:100%;min-width:0;min-height:48px;border:0;outline:0;font:inherit;font-size:14px;background:transparent;color:var(--foreground)}
+.record-list-search-input input::-webkit-search-cancel-button{-webkit-appearance:none}
+.record-list-search-input button{display:grid;place-items:center;flex:0 0 36px;min-height:36px;border:0;border-radius:7px;background:transparent;color:var(--muted-foreground)}
+.record-list-search>p{margin-top:9px;font-size:12px;line-height:1.9;color:var(--muted-foreground)}
+.record-card .record-card-details{font-size:12px;line-height:1.9;margin-top:-7px}
+@media(max-width:760px){.record-list-search{padding:15px 13px}.record-list-search-input input{font-size:16px}.record-list-toolbar>label:not(.secondary),.record-list-toolbar select{width:100%}}
