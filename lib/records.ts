@@ -126,7 +126,7 @@ export function removeRecordTask(record:RecordContent,taskId:string){
   if(record.tasks.length<=1)throw new Error('يجب أن تبقى خانة واحدة على الأقل. أضف خانة أخرى قبل الحذف.');
   const candidate=structuredClone(record);candidate.tasks=candidate.tasks.filter(task=>task.id!==taskId);for(const marks of Object.values(candidate.marks))delete marks[taskId];return validateRecord(candidate);
 }
-export function markClass(mark:RecordMark|undefined,task?:RecordTask){if(typeof mark==='string'&&mark.startsWith('choice:')){const tone=task?.choices?.find(choice=>mark==='choice:'+choice.id)?.tone;return tone==='positive'?'mark-done':tone==='negative'?'mark-missing':'mark-note';}return mark==='ungraded'?'mark-ungraded':mark==='done'?'mark-done':mark==='missing'||mark==='absent'?'mark-missing':typeof mark==='number'?'mark-score':'mark-empty';}
+export function markClass(mark:RecordMark|undefined,task?:RecordTask){if(typeof mark==='string'&&mark.startsWith('choice:')){const tone=task?.choices?.find(choice=>mark==='choice:'+choice.id)?.tone;return tone==='positive'?'mark-done':tone==='negative'?'mark-missing':'mark-note';}return mark==='ungraded'?'mark-ungraded':mark==='done'?'mark-done':mark==='missing'||mark==='absent'||mark===0?'mark-missing':typeof mark==='number'?'mark-score':'mark-empty';}
 export function applyRecordTaskSettings(record:RecordContent,taskId:string,patch:Partial<RecordTask>):RecordContent{
   const candidate=structuredClone(record),task=candidate.tasks.find(item=>item.id===taskId);if(!task)throw new Error('الخانة غير موجودة.');
   if(patch.mode==='comments'&&task.type==='custom'&&task.mode!=='comments'&&task.mode!=='number'&&patch.choices?.length===2){
