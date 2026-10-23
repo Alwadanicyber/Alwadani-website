@@ -1,5 +1,5 @@
 import {database} from './database';
-import type {Initiative,InitiativePost} from './initiatives-core';
+import type {Initiative,InitiativePost,InitiativeReceipt} from './initiatives-core';
 export async function initiativesReady(){const db=database();await db.batch([
  db.prepare("CREATE TABLE IF NOT EXISTS national_initiatives(id TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL,school TEXT NOT NULL DEFAULT '',goal INTEGER NOT NULL DEFAULT 100,open INTEGER NOT NULL DEFAULT 1)"),
  db.prepare("CREATE TABLE IF NOT EXISTS national_initiative_posts(id TEXT PRIMARY KEY,initiative_id TEXT NOT NULL REFERENCES national_initiatives(id),name TEXT NOT NULL,class_name TEXT NOT NULL DEFAULT '',kind TEXT NOT NULL,text TEXT NOT NULL,image TEXT NOT NULL DEFAULT '',audio TEXT NOT NULL DEFAULT '',status TEXT NOT NULL DEFAULT 'pending',created INTEGER NOT NULL)"),
@@ -15,3 +15,6 @@ export const initiativeReply=(body:unknown,status=200)=>Response.json(body,{stat
 
 // Publish every non-hidden submission, including legacy pending submissions.
 export async function initiativeShieldPosts(id:string){const db=await initiativesReady();const rows=await db.prepare("SELECT id,initiative_id,name,kind,text,status,created FROM national_initiative_posts WHERE initiative_id=? AND status IN ('pending','approved') ORDER BY created ASC,id ASC LIMIT 1000").bind(id).all<InitiativePost>();return rows.results;}
+
+// Row insertion order is stable across hiding/restoring and idempotent retries.
+export async function initiativeReceipt(initiativeId:string,postId:string):Promise<InitiativeReceipt|null>{const db=await initiativesReady();return db.prepare('SELECT p.name,(SELECT COUNT(*) FROM national_initiative_posts n WHERE n.initiative_id=p.initiative_id AND n.rowid<=p.rowid) AS number FROM national_initiative_posts p WHERE p.initiative_id=? AND p.id=?').bind(initiativeId,postId).first<InitiativeReceipt>();}

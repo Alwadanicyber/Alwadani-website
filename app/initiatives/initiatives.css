@@ -55,3 +55,15 @@ body:has(.ni-gate) .ni-immersive{visibility:hidden}body:has(.ni-gate) .ni-immers
 .ni-leader-button .ni-portrait-frame:before{filter:drop-shadow(0 0 4px #ffe5a8);animation:ni-frame-orbit 3s linear infinite}
 @keyframes ni-portrait-halo{0%,100%{box-shadow:0 8px 24px #0005,0 0 18px 4px #edcc7888,0 0 35px #d9ab4144}50%{box-shadow:0 8px 24px #0005,0 0 27px 7px #ffe3a3bb,0 0 49px #edc76a77}}
 @media(prefers-reduced-motion:reduce){.ni-immersive .ni-portrait-frame,.ni-leader-button .ni-portrait-frame:before{animation:none!important}}
+
+.ni-guardian-dialog{position:fixed;inset:0;margin:auto;width:min(420px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:0;border:1px solid #eac76e;border-radius:25px;color:#fff0bd;background:#052a1e;font-family:NationalNaskh,Tahoma,serif;box-shadow:0 0 0 5px #cba94e18,0 0 55px #e6bc5b55;overflow:auto}
+.ni-guardian-dialog::backdrop{background:#00160fd9;backdrop-filter:blur(7px)}
+.ni-guardian-card{position:relative;isolation:isolate;padding:20px 22px 25px;text-align:center;overflow:hidden;background:radial-gradient(ellipse at 50% 24%,#e1b54f26,transparent 57%),linear-gradient(145deg,#103929,#032319);border-radius:inherit}
+.ni-guardian-card:before{content:'';position:absolute;inset:6px;border:1px solid #edcd7755;border-radius:19px;pointer-events:none}
+.ni-guardian-medal{display:block;width:min(210px,58vw);height:auto;max-height:32dvh;margin:0 auto 5px;filter:drop-shadow(0 0 15px #edce7366);animation:ni-guardian-reveal .7s ease-out both}
+.ni-guardian-number{display:inline-flex;align-items:center;gap:8px;border-radius:40px;background:linear-gradient(120deg,#e0b85d,#fff1ba,#d5a74a);color:#3e2b0e;padding:5px 20px;font-size:16px;box-shadow:0 0 22px #f2cc6e44}
+.ni-guardian-number b{font-size:23px}.ni-guardian-card h2{font-size:clamp(23px,5vw,29px);font-family:inherit;line-height:1.65;margin:15px 0 3px;color:#f9e09b;text-shadow:0 0 13px #d1ad5144}
+.ni-guardian-name{display:block;overflow-wrap:anywhere;color:#fff7db;font-size:22px;line-height:1.7}.ni-guardian-card p{font-size:17px;line-height:1.8;color:#d4d8b9;margin:10px 0 18px}.ni-guardian-card .primary{font-family:inherit;font-size:18px;border:1px solid #f5db91;border-radius:11px;background:linear-gradient(130deg,#f5df9d,#cda44f);color:#30250d;min-width:110px;min-height:44px;padding:5px 24px;cursor:pointer}
+.ni-guardian-spark{position:absolute;color:#ffe8a8;font-size:22px;pointer-events:none;animation:ni-guardian-spark 3s ease-in-out infinite}.ni-guardian-spark.one{top:16%;right:15%}.ni-guardian-spark.two{top:30%;left:12%;animation-delay:1s}.ni-guardian-spark.three{bottom:24%;right:10%;font-size:16px;animation-delay:1.7s}
+@keyframes ni-guardian-reveal{from{opacity:0;transform:translateY(14px) scale(.85)}to{opacity:1;transform:translateY(0) scale(1)}}@keyframes ni-guardian-spark{0%,100%{opacity:.3;transform:scale(.7)}50%{opacity:1;transform:scale(1.15)}}
+@media(prefers-reduced-motion:reduce){.ni-guardian-medal,.ni-guardian-spark{animation:none}}
