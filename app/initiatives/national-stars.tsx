@@ -1,3 +1,19 @@
-import type {CSSProperties} from 'react';
-// Deterministic positions keep the server and client markup identical.
-export default function NationalStars(){return <div className="ni-starfield" aria-hidden="true">{Array.from({length:48},(_,i)=><span key={i} style={{left:((i*67+11)%101)+'%',top:((i*43+7)%103)+'%','--star-size':(i%5===0?9:3+i%4)+'px','--star-duration':(18+i%17)+'s','--star-delay':(-i*1.7)+'s'} as CSSProperties}>✦</span>)}</div>;}
+'use client';
+import {useEffect,useRef,type RefObject} from 'react';
+type Phase='idle'|'holding'|'verified'|'opening'|'sound-required';
+type Star={x:number;y:number;vx:number;vy:number;size:number;seed:number;alpha:number};
+export default function NationalStars({phase='idle',target}:{phase?:Phase;target?:RefObject<HTMLButtonElement|null>}){
+ const canvas=useRef<HTMLCanvasElement>(null),state=useRef({phase,x:0,y:0});
+ useEffect(()=>{state.current.phase=phase;const rect=target?.current?.getBoundingClientRect();if(rect){state.current.x=rect.left+rect.width/2;state.current.y=rect.top+rect.height/2;}},[phase,target]);
+ useEffect(()=>{const element=canvas.current,ctx=element?.getContext('2d');if(!element||!ctx)return;const media=window.matchMedia('(prefers-reduced-motion: reduce)');let width=0,height=0,frame=0,last=0,previous:Phase='idle',burst=false;let stars:Star[]=[];
+ function resize(){width=window.innerWidth;height=window.innerHeight;const ratio=Math.min(window.devicePixelRatio||1,1.5);element!.width=Math.round(width*ratio);element!.height=Math.round(height*ratio);ctx!.setTransform(ratio,0,0,ratio,0,0);const count=width<760?86:140;stars=Array.from({length:count},(_,i)=>({x:((i*67.37+11)%100)/100*width,y:((i*43.19+7)%100)/100*height,vx:0,vy:16+i%19,size:i%9===0?3.7:1.1+i%4*.5,seed:i*2.39996,alpha:.3+(i%6)*.1}));const rect=target?.current?.getBoundingClientRect();if(rect){state.current.x=rect.left+rect.width/2;state.current.y=rect.top+rect.height/2;}}
+ function draw(now:number){frame=0;if(document.hidden)return;const dt=last?Math.min((now-last)/1000,.06):1/30;if(last&&now-last<30){frame=requestAnimationFrame(draw);return;}last=now;const mode=state.current.phase,gather=!!target&&(mode==='holding'||mode==='verified');if(mode==='opening'&&previous!=='opening'){burst=true;for(const star of stars){const speed=140+(star.seed*41%190);star.vx=Math.cos(star.seed)*speed;star.vy=Math.sin(star.seed)*speed-60;}}if(mode==='idle'||mode==='sound-required')burst=false;previous=mode;ctx!.clearRect(0,0,width,height);
+ for(const star of stars){if(!media.matches){if(gather){const radius=20+(star.seed*7%52),angle=star.seed+now*.0004;const pull=1-Math.exp(-dt*4.5);star.x+=(state.current.x+Math.cos(angle)*radius-star.x)*pull;star.y+=(state.current.y+Math.sin(angle)*radius-star.y)*pull;}else if(burst){star.x+=star.vx*dt;star.y+=star.vy*dt;star.vy+=70*dt;star.vx*=.99;}else{star.y+=star.vy*dt;star.x+=Math.sin(star.seed+now*.0003)*3*dt;}
+ if(!gather&&(star.y>height+12||star.x< -30||star.x>width+30)){star.y=-10;star.x=((star.seed*37+now*.01)%width+width)%width;star.vx=0;star.vy=16+(star.seed%19);}}
+ const twinkle=media.matches?1:.65+.35*Math.sin(now*.002+star.seed);ctx!.globalAlpha=star.alpha*twinkle;ctx!.fillStyle=star.size>3?'#fff4c9':'#efd18a';const r=star.size;ctx!.beginPath();ctx!.moveTo(star.x,star.y-r*1.5);ctx!.lineTo(star.x+r*.28,star.y-r*.28);ctx!.lineTo(star.x+r,star.y);ctx!.lineTo(star.x+r*.28,star.y+r*.28);ctx!.lineTo(star.x,star.y+r*1.5);ctx!.lineTo(star.x-r*.28,star.y+r*.28);ctx!.lineTo(star.x-r,star.y);ctx!.lineTo(star.x-r*.28,star.y-r*.28);ctx!.closePath();ctx!.fill();}
+ ctx!.globalAlpha=1;if(!media.matches)frame=requestAnimationFrame(draw);}
+ function refresh(){cancelAnimationFrame(frame);last=0;resize();frame=requestAnimationFrame(draw);}function visibility(){cancelAnimationFrame(frame);last=0;if(!document.hidden)frame=requestAnimationFrame(draw);}
+ refresh();window.addEventListener('resize',refresh);document.addEventListener('visibilitychange',visibility);media.addEventListener('change',refresh);return()=>{cancelAnimationFrame(frame);window.removeEventListener('resize',refresh);document.removeEventListener('visibilitychange',visibility);media.removeEventListener('change',refresh);};
+ },[target]);
+ return <canvas ref={canvas} className="ni-star-canvas" aria-hidden="true"/>;
+}
