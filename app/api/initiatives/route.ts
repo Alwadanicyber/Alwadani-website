@@ -1,3 +1,4 @@
+import {nationalSurveyScore} from '@/lib/national-survey';
 import {initiativesReady,listInitiatives,initiativeProgress,initiativeShieldPosts,initiativeReceipt,initiativeReply as reply} from '@/lib/initiatives';
 import {initiativeBody,initiativeId,submission,type InitiativePost} from '@/lib/initiatives-core';
 import {tokenHash} from '@/lib/teacher';
@@ -12,8 +13,8 @@ export async function POST(req:Request){
  if(body.action==='prayer'||body.action==='survey'){
   const initiative=await db.prepare('SELECT open FROM national_initiatives WHERE id=?').bind(post.initiativeId).first<{open:number}>();if(!initiative||(body.action==='survey'&&!initiative.open))return reply({error:'المشاركة مغلقة حاليًا.'},409);
   if(body.action==='prayer'){await db.prepare('INSERT OR IGNORE INTO national_initiative_prayers(id,initiative_id) VALUES(?,?)').bind(body.id,post.initiativeId).run();const n=await db.prepare('SELECT COUNT(*) n FROM national_initiative_prayers WHERE initiative_id=?').bind(post.initiativeId).first<{n:number}>();return reply({ok:true,dua:n?.n||0});}
-  if(!Array.isArray(body.answers)||body.answers.length!==3||body.answers.some(v=>!Number.isInteger(v)||v<0||v>2)||!Number.isInteger(body.rating)||Number(body.rating)<1||Number(body.rating)>5)return reply({error:'أكمل الأسئلة الثلاثة وتقييم المبادرة.'},400);
-  const score=body.answers.reduce((n:number,v:number,i:number)=>n+(v===[0,1,0][i]?1:0),0);await db.prepare('INSERT OR IGNORE INTO national_initiative_surveys(id,initiative_id,answers,rating,score) VALUES(?,?,?,?,?)').bind(body.id,post.initiativeId,JSON.stringify(body.answers),body.rating,score).run();return reply({ok:true,score});
+  const score=nationalSurveyScore(body.answers);if(score===null||!Number.isInteger(body.rating)||Number(body.rating)<1||Number(body.rating)>5)return reply({error:'أكمل جميع أسئلة الاستبانة وتقييم المبادرة.'},400);
+  await db.prepare('INSERT OR IGNORE INTO national_initiative_surveys(id,initiative_id,answers,rating,score) VALUES(?,?,?,?,?)').bind(body.id,post.initiativeId,JSON.stringify(body.answers),body.rating,score).run();const saved=await db.prepare('SELECT score FROM national_initiative_surveys WHERE id=? AND initiative_id=?').bind(body.id,post.initiativeId).first<{score:number}>();if(!saved)return reply({error:'تعذّر تأكيد حفظ الاستبانة. حاول مجددًا.'},503);return reply({ok:true,score:saved.score});
  }
  if(!('id' in post))return reply({error:'طلب غير صالح.'},400);
  const existing=await db.prepare('SELECT id FROM national_initiative_posts WHERE id=? AND initiative_id=?').bind(post.id,post.initiativeId).first();if(existing)return reply({ok:true,initiative:await initiativeProgress(post.initiativeId),shieldPosts:await initiativeShieldPosts(post.initiativeId),receipt:await initiativeReceipt(post.initiativeId,post.id)});
