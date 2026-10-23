@@ -1,4 +1,5 @@
-export type Initiative={id:string;title:string;description:string;school:string;goal:number;open:number;approved:number;participations:number;dua:number};
+export type InitiativeIdentity={coordinatorName:string;coordinatorTitle:string;principalName:string;principalTitle:string;slogan:string};
+export type Initiative=InitiativeIdentity&{id:string;title:string;description:string;school:string;goal:number;open:number;approved:number;participations:number;dua:number};
 export type InitiativePost={id:string;initiative_id:string;name:string;class_name:string;kind:'message'|'card'|'drawing'|'voice';text:string;status:'pending'|'approved'|'hidden';created:number};
 export const initiativeId=(v:unknown):v is string=>typeof v==='string'&&/^[a-z0-9-]{1,64}$/.test(v);
 export function submission(v:Record<string,unknown>){
@@ -17,7 +18,9 @@ export function submission(v:Record<string,unknown>){
 export function initiativeSettings(v:Record<string,unknown>){
  const title=typeof v.title==='string'?v.title.trim():'',description=typeof v.description==='string'?v.description.trim():'',school=typeof v.school==='string'?v.school.trim():'',goal=Number(v.goal);
  if(!title||title.length>100||description.length>600||school.length>120||!Number.isInteger(goal)||goal<1||goal>1000||typeof v.open!=='boolean')throw new Error('راجع البيانات: العنوان مطلوب والهدف من ١ إلى ١٠٠٠ مشاركة.');
- return {title,description,school,goal,open:v.open?1:0};
+ const profile:InitiativeIdentity={coordinatorName:'',coordinatorTitle:'منفذ المبادرة',principalName:'',principalTitle:'مدير المدرسة',slogan:''};
+ for(const key of Object.keys(profile) as (keyof InitiativeIdentity)[]){if(v[key]===undefined)continue;if(typeof v[key]!=='string'||String(v[key]).trim().length>(key==='slogan'?200:key.endsWith('Title')?50:100))throw new Error('راجع الأسماء والعناوين: الاسم حتى ١٠٠ حرف والصفة حتى ٥٠ حرفًا.');profile[key]=String(v[key]).trim();}
+ return {title,description,school,goal,open:v.open?1:0,...profile};
 }
 export async function initiativeBody(req:Request){
  if(Number(req.headers.get('content-length'))>420000)throw new Error('حجم المشاركة كبير.');
