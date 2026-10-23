@@ -1,10 +1,10 @@
-export type Initiative={id:string;title:string;description:string;school:string;goal:number;open:number;approved:number;dua:number};
+export type Initiative={id:string;title:string;description:string;school:string;goal:number;open:number;approved:number;participations:number;dua:number};
 export type InitiativePost={id:string;initiative_id:string;name:string;class_name:string;kind:'message'|'card'|'drawing'|'voice';text:string;status:'pending'|'approved'|'hidden';created:number};
 export const initiativeId=(v:unknown):v is string=>typeof v==='string'&&/^[a-z0-9-]{1,64}$/.test(v);
 export function submission(v:Record<string,unknown>){
- const name=typeof v.name==='string'?v.name.trim():'',className=typeof v.className==='string'?v.className.trim():'',text=typeof v.text==='string'?v.text.trim():'',kind=v.kind;
+ const name=typeof v.name==='string'?v.name.trim():'',className='',text=typeof v.text==='string'?v.text.trim():'',kind=v.kind;
  if(!initiativeId(v.initiativeId)||typeof v.id!=='string'||!/^[a-f0-9-]{36}$/.test(v.id))throw new Error('حدّث الصفحة ثم حاول مجددًا.');
- if(!name||name.length>60||className.length>60)throw new Error('اكتب اسم المشاركة (حتى ٦٠ حرفًا).');
+ if(!name||name.length>60)throw new Error('اكتب اسم المشاركة (حتى ٦٠ حرفًا).');
  if(!['message','card','drawing','voice'].includes(String(kind))||text.length>600||(!['drawing','voice'].includes(String(kind))&&!text))throw new Error('اكتب رسالة من حرف واحد إلى ٦٠٠ حرف.');
  const audio=typeof v.audio==='string'?v.audio:'';
  if(kind==='voice'){if(audio.length>350000||!/^data:audio\/(webm|ogg|mp4|mpeg|wav)(;codecs=[a-zA-Z0-9.-]+)?;base64,[A-Za-z0-9+/=]+$/.test(audio))throw new Error('سجل صوتًا قصيرًا حتى ٣٠ ثانية.');}else if(audio)throw new Error('نوع التسجيل غير صالح.');

@@ -1,4 +1,4 @@
-import {initiativesReady,listInitiatives,initiativeReply as reply} from '@/lib/initiatives';
+import {initiativesReady,listInitiatives,initiativeProgress,initiativeReply as reply} from '@/lib/initiatives';
 import {initiativeBody,initiativeId,submission,type InitiativePost} from '@/lib/initiatives-core';
 import {tokenHash} from '@/lib/teacher';
 export const dynamic='force-dynamic';
@@ -16,9 +16,9 @@ export async function POST(req:Request){
   const score=body.answers.reduce((n:number,v:number,i:number)=>n+(v===[0,1,0][i]?1:0),0);await db.prepare('INSERT OR IGNORE INTO national_initiative_surveys(id,initiative_id,answers,rating,score) VALUES(?,?,?,?,?)').bind(body.id,post.initiativeId,JSON.stringify(body.answers),body.rating,score).run();return reply({ok:true,score});
  }
  if(!('id' in post))return reply({error:'طلب غير صالح.'},400);
- const existing=await db.prepare('SELECT id FROM national_initiative_posts WHERE id=? AND initiative_id=?').bind(post.id,post.initiativeId).first();if(existing)return reply({ok:true});
+ const existing=await db.prepare('SELECT id FROM national_initiative_posts WHERE id=? AND initiative_id=?').bind(post.id,post.initiativeId).first();if(existing)return reply({ok:true,initiative:await initiativeProgress(post.initiativeId)});
  const result=await db.prepare("INSERT OR IGNORE INTO national_initiative_posts(id,initiative_id,name,class_name,kind,text,image,audio,status,created) SELECT ?,?,?,?,?,?,?,?,'pending',? FROM national_initiatives WHERE id=? AND open=1 AND (SELECT COUNT(*) FROM national_initiative_posts WHERE initiative_id=?)<1000").bind(post.id,post.initiativeId,post.name,post.className,post.kind,post.text,post.image,post.audio,now,post.initiativeId,post.initiativeId).run();
  if(result.meta.changes!==1)return reply({error:'المشاركة مغلقة حاليًا أو وصلت المبادرة للحد الأقصى.'},409);
- await db.prepare('DELETE FROM national_initiative_limits WHERE expires<?').bind(now).run();return reply({ok:true},201);
+ await db.prepare('DELETE FROM national_initiative_limits WHERE expires<?').bind(now).run();return reply({ok:true,initiative:await initiativeProgress(post.initiativeId)},201);
  }catch{return reply({error:'تعذّر حفظ المشاركة. لم يتم تأكيد إرسالها؛ حاول مجددًا.'},503);}
 }

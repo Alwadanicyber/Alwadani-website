@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import {nationalShieldCells} from '../lib/national-shield.ts';
+for(const goal of [1,2,3,25,100,250,1000]){const cells=nationalShieldCells(goal);assert.equal(cells.length,goal);assert.equal(new Set(cells.map(c=>c.points)).size,goal);assert(cells.every(c=>Number.isFinite(c.x)&&Number.isFinite(c.y)));}
+
 import {readFileSync,readdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
@@ -15,30 +18,31 @@ try{
  await call('/api/initiatives?id=missing',null,404);await call('/api/teacher/initiatives',null,403);
  const p={id:crypto.randomUUID(),initiativeId:'dir-alwatan',name:'الاسم الظاهر',className:'PRIVATE_CLASS_SENTINEL',kind:'message',text:'رسالة وطنية للاختبار'};
  await call('/api/initiatives',p,403,{origin:'https://other.test'});await call('/api/initiatives',{...p,name:''},400);await call('/api/initiatives',{...p,text:'x'.repeat(601)},400);
- await call('/api/initiatives',p,201);await call('/api/initiatives',p);assert.equal((await db.prepare('SELECT COUNT(*) n FROM national_initiative_posts').first()).n,1,'Retry duplicated a submission');
- publicData=(await call('/api/initiatives?id=dir-alwatan')).data;assert.equal(publicData.posts.length,0);assert.equal(publicData.initiative.approved,0);
+ const sent=await call('/api/initiatives',p,201);assert.equal(sent.data.initiative.participations,1,'A pending submission must immediately light the shield');const retried=await call('/api/initiatives',p);assert.equal(retried.data.initiative.participations,1,'Retry must not light another cell');assert.equal((await db.prepare('SELECT COUNT(*) n FROM national_initiative_posts').first()).n,1,'Retry duplicated a submission');
+ publicData=(await call('/api/initiatives?id=dir-alwatan')).data;assert.equal(publicData.posts.length,0);assert.equal(publicData.initiative.approved,0);assert.equal(publicData.initiative.participations,1);
  const owner=await call('/api/teacher/auth',{action:'setup',username:'national-owner',password:'National-Test-Password-123!',setupKey:'national-isolated-test-secret-123456789'});cookie=owner.response.headers.get('set-cookie').split(';')[0];
  const moderation={action:'moderate',id:p.id,status:'approved'};await call('/api/teacher/initiatives',moderation,403,{cookie:''});await call('/api/teacher/initiatives',moderation,403,{origin:'https://other.test'});
- const pending=(await call('/api/teacher/initiatives')).data;assert.equal(pending.posts[0].class_name,p.className);await call('/api/teacher/initiatives',moderation);
+ const pending=(await call('/api/teacher/initiatives')).data;assert.equal(pending.posts[0].class_name,'','New submissions must ignore the removed class field');await call('/api/teacher/initiatives',moderation);
  publicData=(await call('/api/initiatives?id=dir-alwatan')).data;assert.equal(publicData.posts[0].name,p.name);assert.equal(publicData.initiative.approved,1);assert(!JSON.stringify(publicData).includes('PRIVATE_CLASS_SENTINEL'));
- await call('/api/teacher/initiatives',{...moderation,status:'hidden'});assert.equal((await call('/api/initiatives?id=dir-alwatan')).data.initiative.approved,0);
+ await call('/api/teacher/initiatives',{...moderation,status:'hidden'});assert.equal((await call('/api/initiatives?id=dir-alwatan')).data.initiative.approved,0);assert.equal((await call('/api/initiatives?id=dir-alwatan')).data.initiative.participations,0);
  await call('/api/teacher/initiatives',moderation);assert.equal((await call('/api/initiatives?id=dir-alwatan')).data.initiative.approved,1);
  const settings={action:'save',id:'dir-alwatan',title:'درع الاختبار',description:'وصف',school:'مدرسة الاختبار',goal:2,open:false};await call('/api/teacher/initiatives',settings);await call('/api/initiatives',{...p,id:crypto.randomUUID()},409);
  await call('/api/teacher/initiatives',{...settings,goal:0},400);await call('/api/teacher/initiatives',{...settings,open:true});
- const jpeg='data:image/jpeg;base64,/9j/2Q==';const drawing={...p,id:crypto.randomUUID(),kind:'drawing',text:'',image:jpeg};await call('/api/initiatives',drawing,201);
+ const jpeg='data:image/jpeg;base64,/9j/2Q==';const drawing={...p,id:crypto.randomUUID(),kind:'drawing',text:'',image:jpeg};const drawn=await call('/api/initiatives',drawing,201);assert.equal(drawn.data.initiative.participations,2,'A drawing lights the next cell before moderation');
  let media=await mf.dispatchFetch('https://school.test/api/initiatives/media?id='+drawing.id);assert.equal(media.status,404);media=await mf.dispatchFetch('https://school.test/api/initiatives/media?id='+drawing.id,{headers:{cookie}});assert.equal(media.status,200);assert.equal(media.headers.get('content-type'),'image/jpeg');
  await call('/api/teacher/initiatives',{action:'moderate',id:drawing.id,status:'approved'});media=await mf.dispatchFetch('https://school.test/api/initiatives/media?id='+drawing.id);assert.equal(media.status,200);
  await call('/api/initiatives',{...drawing,id:crypto.randomUUID(),image:'data:image/svg+xml;base64,AAAA'},400);
  const created=(await call('/api/teacher/initiatives',{...settings,action:'create',title:'مبادرة ثانية',open:true})).data;assert(created.id.startsWith('initiative-'));assert.equal((await call('/api/initiatives?id='+created.id)).data.initiative.title,'مبادرة ثانية');
  assert.equal((await db.prepare('SELECT COUNT(*) n FROM students').first()).n,before,'Initiatives changed classroom records');
- const privacy=(await call('/api/teacher/initiatives?id=dir-alwatan&status=approved')).data;assert(privacy.posts.some(v=>v.class_name===p.className));
+ const privacy=(await call('/api/teacher/initiatives?id=dir-alwatan&status=approved')).data;assert(privacy.posts.every(v=>v.class_name===''));
 
  const prayer={action:'prayer',id:crypto.randomUUID(),initiativeId:'dir-alwatan'};await call('/api/initiatives',prayer);await call('/api/initiatives',prayer);assert.equal((await call('/api/initiatives?id=dir-alwatan')).data.initiative.dua,1);
  const survey={action:'survey',id:crypto.randomUUID(),initiativeId:'dir-alwatan',answers:[0,1,0],rating:5};await call('/api/initiatives',{...survey,answers:[-1,1,0]},400);assert.equal((await call('/api/initiatives',survey)).data.score,3);await call('/api/initiatives',survey);assert.equal((await call('/api/teacher/initiatives')).data.survey.count,1);
  const voice={...p,id:crypto.randomUUID(),kind:'voice',text:'دعاء',audio:'data:audio/webm;codecs=opus;base64,GkXfo0Ag'};await call('/api/initiatives',voice,201);await call('/api/teacher/initiatives',{action:'moderate',id:voice.id,status:'approved'});const sound=await mf.dispatchFetch('https://school.test/api/initiatives/media?id='+voice.id);assert.equal(sound.status,200);assert.equal(sound.headers.get('content-type'),'audio/webm');await sound.arrayBuffer();
+ const card={...p,id:crypto.randomUUID(),kind:'card',text:'بطاقة شكر'};const beforeCard=(await call('/api/initiatives?id=dir-alwatan')).data.initiative.participations;const cardSent=await call('/api/initiatives',card,201);assert.equal(cardSent.data.initiative.participations,beforeCard+1,'Ready cards also immediately light one cell');
  // Separate network bucket; simultaneous submissions cannot exceed 120 reservations/hour.
  const attempts=await Promise.all(Array.from({length:123},(_,i)=>mf.dispatchFetch('https://school.test/api/initiatives',{method:'POST',headers:{origin:'https://school.test','content-type':'application/json','cf-connecting-ip':'192.0.2.10'},body:JSON.stringify({...p,id:crypto.randomUUID(),text:'Parallel '+i})})));
  assert.equal(attempts.filter(r=>r.status===201).length,120);assert.equal(attempts.filter(r=>r.status===429).length,3);
  assert.equal((await db.prepare("SELECT COUNT(*) n FROM national_initiative_posts WHERE text LIKE 'Parallel %'").first()).n,120);
- console.log('PASS: lazy setup, durable submissions, idempotent retries, owner/origin guards, moderation and reversible hiding, private class fields, protected drawings, open/close controls, new initiatives, independent classroom records, atomic network limits.');
+ console.log('PASS: lazy setup, durable submissions, idempotent retries, owner/origin guards, moderation and reversible hiding, name-only submissions and immediate shield progress, protected drawings, open/close controls, new initiatives, independent classroom records, atomic network limits.');
 }finally{await mf.dispose();}
