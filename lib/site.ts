@@ -5,7 +5,7 @@ export const SITE_NAME='TeachCraft';
 export const SITE_ENGLISH_NAME='TeachCraft Teaching Tools';
 export const SITE_TITLE='الودعاني | TeachCraft – Alwadani Teaching Tools';
 export const SITE_DESCRIPTION='الودعاني — TeachCraft (Alwadani Teaching Tools): أدوات تعليمية لإنشاء كشوف متابعة الطلاب والشهادات، ودروس وتمارين تفاعلية مع تصحيح مفسر ونتائج مباشرة.';
-export const publicSitePaths=['/','/tools','/tools/records','/tools/certificates'];
+export const publicSitePaths=['/','/tools','/tools/records','/tools/certificates','/initiatives'];
 export function pageMetadata(title:string,description:string,path:string):Metadata{
   const url=new URL(path,SITE_URL).href;
   return {title,description,alternates:{canonical:url},robots:{index:true,follow:true},openGraph:{title,description,url,type:'website',locale:'ar_SA',siteName:SITE_NAME},twitter:{card:'summary',title,description}};

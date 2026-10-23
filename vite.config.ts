@@ -8,6 +8,7 @@ export default defineConfig(async () => {
   process.env.WRANGLER_LOG_PATH ??= '.wrangler/logs';
   const { cloudflare } = await import('@cloudflare/vite-plugin');
   return {
-    plugins: [vinext(), cloudflare({ configPath: './wrangler.json', viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] }, inspectorPort: false })],
+    server: { allowedHosts: ['terminal.local'] },
+    plugins: [vinext(), cloudflare({ remoteBindings: false, configPath: './wrangler.json', viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] }, inspectorPort: false })],
   };
 });

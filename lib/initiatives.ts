@@ -1,0 +1,12 @@
+import {database} from './database';
+import type {Initiative} from './initiatives-core';
+export async function initiativesReady(){const db=database();await db.batch([
+ db.prepare("CREATE TABLE IF NOT EXISTS national_initiatives(id TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL,school TEXT NOT NULL DEFAULT '',goal INTEGER NOT NULL DEFAULT 100,open INTEGER NOT NULL DEFAULT 1)"),
+ db.prepare("CREATE TABLE IF NOT EXISTS national_initiative_posts(id TEXT PRIMARY KEY,initiative_id TEXT NOT NULL REFERENCES national_initiatives(id),name TEXT NOT NULL,class_name TEXT NOT NULL DEFAULT '',kind TEXT NOT NULL,text TEXT NOT NULL,image TEXT NOT NULL DEFAULT '',audio TEXT NOT NULL DEFAULT '',status TEXT NOT NULL DEFAULT 'pending',created INTEGER NOT NULL)"),
+ db.prepare("CREATE TABLE IF NOT EXISTS national_initiative_prayers(id TEXT PRIMARY KEY,initiative_id TEXT NOT NULL REFERENCES national_initiatives(id));"),
+ db.prepare("CREATE TABLE IF NOT EXISTS national_initiative_surveys(id TEXT PRIMARY KEY,initiative_id TEXT NOT NULL REFERENCES national_initiatives(id),answers TEXT NOT NULL,rating INTEGER NOT NULL,score INTEGER NOT NULL);"),
+ db.prepare('CREATE INDEX IF NOT EXISTS national_posts_status ON national_initiative_posts(initiative_id,status,created)'),
+ db.prepare('CREATE TABLE IF NOT EXISTS national_initiative_limits(bucket TEXT PRIMARY KEY,count INTEGER NOT NULL,expires INTEGER NOT NULL)'),
+ db.prepare("INSERT OR IGNORE INTO national_initiatives(id,title,description,goal) VALUES('dir-alwatan','درع الوطن','رسالة شكر، دعاء، أو رسمة لحماة الوطن. كل مشاركة معتمدة تضيء جزءًا من درعنا، ومعًا نكمله.',100)")]);return db;}
+export async function listInitiatives(){const db=await initiativesReady();return (await db.prepare("SELECT i.*,(SELECT COUNT(*) FROM national_initiative_posts p WHERE p.initiative_id=i.id AND p.status='approved') AS approved,(SELECT COUNT(*) FROM national_initiative_prayers d WHERE d.initiative_id=i.id) AS dua FROM national_initiatives i ORDER BY i.rowid").all<Initiative>()).results;}
+export const initiativeReply=(body:unknown,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
