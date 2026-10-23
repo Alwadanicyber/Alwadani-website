@@ -32,9 +32,19 @@ body:has(.ni-gate) .ni-immersive{visibility:hidden}body:has(.ni-gate) .ni-immers
 /* A full gold shield with a moving light sweep after the last contribution. */
 .ni-immersive .ni-mosaic.complete{animation:ni-full-shield-glow 4s ease-in-out infinite;filter:drop-shadow(0 0 25px #f7d27a99)}.nh-completion-art{pointer-events:none}.nh-completion-sheen{opacity:0;animation:ni-gold-sweep 4s ease-in-out infinite;will-change:transform}.shield-complete .nh-cell.lit{stroke:#fff3bf99;stroke-width:.8}.ni-classroom .ni-classroom-typed{animation:none;clip-path:none;white-space:pre-wrap}.ni-classroom-board{padding-top:3%!important}.ni-classroom-board .ni-classroom-typed{font-size:clamp(9px,1.7cqw,21px);line-height:1.65;max-width:87%;text-align:center}.ni-writing-cursor{display:inline-block;height:1em;border-left:1px solid #fff3b3;margin-inline-start:2px;vertical-align:-.1em;animation:ni-writing-blink .65s steps(1) infinite}@keyframes ni-writing-blink{50%{opacity:0}}@keyframes ni-full-shield-glow{0%,100%{transform:translateY(0) scale(1);filter:drop-shadow(0 0 22px #e9c56b88)}50%{transform:translateY(-5px) scale(1.025);filter:drop-shadow(0 0 38px #ffe5a5cc)}}@keyframes ni-gold-sweep{0%,15%{transform:translateX(-70px);opacity:0}30%{opacity:.65}70%{transform:translateX(330px);opacity:0}100%{transform:translateX(330px);opacity:0}}@media(prefers-reduced-motion:reduce){.ni-immersive .ni-mosaic.complete,.nh-completion-sheen,.ni-writing-cursor{animation:none!important}.nh-completion-sheen,.ni-writing-cursor{display:none}}
 
-/* School identity leads the gold glow; staff names use a softer halo. */
+/* School identity leads the gold glow. */
 .ni-immersive .ni-school-card h2,.ni-gate .ni-gate-school{color:#fff2b7;text-shadow:0 0 5px #ffe9a6aa,0 0 15px #efc65c99,0 0 32px #e7b53b66;animation:ni-school-name-glow 4.8s ease-in-out infinite}
-.ni-immersive .ni-staff strong{color:#fff0c5;text-shadow:0 0 6px #f5d68177,0 0 15px #d7ae4455;animation:ni-staff-name-glow 5.6s ease-in-out infinite}
+.ni-immersive .ni-staff strong{color:#fff0c5;text-shadow:none;animation:none}
 @keyframes ni-school-name-glow{0%,100%{text-shadow:0 0 5px #ffe9a6aa,0 0 15px #efc65c99,0 0 32px #e7b53b66}50%{text-shadow:0 0 7px #fff2c3dd,0 0 23px #ffd76fbb,0 0 45px #efbd4b88}}
-@keyframes ni-staff-name-glow{0%,100%{text-shadow:0 0 6px #f5d68177,0 0 15px #d7ae4455}50%{text-shadow:0 0 8px #ffe7a699,0 0 20px #e7c06077}}
+
 @media(prefers-reduced-motion:reduce){.ni-immersive .ni-school-card h2,.ni-gate .ni-gate-school,.ni-immersive .ni-staff strong{animation:none}}
+
+/* Ceremonial typography and animated staff frames. */
+.ni-immersive .ni-leaders figure{width:min(100%,250px)}
+.ni-immersive .ni-leaders figcaption{font-family:NationalTitle,Tahoma,serif;font-size:17px;line-height:1.8;max-width:260px;color:#f6e5b7;text-shadow:0 2px 8px #00170e}
+.ni-immersive .ni-leaders figcaption strong{display:inline-block;font-size:20px;font-weight:700;background:linear-gradient(180deg,#fff9df 5%,#f8df96 48%,#d8ae4f 85%,#fff0bc);background-clip:text;-webkit-background-clip:text;color:transparent;filter:drop-shadow(0 1px 4px #d4a13a55)}
+.ni-immersive .ni-leaders>p{font-family:NationalTitle,Tahoma,serif;font-size:clamp(23px,4.5vw,30px)!important;color:#fff0b9;text-shadow:0 2px 5px #001a11,0 0 17px #e3ba5a66;line-height:1.8}
+.ni-immersive .ni-school-motto,.ni-gate-content .ni-kicker{font-family:NationalTitle,Tahoma,serif;font-size:clamp(22px,4.2vw,28px);font-weight:700;color:#ffeab0;line-height:1.7;text-shadow:0 2px 5px #001a11,0 0 16px #e3ba5a66}
+.ni-immersive .ni-staff>div{position:relative;isolation:isolate;border-color:#e3c36d88;box-shadow:0 0 13px #e3bd5b44,inset 0 0 9px #e9cc7822}
+.ni-immersive .ni-staff>div:before{content:'';position:absolute;inset:-1px;padding:2px;border-radius:inherit;pointer-events:none;background:conic-gradient(from var(--ni-frame-angle),#bb923c55,#fff3bb 40deg,#e3be60 75deg,#bb923c55 120deg,#bb923c55 200deg,#fff3bb 240deg,#e3be60 275deg,#bb923c55 320deg);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;animation:ni-frame-orbit 5s linear infinite}
+@media(prefers-reduced-motion:reduce){.ni-immersive .ni-staff>div:before{animation:none}}
