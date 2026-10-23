@@ -1,5 +1,5 @@
 import {database} from './database';
-import type {Initiative} from './initiatives-core';
+import type {Initiative,InitiativePost} from './initiatives-core';
 export async function initiativesReady(){const db=database();await db.batch([
  db.prepare("CREATE TABLE IF NOT EXISTS national_initiatives(id TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL,school TEXT NOT NULL DEFAULT '',goal INTEGER NOT NULL DEFAULT 100,open INTEGER NOT NULL DEFAULT 1)"),
  db.prepare("CREATE TABLE IF NOT EXISTS national_initiative_posts(id TEXT PRIMARY KEY,initiative_id TEXT NOT NULL REFERENCES national_initiatives(id),name TEXT NOT NULL,class_name TEXT NOT NULL DEFAULT '',kind TEXT NOT NULL,text TEXT NOT NULL,image TEXT NOT NULL DEFAULT '',audio TEXT NOT NULL DEFAULT '',status TEXT NOT NULL DEFAULT 'pending',created INTEGER NOT NULL)"),
@@ -12,3 +12,6 @@ export async function initiativesReady(){const db=database();await db.batch([
 export async function initiativeProgress(id:string){return (await listInitiatives()).find(i=>i.id===id);}
 export async function listInitiatives(){const db=await initiativesReady();return (await db.prepare("SELECT i.*,COALESCE(x.coordinator_name,'') AS coordinatorName,COALESCE(x.coordinator_title,'منفذ المبادرة') AS coordinatorTitle,COALESCE(x.principal_name,'') AS principalName,COALESCE(x.principal_title,'مدير المدرسة') AS principalTitle,COALESCE(x.slogan,'') AS slogan,(SELECT COUNT(*) FROM national_initiative_posts p WHERE p.initiative_id=i.id AND p.status='approved') AS approved,(SELECT COUNT(*) FROM national_initiative_posts p WHERE p.initiative_id=i.id AND p.status IN ('pending','approved')) AS participations,(SELECT COUNT(*) FROM national_initiative_prayers d WHERE d.initiative_id=i.id) AS dua FROM national_initiatives i LEFT JOIN national_initiative_identity x ON x.initiative_id=i.id ORDER BY i.rowid").all<Initiative>()).results;}
 export const initiativeReply=(body:unknown,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+
+// Preserve one slot per non-hidden submission without exposing pending content.
+export async function initiativeShieldPosts(id:string){const db=await initiativesReady();const rows=await db.prepare("SELECT id,initiative_id,name,kind,text,status,created FROM national_initiative_posts WHERE initiative_id=? AND status IN ('pending','approved') ORDER BY created ASC,id ASC LIMIT 1000").bind(id).all<InitiativePost>();return rows.results.map(post=>post.status==='approved'?post:null);}

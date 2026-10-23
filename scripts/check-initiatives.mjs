@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import {nationalShieldCells} from '../lib/national-shield.ts';
-for(const goal of [1,2,3,25,100,250,1000]){const cells=nationalShieldCells(goal);assert.equal(cells.length,goal);assert.equal(new Set(cells.map(c=>c.points)).size,goal);assert(cells.every(c=>Number.isFinite(c.x)&&Number.isFinite(c.y)));}
+// Sample the actual SVG outline, then use an independent ray-casting check.
+const boundary=[[100,5],[190,38],[190,118]];
+for(let i=1;i<=100;i++){const t=i/100;boundary.push([190-90*t*t,118+156*t-37*t*t]);}
+for(let i=1;i<=100;i++){const t=i/100;boundary.push([100-180*t+90*t*t,237-82*t-37*t*t]);}
+boundary.push([10,38]);
+function inOutline(x,y){let inside=false;for(let i=0,j=boundary.length-1;i<boundary.length;j=i++){const [a,b]=boundary[i],[c,d]=boundary[j];if(((b>y)!==(d>y))&&x<(c-a)*(y-b)/(d-b)+a)inside=!inside;}return inside;}
+for(const goal of [1,2,3,25,100,250,1000]){const cells=nationalShieldCells(goal);assert.equal(cells.length,goal);assert.equal(new Set(cells.map(c=>c.points)).size,goal);for(const cell of cells)for(const point of cell.points.split(' ')){const [x,y]=point.split(',').map(Number);assert(inOutline(x,y),`A cell for goal ${goal} was clipped outside the visible shield`);}}
+
 
 import {readFileSync,readdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -19,11 +26,11 @@ try{
  const p={id:crypto.randomUUID(),initiativeId:'dir-alwatan',name:'الاسم الظاهر',className:'PRIVATE_CLASS_SENTINEL',kind:'message',text:'رسالة وطنية للاختبار'};
  await call('/api/initiatives',p,403,{origin:'https://other.test'});await call('/api/initiatives',{...p,name:''},400);await call('/api/initiatives',{...p,text:'x'.repeat(601)},400);
  const sent=await call('/api/initiatives',p,201);assert.equal(sent.data.initiative.participations,1,'A pending submission must immediately light the shield');const retried=await call('/api/initiatives',p);assert.equal(retried.data.initiative.participations,1,'Retry must not light another cell');assert.equal((await db.prepare('SELECT COUNT(*) n FROM national_initiative_posts').first()).n,1,'Retry duplicated a submission');
- publicData=(await call('/api/initiatives?id=dir-alwatan')).data;assert.equal(publicData.posts.length,0);assert.equal(publicData.initiative.approved,0);assert.equal(publicData.initiative.participations,1);
+ publicData=(await call('/api/initiatives?id=dir-alwatan')).data;assert.equal(publicData.posts.length,0);assert.deepEqual(publicData.shieldPosts,[null],'Pending cells must not expose a name or content');assert.equal(publicData.initiative.approved,0);assert.equal(publicData.initiative.participations,1);
  const owner=await call('/api/teacher/auth',{action:'setup',username:'national-owner',password:'National-Test-Password-123!',setupKey:'national-isolated-test-secret-123456789'});cookie=owner.response.headers.get('set-cookie').split(';')[0];
  const moderation={action:'moderate',id:p.id,status:'approved'};await call('/api/teacher/initiatives',moderation,403,{cookie:''});await call('/api/teacher/initiatives',moderation,403,{origin:'https://other.test'});
  const pending=(await call('/api/teacher/initiatives')).data;assert.equal(pending.posts[0].class_name,'','New submissions must ignore the removed class field');await call('/api/teacher/initiatives',moderation);
- publicData=(await call('/api/initiatives?id=dir-alwatan')).data;assert.equal(publicData.posts[0].name,p.name);assert.equal(publicData.initiative.approved,1);assert(!JSON.stringify(publicData).includes('PRIVATE_CLASS_SENTINEL'));
+ publicData=(await call('/api/initiatives?id=dir-alwatan')).data;assert.equal(publicData.posts[0].name,p.name);assert.equal(publicData.shieldPosts[0].id,p.id,'Approved cell must open the corresponding contribution');assert.equal(publicData.initiative.approved,1);assert(!JSON.stringify(publicData).includes('PRIVATE_CLASS_SENTINEL'));
  await call('/api/teacher/initiatives',{...moderation,status:'hidden'});assert.equal((await call('/api/initiatives?id=dir-alwatan')).data.initiative.approved,0);assert.equal((await call('/api/initiatives?id=dir-alwatan')).data.initiative.participations,0);
  await call('/api/teacher/initiatives',moderation);assert.equal((await call('/api/initiatives?id=dir-alwatan')).data.initiative.approved,1);
  const settings={action:'save',id:'dir-alwatan',title:'درع الاختبار',description:'وصف',school:'مدرسة الاختبار',goal:2,open:false};await call('/api/teacher/initiatives',settings);await call('/api/initiatives',{...p,id:crypto.randomUUID()},409);
@@ -34,9 +41,9 @@ try{
  const profile=(await call('/api/initiatives?id=dir-alwatan')).data;assert.equal(profile.initiative.school,identity.school);assert.equal(profile.initiative.coordinatorName,identity.coordinatorName);assert.equal(profile.initiative.principalName,identity.principalName);assert.equal(profile.initiative.slogan,identity.slogan);assert(Array.isArray(profile.initiatives));
  await call('/api/teacher/initiatives',{...settings,open:true},200);const retained=(await call('/api/initiatives?id=dir-alwatan')).data.initiative;assert.equal(retained.coordinatorName,identity.coordinatorName,'Legacy settings updates must preserve identity names');assert.equal(retained.principalName,identity.principalName);
  await call('/api/teacher/initiatives',{...identity,coordinatorName:'x'.repeat(101)},400);assert.equal((await call('/api/initiatives?id=dir-alwatan')).data.initiative.coordinatorName,identity.coordinatorName);
- const jpeg='data:image/jpeg;base64,/9j/2Q==';const drawing={...p,id:crypto.randomUUID(),kind:'drawing',text:'',image:jpeg};const drawn=await call('/api/initiatives',drawing,201);assert.equal(drawn.data.initiative.participations,2,'A drawing lights the next cell before moderation');
+ const jpeg='data:image/jpeg;base64,/9j/2Q==';const drawing={...p,id:crypto.randomUUID(),kind:'drawing',text:'',image:jpeg};const drawn=await call('/api/initiatives',drawing,201);assert.equal(drawn.data.shieldPosts.length,2);assert.equal(drawn.data.shieldPosts[0].id,p.id);assert.equal(drawn.data.shieldPosts[1],null);assert.equal(drawn.data.initiative.participations,2,'A drawing lights the next cell before moderation');
  let media=await mf.dispatchFetch('https://school.test/api/initiatives/media?id='+drawing.id);assert.equal(media.status,404);media=await mf.dispatchFetch('https://school.test/api/initiatives/media?id='+drawing.id,{headers:{cookie}});assert.equal(media.status,200);assert.equal(media.headers.get('content-type'),'image/jpeg');
- await call('/api/teacher/initiatives',{action:'moderate',id:drawing.id,status:'approved'});media=await mf.dispatchFetch('https://school.test/api/initiatives/media?id='+drawing.id);assert.equal(media.status,200);
+ await call('/api/teacher/initiatives',{action:'moderate',id:drawing.id,status:'approved'});assert.equal((await call('/api/initiatives?id=dir-alwatan')).data.shieldPosts[1].id,drawing.id,'Approval must reveal the same cell without repeating another post');media=await mf.dispatchFetch('https://school.test/api/initiatives/media?id='+drawing.id);assert.equal(media.status,200);
  await call('/api/initiatives',{...drawing,id:crypto.randomUUID(),image:'data:image/svg+xml;base64,AAAA'},400);
  const created=(await call('/api/teacher/initiatives',{...settings,action:'create',title:'مبادرة ثانية',open:true})).data;assert(created.id.startsWith('initiative-'));assert.equal((await call('/api/initiatives?id='+created.id)).data.initiative.title,'مبادرة ثانية');
  assert.equal((await db.prepare('SELECT COUNT(*) n FROM students').first()).n,before,'Initiatives changed classroom records');
