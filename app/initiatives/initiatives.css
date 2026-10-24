@@ -102,8 +102,8 @@ body:has(.ni-gate) .ni-immersive{visibility:hidden}body:has(.ni-gate) .ni-immers
 
 /* Three independent light layers: broad rotating rays, a breathing halo, glass reflection. */
 .ni-immersive .ni-mosaic{position:relative;isolation:isolate;overflow:visible}
-.ni-immersive .ni-mosaic:before{content:'';position:absolute;inset:-22%;z-index:-1;border-radius:50%;pointer-events:none;background:conic-gradient(from 0deg,transparent 0deg 36deg,#ffe28c88 50deg,transparent 72deg 126deg,#ffe28c70 144deg,transparent 166deg 216deg,#ffe28c88 234deg,transparent 256deg 306deg,#ffe28c70 324deg,transparent 346deg 360deg);mask-image:radial-gradient(ellipse,#000 30%,transparent 70%);-webkit-mask-image:radial-gradient(ellipse,#000 30%,transparent 70%);opacity:1;animation:ni-shield-rays-turn 14s linear infinite;will-change:transform}
-.ni-immersive .ni-mosaic:after{content:'';position:absolute;inset:0 4%;z-index:-1;border-radius:50%;pointer-events:none;background:radial-gradient(ellipse,#ffdc78a8 0%,#e8cd8440 43%,transparent 70%);opacity:.9;animation:ni-shield-halo-breathe 2.8s ease-in-out infinite;will-change:transform,opacity}
+.ni-immersive .ni-mosaic:before,.ni-gate .ni-fingerprint-shield:before{content:'';position:absolute;inset:-22%;z-index:-1;border-radius:50%;pointer-events:none;background:conic-gradient(from 0deg,transparent 0deg 36deg,#ffe28c88 50deg,transparent 72deg 126deg,#ffe28c70 144deg,transparent 166deg 216deg,#ffe28c88 234deg,transparent 256deg 306deg,#ffe28c70 324deg,transparent 346deg 360deg);mask-image:radial-gradient(ellipse,#000 30%,transparent 70%);-webkit-mask-image:radial-gradient(ellipse,#000 30%,transparent 70%);opacity:1;animation:ni-shield-rays-turn 14s linear infinite;will-change:transform}
+.ni-immersive .ni-mosaic:after,.ni-gate .ni-fingerprint-shield:after{content:'';position:absolute;inset:0 4%;z-index:-1;border-radius:50%;pointer-events:none;background:radial-gradient(ellipse,#ffdc78a8 0%,#e8cd8440 43%,transparent 70%);opacity:.9;animation:ni-shield-halo-breathe 2.8s ease-in-out infinite;will-change:transform,opacity}
 .nh-edge-aura{opacity:.55;filter:blur(4px);animation:ni-shield-rim-breathe 2.8s ease-in-out infinite;pointer-events:none}
 .nh-surface-sheen-band{opacity:1;animation:ni-shield-glass-pass 3.6s ease-in-out infinite;transform-box:view-box;will-change:transform}
 @keyframes ni-shield-rays-turn{to{transform:rotate(360deg)}}
@@ -113,3 +113,10 @@ body:has(.ni-gate) .ni-immersive{visibility:hidden}body:has(.ni-gate) .ni-immers
 @media(max-width:760px),(pointer:coarse){.nh-edge-aura{filter:blur(2px)}}
 @media(prefers-reduced-motion:reduce){.ni-immersive .ni-mosaic:before,.ni-immersive .ni-mosaic:after,.nh-edge-aura,.nh-surface-sheen-band{animation:none!important}.nh-surface-sheen-band{display:none}}
 .ni-immersive .ni-shield-card{background:radial-gradient(ellipse at 50% 35%,#0c713aea 0%,#043b27f0 64%,#032c1ff5 100%)}
+
+/* The entrance shares the shield lighting; its light follows the splitting halves. */
+.ni-gate .ni-fingerprint-shield{isolation:isolate;overflow:visible}
+.ni-gate.opening .ni-fingerprint-shield:before,.ni-gate.opening .ni-fingerprint-shield:after{animation:none;opacity:0;transition:opacity .45s}
+.ni-gate.opening .nh-surface-sheen,.ni-gate.opening .nh-edge-aura{opacity:0;transition:opacity .4s}
+@media(prefers-reduced-motion:reduce){.ni-gate .ni-fingerprint-shield:before,.ni-gate .ni-fingerprint-shield:after{animation:none!important}}
+.ni-gate .ni-fingerprint-shield{filter:none!important}
