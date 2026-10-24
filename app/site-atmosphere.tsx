@@ -1,6 +1,7 @@
 'use client';
 
 import {useEffect,useRef,type CSSProperties} from 'react';
+import {usePathname} from 'next/navigation';
 
 const words=[
   {text:'Learn',x:5,y:15,size:36,tilt:-12,time:19},
@@ -45,7 +46,9 @@ const words=[
   {text:'Welcome',x:69,y:28,size:22,tilt:-6,time:27},
 ];
 
-export default function SiteAtmosphere(){
+export default function SiteAtmosphere(){const pathname=usePathname();return pathname==='/initiatives'||pathname.startsWith('/initiatives/')?null:<SiteAtmosphereContent/>;}
+
+function SiteAtmosphereContent(){
   const atmosphere=useRef<HTMLDivElement>(null);
   const bursts=useRef<HTMLDivElement>(null);
   const active=useRef(true);
