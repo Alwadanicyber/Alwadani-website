@@ -1,6 +1,7 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import './site-atmosphere.css';
+import './design-system.css';
 import Theme from './theme';
 import SiteAtmosphere from './site-atmosphere';
 import {SITE_URL,SITE_NAME,SITE_TITLE,SITE_DESCRIPTION,siteNameSchema} from '@/lib/site';
