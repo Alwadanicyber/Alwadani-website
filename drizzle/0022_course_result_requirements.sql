@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS course_result_requirements(course TEXT PRIMARY KEY,enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0,1)),minimum_percent INTEGER NOT NULL DEFAULT 80 CHECK(minimum_percent BETWEEN 1 AND 100),updated TEXT NOT NULL);

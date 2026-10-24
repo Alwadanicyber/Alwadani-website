@@ -9,6 +9,8 @@ import {compareResults,betterResult,resultPercent,type Result,type Rank} from '.
 import {sentenceResponseSchema} from './tenses-learning';
 import {getCompetition} from './course-competition';
 import {getRankingMode} from './course-ranking';
+import {getResultRequirements} from './course-result-requirements';
+import {qualifiesResult} from './result-requirements';
 import {allContinuousTimes} from './continuous-speed';
 import {rankingUsesTime,compareCompetitionResults} from './ranking-mode';
 import {studentModerationSchema,type StudentParticipation} from './student-moderation';
@@ -34,6 +36,7 @@ export async function archiveAndRestart(id:string,attempt:number,course:TeacherC
 }
 export async function classroomResults(course:TeacherCourse,studentId?:string,teacherView=false){
  const db=database();
+ const requirements=await getResultRequirements(course.id);
  const rankingMode=course.rankingMode??await getRankingMode(course.id),required=course.id===CHORES_COURSE_ID,learningOnly=rankingMode==='participation',untimed=!rankingUsesTime(rankingMode),competition=await getCompetition(course.id),deadline=!learningOnly&&competition.enabled?competition.endsAt:null;
  const compareAttempt=(a:Result,b:Result)=>rankingMode==='speed'?compareCompetitionResults(a,b,rankingMode):betterResult(a,b)?-1:betterResult(b,a)?1:0;
  const compareRows=(a:Rank,b:Rank)=>(learningOnly?a.name.localeCompare(b.name,'ar'):rankingMode==='balanced'?compareResults(a,b):compareCompetitionResults(a,b,rankingMode))||(rankingMode==='accuracy'||rankingMode==='speed'?a.created.localeCompare(b.created)||((entryOrder.get(a.id)||0)-(entryOrder.get(b.id)||0)):(a.completed||a.created).localeCompare(b.completed||b.created))||a.id.localeCompare(b.id);
@@ -70,6 +73,8 @@ export async function classroomResults(course:TeacherCourse,studentId?:string,te
   const {_entryOrder,...source}=raw as unknown as Rank&{student?:string;_entryOrder?:number},id=source.student||source.id,current=rows.get(id);
   if(!current)continue;
   const result=combined(source,id,competitionGameMap);
+  // Filter each attempt before choosing the best: a faster low score must not hide an eligible retry.
+  if(!qualifiesResult(result,requirements))continue;
   if(deadline&&(result.completed?Date.parse(result.completed)>=Date.parse(deadline):competition.ended))continue;
   if(deadline&&Date.parse(joined.get(id)||'')>=Date.parse(deadline))continue;
   const previous=competitionRows.get(id);
@@ -80,5 +85,5 @@ export async function classroomResults(course:TeacherCourse,studentId?:string,te
  const places=new Map(leaderboard.map(r=>[r.id,r.position]));
  const official=new Map(leaderboard.map(r=>[r.id,r]));
  const participants:StudentParticipation[]=teacherView?allResults.map(r=>({...r,...official.get(r.id),position:places.get(r.id)||0,removedAt:removed.get(r.id)||null,competing:places.has(r.id)})):[];
- return {competition,rankingMode,leaderboard,bestResult:studentId?(()=>{const own=allResults.find(r=>r.id===studentId);return own?{...own,position:places.get(studentId)||0}:null;})():null,certificate,...(required?{previousCertificate}: {}),...(teacherView?{participants}:{})};
+ return {competition,rankingMode,resultRequirements:{...requirements,bestCompletedPercent:certificate?resultPercent(certificate):null},leaderboard,bestResult:studentId?(()=>{const own=(requirements.enabled?official.get(studentId):undefined)||allResults.find(r=>r.id===studentId);return own?{...own,position:places.get(studentId)||0}:null;})():null,certificate:qualifiesResult(certificate,requirements)?certificate:null,...(required?{previousCertificate:qualifiesResult(previousCertificate,requirements)?previousCertificate:null}: {}),...(teacherView?{participants}:{})};
 }

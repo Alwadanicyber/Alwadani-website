@@ -29,7 +29,8 @@
     "test:home-can": "node scripts/check-home-can.mjs",
     "test:exam-prep": "node --experimental-strip-types scripts/check-exam-prep.mjs",
     "test:assistant": "node scripts/check-assistant.mjs",
-    "test:initiatives": "node --experimental-strip-types scripts/check-initiatives.mjs"
+    "test:initiatives": "node --experimental-strip-types scripts/check-initiatives.mjs",
+    "test:result-requirements": "node --experimental-strip-types scripts/check-result-requirements.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
