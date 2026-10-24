@@ -120,3 +120,13 @@ body:has(.ni-gate) .ni-immersive{visibility:hidden}body:has(.ni-gate) .ni-immers
 .ni-gate.opening .nh-surface-sheen,.ni-gate.opening .nh-edge-aura{opacity:0;transition:opacity .4s}
 @media(prefers-reduced-motion:reduce){.ni-gate .ni-fingerprint-shield:before,.ni-gate .ni-fingerprint-shield:after{animation:none!important}}
 .ni-gate .ni-fingerprint-shield{filter:none!important}
+
+/* Cache a small frame halo and pulse its opacity instead of repainting shadows. */
+.ni-name-frame{position:relative;isolation:isolate;border:1px solid #ffe2a0!important;border-radius:14px;box-shadow:0 0 9px #e6bf6255}
+.ni-name-frame:before{content:'';position:absolute;inset:-3px;border:2px solid #f3d18b;border-radius:inherit;box-shadow:0 0 13px 3px #e8c26a88;opacity:.4;pointer-events:none;animation:ni-name-frame-light 3s ease-in-out infinite}
+.ni-dialog h2.ni-name-frame,.ni-admin h3.ni-name-frame{display:table;padding:7px 17px;max-width:100%;overflow-wrap:anywhere}
+.ni-immersive .ni-post.ni-name-frame{border-color:#ffe9af;box-shadow:0 0 10px #e4bd5a55}
+@keyframes ni-name-frame-light{0%,100%{opacity:.35}50%{opacity:.9}}
+@media(max-width:760px),(pointer:coarse){.ni-participant-glow{animation:none!important}.nh-edge-aura{will-change:opacity}}
+@media(prefers-reduced-motion:reduce){.ni-name-frame:before{animation:none;opacity:.65}}
+.ni-admin .ni-participant-glow{color:#89631b!important;text-shadow:0 0 8px #d5ae5866}.ni-admin h3.ni-name-frame{border-color:#bf9848!important;background:#fbf3dc}

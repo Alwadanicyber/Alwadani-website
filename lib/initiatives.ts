@@ -6,6 +6,7 @@ export async function initiativesReady(){const db=database();await db.batch([
  db.prepare("CREATE TABLE IF NOT EXISTS national_initiative_prayers(id TEXT PRIMARY KEY,initiative_id TEXT NOT NULL REFERENCES national_initiatives(id));"),
  db.prepare("CREATE TABLE IF NOT EXISTS national_initiative_surveys(id TEXT PRIMARY KEY,initiative_id TEXT NOT NULL REFERENCES national_initiatives(id),answers TEXT NOT NULL,rating INTEGER NOT NULL,score INTEGER NOT NULL);"),
  db.prepare("CREATE TABLE IF NOT EXISTS national_initiative_identity(initiative_id TEXT PRIMARY KEY REFERENCES national_initiatives(id),coordinator_name TEXT NOT NULL DEFAULT '',coordinator_title TEXT NOT NULL DEFAULT 'منفذ المبادرة',principal_name TEXT NOT NULL DEFAULT '',principal_title TEXT NOT NULL DEFAULT 'مدير المدرسة',slogan TEXT NOT NULL DEFAULT '')"),
+ db.prepare("CREATE TABLE IF NOT EXISTS national_initiative_name_frames(post_id TEXT PRIMARY KEY REFERENCES national_initiative_posts(id),enabled INTEGER NOT NULL DEFAULT 1)"),
  db.prepare("CREATE TABLE IF NOT EXISTS national_initiative_highlights(post_id TEXT PRIMARY KEY REFERENCES national_initiative_posts(id),enabled INTEGER NOT NULL DEFAULT 1)"),
  db.prepare('CREATE INDEX IF NOT EXISTS national_posts_status ON national_initiative_posts(initiative_id,status,created)'),
  db.prepare('CREATE TABLE IF NOT EXISTS national_initiative_limits(bucket TEXT PRIMARY KEY,count INTEGER NOT NULL,expires INTEGER NOT NULL)'),
@@ -15,7 +16,7 @@ export async function listInitiatives(){const db=await initiativesReady();return
 export const initiativeReply=(body:unknown,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 
 // Publish every non-hidden submission, including legacy pending submissions.
-export async function initiativeShieldPosts(id:string){const db=await initiativesReady();const rows=await db.prepare("SELECT p.id,p.initiative_id,p.name,p.kind,p.text,p.status,p.created,COALESCE(h.enabled,0) AS highlighted FROM national_initiative_posts p LEFT JOIN national_initiative_highlights h ON h.post_id=p.id WHERE p.initiative_id=? AND p.status IN ('pending','approved') ORDER BY p.created ASC,p.id ASC LIMIT 1000").bind(id).all<InitiativePost>();return rows.results;}
+export async function initiativeShieldPosts(id:string){const db=await initiativesReady();const rows=await db.prepare("SELECT p.id,p.initiative_id,p.name,p.kind,p.text,p.status,p.created,COALESCE(h.enabled,0) AS highlighted,COALESCE(f.enabled,0) AS frameHighlighted FROM national_initiative_posts p LEFT JOIN national_initiative_highlights h ON h.post_id=p.id LEFT JOIN national_initiative_name_frames f ON f.post_id=p.id WHERE p.initiative_id=? AND p.status IN ('pending','approved') ORDER BY p.created ASC,p.id ASC LIMIT 1000").bind(id).all<InitiativePost>();return rows.results;}
 
 // Row insertion order is stable across hiding/restoring and idempotent retries.
 export async function initiativeReceipt(initiativeId:string,postId:string):Promise<InitiativeReceipt|null>{const db=await initiativesReady();return db.prepare('SELECT p.name,(SELECT COUNT(*) FROM national_initiative_posts n WHERE n.initiative_id=p.initiative_id AND n.rowid<=p.rowid) AS number FROM national_initiative_posts p WHERE p.initiative_id=? AND p.id=?').bind(initiativeId,postId).first<InitiativeReceipt>();}
