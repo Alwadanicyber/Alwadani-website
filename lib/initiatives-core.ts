@@ -1,6 +1,7 @@
+import type {InitiativeGlow} from './initiative-glow';
 export type InitiativeReceipt={name:string;number:number};
 export type InitiativeIdentity={coordinatorName:string;coordinatorTitle:string;principalName:string;principalTitle:string;slogan:string};
-export type Initiative=InitiativeIdentity&{id:string;title:string;description:string;school:string;goal:number;open:number;approved:number;participations:number;dua:number};
+export type Initiative=InitiativeIdentity&{id:string;title:string;description:string;school:string;goal:number;open:number;approved:number;participations:number;dua:number;glow:InitiativeGlow};
 export type InitiativePost={id:string;initiative_id:string;name:string;class_name:string;kind:'message'|'card'|'drawing'|'voice';text:string;status:'pending'|'approved'|'hidden';created:number;highlighted?:number;frameHighlighted?:number};
 export const initiativeId=(v:unknown):v is string=>typeof v==='string'&&/^[a-z0-9-]{1,64}$/.test(v);
 export function submission(v:Record<string,unknown>){

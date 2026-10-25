@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import {nationalShieldCells} from '../lib/national-shield.ts';
+import {defaultInitiativeGlow,initiativeGlowColors,initiativeGlowSettings,initiativeGlowPresentation} from '../lib/initiative-glow.ts';
+for(const {color} of initiativeGlowColors)for(const nameEffect of ['steady','pulse','shimmer'])for(const frameEffect of ['steady','pulse','orbit'])for(const intensity of ['soft','medium','strong'])assert.deepEqual(initiativeGlowSettings({color,nameEffect,frameEffect,intensity}),{color,nameEffect,frameEffect,intensity});
+for(const color of ['#000000','#ffffff']){const attrs=initiativeGlowPresentation({...defaultInitiativeGlow,color});assert.match(attrs.style['--ni-glow-text'],/^#[0-9a-f]{6}$/);assert.match(attrs.style['--ni-glow-ink'],/^#[0-9a-f]{6}$/);}
 // Sample the actual SVG outline, then use an independent ray-casting check.
 const boundary=[[100,5],[190,38],[190,118]];
 for(let i=1;i<=100;i++){const t=i/100;boundary.push([190-90*t*t,118+156*t-37*t*t]);}
@@ -19,9 +22,9 @@ const mf=new Miniflare({name:'app',modules,modulesRoot:root,compatibilityDate:'2
 async function call(path,body,status=200,headers={}){const r=await mf.dispatchFetch('https://school.test'+path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',origin:'https://school.test',cookie,...headers},...(body?{body:JSON.stringify(body)}:{})});const data=await r.json();assert.equal(r.status,status,JSON.stringify({path,data}));return {data,response:r};}
 try{
  const db=await mf.getD1Database('DB');
- for(const file of readdirSync(project+'drizzle').filter(f=>f.endsWith('.sql')&&!f.startsWith('0005_')&&!f.startsWith('0018_')).sort())for(const sql of readFileSync(project+'drizzle/'+file,'utf8').split('--> statement-breakpoint'))if(sql.trim())await db.prepare(sql.trim()).run();
+ for(const file of readdirSync(project+'drizzle').filter(f=>f.endsWith('.sql')&&!f.startsWith('0005_')&&!f.startsWith('0018_')&&!f.startsWith('0023_')).sort())for(const sql of readFileSync(project+'drizzle/'+file,'utf8').split('--> statement-breakpoint'))if(sql.trim())await db.prepare(sql.trim()).run();
  const before=(await db.prepare('SELECT COUNT(*) n FROM students').first()).n;
- let publicData=(await call('/api/initiatives')).data;assert.equal(publicData.initiatives[0].approved,0);assert.equal(publicData.initiatives[0].id,'dir-alwatan');
+ let publicData=(await call('/api/initiatives')).data;assert.equal(publicData.initiatives[0].approved,0);assert.equal(publicData.initiatives[0].id,'dir-alwatan');assert.deepEqual(publicData.initiatives[0].glow,defaultInitiativeGlow,'Old initiatives retain the gold pulse by default');
  await call('/api/initiatives?id=missing',null,404);await call('/api/teacher/initiatives',null,403);
  const p={id:crypto.randomUUID(),initiativeId:'dir-alwatan',name:'الاسم الظاهر',className:'PRIVATE_CLASS_SENTINEL',kind:'message',text:'رسالة وطنية للاختبار'};
  await call('/api/initiatives',p,403,{origin:'https://other.test'});await call('/api/initiatives',{...p,name:''},400);await call('/api/initiatives',{...p,text:'x'.repeat(601)},400);
@@ -52,6 +55,29 @@ try{
  await call('/api/initiatives',{...drawing,id:crypto.randomUUID(),image:'data:image/svg+xml;base64,AAAA'},400);
  await call('/api/teacher/initiatives',{action:'moderate',id:drawing.id,status:'hidden'});assert.equal((await mf.dispatchFetch('https://school.test/api/initiatives/media?id='+drawing.id)).status,404,'Hidden media must remain private');assert(!(await call('/api/initiatives?id=dir-alwatan')).data.shieldPosts.some(v=>v.id===drawing.id));await call('/api/teacher/initiatives',{action:'moderate',id:drawing.id,status:'approved'});
  const created=(await call('/api/teacher/initiatives',{...settings,action:'create',title:'مبادرة ثانية',open:true})).data;assert(created.id.startsWith('initiative-'));assert.equal((await call('/api/initiatives?id='+created.id)).data.initiative.title,'مبادرة ثانية');
+
+ // Styling is owner-only, independent per initiative, and never changes participation flags or data.
+ const original=(await call('/api/initiatives?id=dir-alwatan')).data;
+ const selectedGlow={color:'#5A8DCF',nameEffect:'shimmer',frameEffect:'orbit',intensity:'strong'};
+ const glowRequest={action:'glow-settings',id:'dir-alwatan',glow:selectedGlow};
+ await call('/api/teacher/initiatives',glowRequest,403,{cookie:''});await call('/api/teacher/initiatives',glowRequest,403,{origin:'https://other.test'});
+ await call('/api/teacher/initiatives',{...glowRequest,id:'missing-initiative'},404);
+ for(const bad of [null,[],{}, {...selectedGlow,color:'red'}, {...selectedGlow,color:'#fff'}, {...selectedGlow,color:'#abcdef; background:url(x)'}, {...selectedGlow,nameEffect:'flash'}, {...selectedGlow,nameEffect:['pulse']}, {...selectedGlow,frameEffect:true}, {...selectedGlow,intensity:3}])await call('/api/teacher/initiatives',{...glowRequest,glow:bad},400);
+ const accepted=(await call('/api/teacher/initiatives',glowRequest)).data.glow;
+ assert.deepEqual(accepted,{...selectedGlow,color:'#5a8dcf'});
+ const styled=(await call('/api/initiatives?id=dir-alwatan')).data;
+ assert.deepEqual(styled.initiative.glow,accepted);assert.deepEqual(styled.posts,original.posts);assert.deepEqual(styled.shieldPosts,original.shieldPosts);assert.equal(styled.initiative.participations,original.initiative.participations);
+ assert.deepEqual((await call('/api/teacher/initiatives')).data.initiatives.find(i=>i.id==='dir-alwatan').glow,accepted);
+ await call('/api/teacher/initiatives',{...settings,open:true});assert.deepEqual((await call('/api/initiatives?id=dir-alwatan')).data.initiative.glow,accepted,'Saving other settings must retain the chosen appearance');
+ assert.deepEqual((await call('/api/initiatives?id='+created.id)).data.initiative.glow,defaultInitiativeGlow);
+ for(const [i,{color}] of initiativeGlowColors.entries()){
+  const glow={color,nameEffect:['steady','pulse','shimmer'][i%3],frameEffect:['steady','pulse','orbit'][i%3],intensity:['soft','medium','strong'][i%3]};
+  await call('/api/teacher/initiatives',{action:'glow-settings',id:created.id,glow});assert.deepEqual((await call('/api/initiatives?id='+created.id)).data.initiative.glow,glow);
+  assert.deepEqual((await call('/api/initiatives?id=dir-alwatan')).data.initiative.glow,accepted,'Changing another initiative must not alter the first');
+ }
+ // The tracked migration is safe after lazy setup, including with saved preferences.
+ await db.prepare(readFileSync(project+'drizzle/0023_national_initiative_glow_settings.sql','utf8')).run();assert.deepEqual((await call('/api/initiatives?id=dir-alwatan')).data.initiative.glow,accepted);
+ await call('/api/teacher/initiatives',{...glowRequest,glow:defaultInitiativeGlow});assert.deepEqual((await call('/api/initiatives?id=dir-alwatan')).data.initiative.glow,defaultInitiativeGlow);
  assert.equal((await db.prepare('SELECT COUNT(*) n FROM students').first()).n,before,'Initiatives changed classroom records');
  const privacy=(await call('/api/teacher/initiatives?id=dir-alwatan&status=approved')).data;assert(privacy.posts.every(v=>v.class_name===''));
 
@@ -66,8 +92,8 @@ try{
  const voice={...p,id:crypto.randomUUID(),kind:'voice',text:'دعاء',audio:'data:audio/webm;codecs=opus;base64,GkXfo0Ag'};await call('/api/initiatives',voice,201);await call('/api/teacher/initiatives',{action:'moderate',id:voice.id,status:'approved'});const sound=await mf.dispatchFetch('https://school.test/api/initiatives/media?id='+voice.id);assert.equal(sound.status,200);assert.equal(sound.headers.get('content-type'),'audio/webm');await sound.arrayBuffer();
  const card={...p,id:crypto.randomUUID(),kind:'card',text:'بطاقة شكر'};const beforeCard=(await call('/api/initiatives?id=dir-alwatan')).data.initiative.participations;const cardSent=await call('/api/initiatives',card,201);assert.equal(cardSent.data.receipt.number,4);assert.equal(cardSent.data.initiative.participations,beforeCard+1,'Ready cards also immediately light one cell');
  // Separate network bucket; simultaneous submissions cannot exceed 120 reservations/hour.
- const attempts=await Promise.all(Array.from({length:123},(_,i)=>mf.dispatchFetch('https://school.test/api/initiatives',{method:'POST',headers:{origin:'https://school.test','content-type':'application/json','cf-connecting-ip':'192.0.2.10'},body:JSON.stringify({...p,id:crypto.randomUUID(),text:'Parallel '+i})})));
- assert.equal(attempts.filter(r=>r.status===201).length,120);assert.equal(attempts.filter(r=>r.status===429).length,3);const receipts=await Promise.all(attempts.filter(r=>r.status===201).map(r=>r.json()));assert.equal(new Set(receipts.map(r=>r.receipt.number)).size,120,'Concurrent submissions must have distinct guardian numbers');await call('/api/teacher/initiatives',{...moderation,status:'hidden'});const retryAfterHiding=await call('/api/initiatives',card);assert.equal(retryAfterHiding.data.receipt.number,4,'Hiding an earlier participation must not renumber a guardian');
+ const attempts=await Promise.all(Array.from({length:123},async(_,i)=>{const response=await mf.dispatchFetch('https://school.test/api/initiatives',{method:'POST',headers:{origin:'https://school.test','content-type':'application/json','cf-connecting-ip':'192.0.2.10'},body:JSON.stringify({...p,id:crypto.randomUUID(),text:'Parallel '+i})});return {status:response.status,data:await response.json()};}));
+ assert.equal(attempts.filter(r=>r.status===201).length,120);assert.equal(attempts.filter(r=>r.status===429).length,3);const receipts=attempts.filter(r=>r.status===201).map(r=>r.data);assert.equal(new Set(receipts.map(r=>r.receipt.number)).size,120,'Concurrent submissions must have distinct guardian numbers');await call('/api/teacher/initiatives',{...moderation,status:'hidden'});const retryAfterHiding=await call('/api/initiatives',card);assert.equal(retryAfterHiding.data.receipt.number,4,'Hiding an earlier participation must not renumber a guardian');
  assert.equal((await db.prepare("SELECT COUNT(*) n FROM national_initiative_posts WHERE text LIKE 'Parallel %'").first()).n,120);
- console.log('PASS: lazy setup, durable submissions, idempotent retries, owner/origin guards, moderation and reversible hiding, name-only submissions and immediate shield progress, immediate publishing including legacy pending submissions, protected hidden drawings, open/close controls, new initiatives, independent classroom records, editable school/staff identity with owner/origin guards and legacy preservation, atomic network limits.');
+ console.log('PASS: lazy setup, durable submissions, idempotent retries, owner/origin guards, moderation and reversible hiding, name-only submissions and immediate shield progress, immediate publishing including legacy pending submissions, protected hidden drawings, open/close controls, new initiatives, independent classroom records, editable school/staff identity with owner/origin guards and legacy preservation, atomic network limits, owner-only per-initiative glow palettes/effects/intensities, safe custom colors, independent name/frame flags, settings preservation and gold restoration.');
 }finally{await mf.dispose();}
