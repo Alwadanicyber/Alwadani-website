@@ -1,0 +1,2 @@
+import {reportDates} from '@/lib/report-dates';
+export default function ReportDate({label,value}:{label:string;value:string}){const dates=reportDates(value);if(!dates)return null;return <div className="report-date"><strong>{label}</strong><time dateTime={value}><span>ميلادي: {dates.gregorian}</span><span>هجري: {dates.hijri}</span><span className="report-date-time">الوقت: {dates.time} · بتوقيت السعودية</span></time></div>;}

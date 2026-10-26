@@ -1,7 +1,7 @@
 export const reportCategories=[{id:'grades',label:'تقارير الدرجات'},{id:'homework',label:'تقارير الواجبات'},{id:'pledge',label:'التعهدات'},{id:'referral',label:'إحالات لوكيل المدرسة'},{id:'behaviour',label:'تقارير السلوك'}] as const;
 export const reportViolations=['عدم أداء الواجب','عدم إحضار الأدوات','التأخر عن الحصة','الغياب عن الحصة','مقاطعة الشرح','إزعاج الزملاء','عدم اتباع تعليمات المعلم','إتلاف الممتلكات','أخرى'];
 export type ReportCategory=string;
-export type StudentReport={id:string;category:ReportCategory;title:string;grade:string;studentName:string;violation:string;notes:string;fileName:string;fileType:string;fileSize:number;created:string;updated:string;archived:number};
+export type StudentReport={id:string;category:ReportCategory;title:string;grade:string;studentName:string;violation:string;notes:string;fileName:string;fileType:string;fileSize:number;fileUploadedAt:string|null;created:string;updated:string;archived:number};
 export const reportNeedsStudent=(category:string)=>['pledge','referral','behaviour'].includes(category);
 export const validReportId=(value:unknown):value is string=>typeof value==='string'&&/^[a-f0-9-]{36}$/.test(value);
 export const REPORT_FILE_LIMIT=1024*1024;
