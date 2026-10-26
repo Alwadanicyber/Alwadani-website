@@ -4,7 +4,7 @@ export type ReportCategory=string;
 export type StudentReport={id:string;category:ReportCategory;title:string;grade:string;studentName:string;violation:string;notes:string;fileName:string;fileType:string;fileSize:number;fileUploadedAt:string|null;created:string;updated:string;archived:number};
 export const reportNeedsStudent=(category:string)=>['pledge','referral','behaviour'].includes(category);
 export const validReportId=(value:unknown):value is string=>typeof value==='string'&&/^[a-f0-9-]{36}$/.test(value);
-export const REPORT_FILE_LIMIT=1024*1024;
+export const REPORT_FILE_LIMIT=50*1024*1024;
 export type CustomReportCategory={id:string;label:string;mode:string};
 export function validateStudentReport(raw:Record<string,unknown>,custom:CustomReportCategory[]=[]){
  const field=(key:string,max:number)=>{const v=raw[key]??'';if(typeof v!=='string'||v.trim().length>max)throw new Error('راجع بيانات التقرير.');return v.trim();};
