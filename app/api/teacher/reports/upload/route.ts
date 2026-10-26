@@ -7,7 +7,7 @@ const reply=(v:unknown,status=200)=>Response.json(v,{status,headers:{'Cache-Cont
 async function denied(req:Request){if(!await teacherAccess()||req.headers.get('origin')!==new URL(req.url).origin)return reply({error:'غير مصرح برفع الملفات.'},403);if(!await reportUnlocked(req))return reply({error:'افتح قفل التقارير أولًا.',locked:true},423);return null;}
 export async function POST(req:Request){try{const no=await denied(req);if(no)return no;const raw=await req.text();if(raw.length>2000)return reply({error:'طلب كبير.'},400);const body=JSON.parse(raw);const db=await reportFileChunksReady();
  if(body.action==='begin'){
- if(!validReportId(body.reportId)||typeof body.fileName!=='string'||!body.fileName.trim()||body.fileName.length>255||!Number.isSafeInteger(body.size)||body.size<1||body.size>REPORT_FILE_LIMIT)return reply({error:'اختر ملفًا غير فارغ بحجم لا يتجاوز ٥٠ ميجابايت.'},400);
+ if(!validReportId(body.reportId)||typeof body.fileName!=='string'||!body.fileName.trim()||body.fileName.length>255||!Number.isSafeInteger(body.size)||body.size<1||body.size>REPORT_FILE_LIMIT)return reply({error:'اختر ملفًا غير فارغ بحجم لا يتجاوز ٢٥٠ ميجابايت.'},400);
  if(!await db.prepare('SELECT id FROM teacher_student_reports WHERE id=? AND archived=0').bind(body.reportId).first())return reply({error:'التقرير غير موجود.'},404);
  const id=crypto.randomUUID(),name=body.fileName.replace(/[\r\n\x00-\x1f]/g,'').slice(0,200);await db.prepare("INSERT INTO teacher_report_file_uploads(id,report_id,file_name,file_type,file_size,created) VALUES(?,?,?,'application/octet-stream',?,?)").bind(id,body.reportId,name,body.size,new Date().toISOString()).run();return reply({uploadId:id,chunkSize:REPORT_CHUNK_SIZE},201);
  }
