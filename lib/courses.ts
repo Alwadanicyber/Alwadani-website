@@ -1,3 +1,4 @@
+import {grade4RevisionCourses} from './grade4-revision-courses';
 import {database} from './database';
 import {grades} from './grades';
 import {lessons,questions} from './course';
@@ -14,7 +15,7 @@ import {defaultRankingMode} from './ranking-mode';
 import {courseStudentAccess,validateStudentAccess} from './student-access';
 export const originalDefinition:Definition={lessons,questions:questions.map(q=>({...q,...grading[q.id]}))};
 export const originalCourse:TeacherCourse={id:'life-stories',grade:'grade-9',title:'حكايات الماضي · Life Stories',description:'الماضي البسيط، الحديث عن الميلاد، المبني للمجهول في الماضي، وعادات الماضي.',published:1,definition:originalDefinition,updated:'2026-10-03'};
-export const builtInCourses:TeacherCourse[]=[originalCourse,choresCourse,tensesCourse,homeCanCourse,timePlaceCourse,...examPrepCourses];
+export const builtInCourses:TeacherCourse[]=[originalCourse,choresCourse,tensesCourse,homeCanCourse,timePlaceCourse,...examPrepCourses,...grade4RevisionCourses];
 export const builtInCourse=(id:string)=>builtInCourses.find(c=>c.id===id);
 function parse(row:any):TeacherCourse{const definition=JSON.parse(row.definition),course={...row,definition,studentGender:validateGender(definition.studentGender),studentAccess:courseStudentAccess({id:row.id,definition})};if(course.id===homeCanCourse.id)return {...course,definition:addHomeCanDictation(course.definition)};if(course.id===tensesCourse.id)return {...course,definition:upgradeLegacyTensesDefinition(course.definition)};if(course.id===choresCourse.id&&[4,7].includes(course.definition.lessons.length)&&course.definition.lessons.slice(0,3).map((l:any)=>l.en).join('|')==='My Morning|On the Bus|Helping at Home')return {...course,definition:{...choresCourse.definition,studentGender:course.studentGender,studentAccess:course.studentAccess},description:choresCourse.description};return course;}
 export async function getCourse(id:string,teacher=false){const row=await database().prepare('SELECT * FROM courses WHERE id=?').bind(id).first();const course=row?parse(row):builtInCourse(id);return course&&course.published!==COURSE_TRASHED&&(teacher||course.published===1)?course:null;}

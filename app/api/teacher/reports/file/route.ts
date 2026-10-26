@@ -1,0 +1,6 @@
+import {reportUnlocked} from '@/lib/report-lock';
+import {teacherAccess} from '@/lib/teacher';
+import {studentReportsReady} from '@/lib/student-report-store';
+import {validReportId} from '@/lib/student-reports';
+export const dynamic='force-dynamic';
+export async function GET(req:Request){const headers={'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'};try{if(!await teacherAccess())return Response.json({error:'ملف خاص بمالك الموقع.'},{status:403,headers});if(!await reportUnlocked(req))return Response.json({error:'افتح قفل التقارير أولًا.'},{status:423,headers});const id=new URL(req.url).searchParams.get('id');if(!validReportId(id))return new Response('Invalid report',{status:400,headers});const db=await studentReportsReady();const r=await db.prepare('SELECT fileName,fileType,fileData FROM teacher_student_reports WHERE id=? AND fileSize>0').bind(id).first<{fileName:string;fileType:string;fileData:string}>();if(!r)return new Response('Not found',{status:404,headers});return new Response(Uint8Array.from(atob(r.fileData),c=>c.charCodeAt(0)),{headers:{...headers,'Content-Type':r.fileType,'Content-Disposition':"attachment; filename=report; filename*=UTF-8''"+encodeURIComponent(r.fileName),'Content-Security-Policy':"default-src 'none'; sandbox"}});}catch{return new Response('Unable to load report',{status:503,headers});}}
