@@ -1,6 +1,7 @@
 import {updateStudentHomeDictation} from '@/lib/home-can-dictation-update';
 import {hasLegacyHomeCanDefinition} from '@/lib/home-can-course';
 import {HOME_CAN_COURSE_ID,normalizeHomeSpelling} from '@/lib/home-can-learning';
+import {TRAVEL_COURSE_ID} from '@/lib/travel-learning';
 import {isExamPrep} from '@/lib/exam-prep-content';
 import {database} from '@/lib/database';
 import {parseSolveMs,SolveTimeError} from '@/lib/solve-time';
@@ -109,7 +110,7 @@ export async function POST(req:Request){const receivedAt=Date.now();try{
   const current=await context(req,courseId);return reply(await snapshot(current.student,current.course,current.grade));
  }else if(body.action==='read'){
   if(!Number.isInteger(body.lesson)||!lessons[body.lesson])return reply({error:'درس غير صالح.'},400);
-  if(courseId===CHORES_COURSE_ID||courseId===TENSES_COURSE_ID||courseId===TIME_PLACE_COURSE_ID||courseId===HOME_CAN_COURSE_ID||isExamPrep(courseId)){const previous=questions.filter(q=>q.lesson<body.lesson),done=await db.prepare('SELECT COUNT(*) AS n FROM answers WHERE student=? AND question<?').bind(id,questions.find(q=>q.lesson===body.lesson)?.id??Number.MAX_SAFE_INTEGER).first<{n:number}>();if(done?.n!==previous.length)return reply({error:'أكمل تدريب المشهد السابق أولًا.'},400);}
+  if(courseId===CHORES_COURSE_ID||courseId===TENSES_COURSE_ID||courseId===TIME_PLACE_COURSE_ID||courseId===HOME_CAN_COURSE_ID||isExamPrep(courseId)||courseId===TRAVEL_COURSE_ID){const previous=questions.filter(q=>q.lesson<body.lesson),done=await db.prepare('SELECT COUNT(*) AS n FROM answers WHERE student=? AND question<?').bind(id,questions.find(q=>q.lesson===body.lesson)?.id??Number.MAX_SAFE_INTEGER).first<{n:number}>();if(done?.n!==previous.length)return reply({error:'أكمل تدريب المشهد السابق أولًا.'},400);}
   if(course.rankingMode==='speed'&&!student.completed)await resumeSpeedClock(id,attempt,receivedAt);
   if(course.rankingMode==='speed'&&body.lesson===lessons.length-1&&(courseId===TIME_PLACE_COURSE_ID||courseId===TENSES_COURSE_ID||courseId===HOME_CAN_COURSE_ID))await markSpeedPrefix(id,attempt,receivedAt);
   await db.prepare('INSERT OR IGNORE INTO reads(student,lesson) SELECT ?,? WHERE EXISTS(SELECT 1 FROM student_sessions WHERE student=? AND attempt=?)').bind(id,body.lesson,id,attempt).run();
