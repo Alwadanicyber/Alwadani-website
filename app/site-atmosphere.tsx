@@ -2,6 +2,7 @@
 
 import {useEffect,useRef,type CSSProperties} from 'react';
 import {usePathname} from 'next/navigation';
+import {motionEnabled,MOTION_EVENT} from './motion-preference';
 
 const words=[
   {text:'Learn',x:5,y:15,size:36,tilt:-12,time:19},
@@ -123,7 +124,7 @@ function SiteAtmosphereContent(){
     };
     const pointerOut=(event:PointerEvent)=>{if(event.relatedTarget===null)release();};
     const applyPreference=()=>{
-      const next=!query.matches;
+      const next=motionEnabled();
       active.current=next;
       document.documentElement.dataset.siteEffects=next?'on':'off';
       if(!next){bursts.current?.replaceChildren();resetMotion();}
@@ -170,6 +171,7 @@ function SiteAtmosphereContent(){
     applyPreference();
     updateVisibility();
     query.addEventListener('change',applyPreference);
+    window.addEventListener(MOTION_EVENT,applyPreference);
     document.addEventListener('visibilitychange',updateVisibility);
     document.addEventListener('pointerdown',pointerDown,{passive:true});
     document.addEventListener('pointermove',repel,{passive:true});
@@ -180,6 +182,7 @@ function SiteAtmosphereContent(){
     document.addEventListener('keydown',keyDown);
     return()=>{
       query.removeEventListener('change',applyPreference);
+      window.removeEventListener(MOTION_EVENT,applyPreference);
       document.removeEventListener('visibilitychange',updateVisibility);
       document.removeEventListener('pointerdown',pointerDown);
       document.removeEventListener('pointermove',repel);

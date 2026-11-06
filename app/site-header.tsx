@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {BookOpen,ClipboardList,Flag,Menu,Settings,X} from 'lucide-react';
 import Brand from '@/components/brand';
 import AppearanceToggle from './appearance-toggle';
+import MotionToggle from './motion-toggle';
 
 export default function SiteHeader(){
   const [open,setOpen]=useState(false);
@@ -23,6 +24,6 @@ export default function SiteHeader(){
       <a href="/initiatives"><Flag size={17}/>مبادرات وطني الغالي</a>
       <a className="tc-teacher-link" href="/teacher"><Settings size={17}/>مساحة المعلم</a>
     </nav>
-    <div className="tc-header-actions"><AppearanceToggle/><button ref={toggle} type="button" className="tc-menu-toggle" aria-controls="catalog-navigation" aria-expanded={open} aria-label={open?'إغلاق القائمة الرئيسية':'فتح القائمة الرئيسية'} onClick={()=>setOpen(!open)}>{open?<X size={23}/>:<Menu size={23}/>}</button></div>
+    <div className="tc-header-actions"><MotionToggle/><AppearanceToggle/><button ref={toggle} type="button" className="tc-menu-toggle" aria-controls="catalog-navigation" aria-expanded={open} aria-label={open?'إغلاق القائمة الرئيسية':'فتح القائمة الرئيسية'} onClick={()=>setOpen(value=>!value)}>{open?<X size={23} aria-hidden="true"/>:<Menu size={23} aria-hidden="true"/>}</button></div>
   </header>;
 }
