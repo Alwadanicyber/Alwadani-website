@@ -350,3 +350,18 @@ React وTypeScript وVinext وCloudflare Workers وD1. الحزم مثبتة ف�
 درع البصمة يعرض طبقات الإضاءة نفسها: أشعة خلفية وهالة ولمعة بيضاء تتبع نصفي الدرع عند الانشقاق. تنجذب النجوم إلى حلقة مضيئة حول البصمة أثناء الضغط وتتقارب أكثر عند اكتماله، مع تصحيح مركز التجمع نسبةً إلى قياسات Canvas الفعلية (خصوصًا اختلاف lvh وارتفاع الجوال المرئي)، والحفاظ على التشتت عند الإلغاء والانطلاق عند الفتح.
 
 توهج إطار اسم المشارك مستقل عن توهج النص، ويتحكم المالك فيه من زر «توهج الإطار». تحفظ الإطارات في national_initiative_name_frames وتظهر في الحائط ونافذة الرسالة. الهالة تحرك opacity فقط؛ يتوقف Canvas خلف نوافذ المشاركات والاحتفال ويستأنف عند إغلاقها. لا يرسم درع البصمة الخلايا البعيدة عن نصفه المقصوص، وتبقى الخلايا العابرة للمنتصف في النصفين لمنع الفراغات. على اللمس يُحتفظ بتوهج النص ثابتًا بدل إعادة رسم ظلال كل الأسماء باستمرار.
+
+
+## Remedial learning plans
+
+Teacher management: /teacher/remedial. Student entry: /remedial.
+
+Create a titled draft, select its grade and optional class section, and save it before adding lesson content. Students can be assigned immediately with individual generated or custom access codes. The teacher can retrieve, copy and rotate each code, or download a locally generated QR; a draft stays in preparation for students. No sample plans or student records are created in production.
+
+Add chapters with lesson text and multiple-choice understanding exams, then enable student access. Default passing score is 70%; the next chapter opens **six hours after passing**, including on the same day. The optional Riyadh calendar-day cap is off by default. Threshold and wait are teacher-controlled. Failed exams can be retried. All grading and unlock times are enforced in D1 on the server.
+
+The same student code resumes saved progress across devices. Only the current unlocked chapter is returned; future lesson content and answer keys are withheld. QR codes use a URL fragment, removed on entry, rather than putting the access code in request URLs. Codes are unique, hashed for lookup and AES-GCM encrypted for teacher-only recovery using the existing TEACHER_SETUP_KEY. Sessions use hashed tokens and HttpOnly/Secure/SameSite cookies. Treat the code as private: anyone holding it can access that student's plan. Keep the existing setup key stable; if it changes, issue replacement codes from the teacher panel.
+
+Teacher controls include pause/reactivate, explicitly override a wait, retained attempt history, reset progress, and rotate access codes (revoking existing sessions). Started plans use a versioned snapshot: use “تحديث الفصول الباقية” to apply later content without losing completed chapters or the existing unlock time; completed chapter IDs/order must be preserved. Reset applies the latest full plan while retaining attempt history.
+
+Migration 0028 is additive, and the feature also initializes its own tables idempotently for the existing hosted build pipeline. No existing lesson/student tables are changed. Run pnpm check, pnpm build, pnpm test:remedial, and pnpm test:integration to validate. The remedial test uses an isolated Miniflare/D1 database and disposable credentials.

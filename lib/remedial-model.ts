@@ -1,0 +1,23 @@
+export type RemedialQuestion={id:string;prompt:string;choices:string[];correct:number;explanation:string};
+export type RemedialChapter={id:string;title:string;body:string;questions:RemedialQuestion[]};
+export type RemedialPlan={title:string;description:string;grade:string;className:string;passPercent:number;delayHours:number;dailyLimit:boolean;chapters:RemedialChapter[]};
+export const remedialId=(value:unknown):value is string=>typeof value==='string'&&/^[a-f0-9-]{36}$/.test(value);
+const text=(value:unknown,max:number,required=false)=>{if(typeof value!=='string'||value.trim().length>max||(required&&!value.trim()))throw new Error('راجع النصوص المطلوبة وحدود طول المحتوى.');return value.trim();};
+export function normalizeAccessCode(value:unknown){if(typeof value!=='string')throw new Error('اكتب رمز الوصول.');const code=value.normalize('NFKC').toUpperCase().replace(/[\s-]/g,'');if(!/^[A-Z0-9]{8,64}$/.test(code))throw new Error('الرمز من ٨ إلى ٦٤ حرفًا إنجليزيًا أو رقمًا.');return code;}
+export function newAccessCode(){const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';const bytes=crypto.getRandomValues(new Uint8Array(15));return 'TC-'+Array.from(bytes,b=>alphabet[b%32]).join('').match(/.{1,5}/g)!.join('-');}
+export function validateRemedialPlan(input:unknown,publish=false):RemedialPlan{
+ if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('خطة غير صالحة.');const v=input as Record<string,unknown>;
+ const passPercent=Number(v.passPercent),delayHours=Number(v.delayHours);
+ if(!Number.isInteger(passPercent)||passPercent<1||passPercent>100||!Number.isInteger(delayHours)||delayHours<0||delayHours>168||typeof v.dailyLimit!=='boolean'||!Array.isArray(v.chapters)||v.chapters.length>30||(publish&&!v.chapters.length))throw new Error('حدّد نسبة نجاح من ١ إلى ١٠٠، وانتظارًا من صفر إلى ١٦٨ ساعة، وفصلًا واحدًا على الأقل للنشر.');
+ const ids=new Set<string>();const unique=(id:unknown)=>{if(!remedialId(id)||ids.has(id))throw new Error('معرّفات الفصول والأسئلة غير صالحة أو مكررة.');ids.add(id);return id;};
+ const chapters=v.chapters.map((raw:unknown)=>{if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new Error('فصل غير صالح.');const c=raw as Record<string,unknown>;if(!Array.isArray(c.questions)||c.questions.length>25||(publish&&!c.questions.length))throw new Error('أضف سؤالًا واحدًا على الأقل لكل فصل قبل النشر (حتى ٢٥ سؤالًا).');
+  return {id:unique(c.id),title:text(c.title,150,publish),body:text(c.body,12000,publish),questions:c.questions.map((raw:unknown)=>{if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new Error('سؤال غير صالح.');const q=raw as Record<string,unknown>;if(!Array.isArray(q.choices)||q.choices.length<2||q.choices.length>6||!Number.isInteger(q.correct)||Number(q.correct)<0||Number(q.correct)>=q.choices.length)throw new Error('لكل سؤال من خيارين إلى ستة، مع تحديد الإجابة الصحيحة.');const choices=q.choices.map(x=>text(x,500,publish));if(publish&&new Set(choices).size!==choices.length)throw new Error('اجعل خيارات السؤال مختلفة.');return {id:unique(q.id),prompt:text(q.prompt,1200,publish),choices,correct:Number(q.correct),explanation:text(q.explanation,1600)};})};
+ });const grade=typeof v.grade==='string'?v.grade:'';if((grade&&!/^(grade-(?:[1-9]|1[0-2])|general)$/.test(grade))||(publish&&!grade))throw new Error('اختر الصف الدراسي للخطة.');return {title:text(v.title,150,true),description:text(v.description,1600),grade,className:text(v.className??'',60),passPercent,delayHours,dailyLimit:v.dailyLimit,chapters};
+}
+export const riyadhDay=(time:number)=>Math.floor((time+3*3600000)/86400000);
+export function nextChapterTime(passedAt:number,plan:Pick<RemedialPlan,'delayHours'|'dailyLimit'>){return Math.max(passedAt+plan.delayHours*3600000,plan.dailyLimit?(riyadhDay(passedAt)+1)*86400000-3*3600000:0);}
+export function gradeRemedialExam(chapter:RemedialChapter,answers:unknown,passPercent:number){
+ if(!Array.isArray(answers)||answers.length!==chapter.questions.length||!chapter.questions.length)throw new Error('أجب عن جميع أسئلة الاختبار.');const ids=new Set<string>();
+ const detail=chapter.questions.map(q=>{const a=answers.find(x=>x&&typeof x==='object'&&x.id===q.id);if(!a||ids.has(a.id)||!Number.isInteger(a.choice)||a.choice<0||a.choice>=q.choices.length)throw new Error('إجابة غير صالحة.');ids.add(a.id);return {question:q.prompt,chosen:q.choices[a.choice],correct:q.choices[q.correct],success:a.choice===q.correct,explanation:q.explanation};});
+ if(answers.some(a=>!a||!ids.has(a.id))||new Set(answers.map(a=>a.id)).size!==answers.length)throw new Error('راجع أسئلة الاختبار.');const score=detail.filter(x=>x.success).length,total=detail.length;return {score,total,percent:Math.round(score/total*100),passed:score*100>=passPercent*total,detail};
+}

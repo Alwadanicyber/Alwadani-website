@@ -13,6 +13,7 @@ export default function LearningQuickStart({grades,resume,onChooseGrade}:{grades
     <div className="tc-start-copy"><h3>{resume?'أكمل ما بدأته':'دروس جاهزة للتعلّم'}</h3><p>{resume?'تقدّمك محفوظ في هذا المتصفح.':'اختر صفًا تتوفر فيه دروس، وابدأ بخطوة بسيطة.'}</p>
      {resume?<a className="tc-resume-link" href={'/?course='+encodeURIComponent(resume.id)}><Play size={17} aria-hidden="true"/><span>{resume.title}<small>أكملت {countFormat.format(resume.percent)}٪</small></span><ArrowLeft size={18} aria-hidden="true"/></a>:
       <div className="tc-ready-grades">{grades.length?grades.map(item=><button type="button" key={item.id} onClick={()=>onChooseGrade(item.id)}>{item.label}<span>{countFormat.format(item.courses)} دروس</span><ArrowLeft size={15} aria-hidden="true"/></button>):<a href="#grades">تصفّح الصفوف<ArrowLeft size={16} aria-hidden="true"/></a>}</div>}
+     <a className="rm-home-link" href="/remedial">لديك خطة علاجية؟ ادخل برمز معلّمك<ArrowLeft size={16} aria-hidden="true"/></a>
     </div>
    </div>
    <div className="tc-teacher-start" aria-label="اختصارات أدوات المعلم">
