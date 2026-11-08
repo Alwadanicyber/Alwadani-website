@@ -1,4 +1,5 @@
 'use client';
+import CompletionDate from '../../completion-date';
 import {supportsWriting} from '@/lib/writing-courses';
 import ExamWritingReview from './exam-writing-review';
 import '../../exam-prep.css';
@@ -61,7 +62,7 @@ export default function TeacherParticipants({username,courses,initialCourse,init
         return <article className={'participant-card '+(row.removedAt?'participant-removed':'')} key={row.id}>
           <div className="participant-card-heading"><span className="participant-place">{learningOnly?(row.removedAt?'مشاركة محذوفة':'مشاركة في الدرس'):row.competing?'المركز #'+row.position:row.removedAt?'محذوفة من المنافسة':'خارج المنافسة'}</span><span className="pill">{row.completed?words.finishedJourney:'قيد التدريب'}</span></div>
           <h2 dir="auto">{row.name}</h2><div className="participant-result"><strong>{Math.round(row.percentage)}%</strong><span><bdi dir="ltr">{row.score} / {row.total}</bdi> نقطة</span></div>
-          <div className="participant-details"><span>عدد المحاولات: {row.attempts}</span>{showTiming&&row.completed&&<span><Clock3 size={14}/>{typeof time==='number'?<>{measured?'وقت الحل':'وقت تقديري'} <bdi dir="ltr">{formatSolveTime(time)}</bdi></>:'الوقت غير مسجّل'}</span>}</div>
+          <CompletionDate value={row.completed}/><div className="participant-details"><span>عدد المحاولات: {row.attempts}</span>{showTiming&&row.completed&&<span><Clock3 size={14}/>{typeof time==='number'?<>{measured?'وقت الحل':'وقت تقديري'} <bdi dir="ltr">{formatSolveTime(time)}</bdi></>:'الوقت غير مسجّل'}</span>}</div>
           {supportsWriting(courseId)&&<ExamWritingReview key={courseId+row.id} courseId={courseId} studentId={row.id}/>}<small className="participant-date">بدء المشاركة: <time dateTime={row.created}>{new Date(row.created).toLocaleString('ar-SA',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Riyadh'})}</time></small>
           {row.removedAt?<button className="secondary" disabled={busy} onClick={()=>void mutate(row,true)} aria-label={'استعادة مشاركة '+row.name}><RotateCcw size={17}/>استعادة المشاركة</button>:<button className="secondary danger" disabled={busy} onClick={()=>{setTarget(row);setDialogError('');}} aria-label={'حذف مشاركة '+row.name}><Trash2 size={17}/>حذف المشاركة</button>}
         </article>;

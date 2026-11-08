@@ -55,3 +55,7 @@
 @media screen and (prefers-reduced-motion:reduce){
   .tc-ready-grades :is(button,a),.tc-teacher-start>a{transition:none}
 }
+
+.result-completed-at{display:block;font-size:12px;font-weight:400;line-height:1.8;color:var(--tc-muted,#63736e);margin-top:7px;white-space:normal;overflow-wrap:anywhere}.result-completed-at time{display:inline-block;unicode-bidi:isolate}.result-completed-at small{display:block;font-size:11px}.competition-podium .result-completed-at{font-size:11px}.competition-name{min-width:0}
+
+.competition-row{flex-wrap:wrap}.competition-row>.result-completed-at{flex-basis:100%;border-top:1px solid var(--tc-line,#dce6e1);padding-top:8px;font-size:12px;display:flex;align-items:baseline;gap:4px 8px;flex-wrap:wrap}.competition-row>.result-completed-at small{display:inline;font-size:11px}

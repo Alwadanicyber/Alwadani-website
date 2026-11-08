@@ -2,7 +2,7 @@
 export const PAST_SIMPLE_COURSE_ID='simple-past-car-rally-grade-4';
 export const pastRoutes=['ed','d','y → ied','double + ed'] as const;
 export type PastRoute=typeof pastRoutes[number];
-export const routeLabels:Record<PastRoute,string>={ed:'أضف ed',d:'أضف d','y → ied':'غيّر y إلى i ثم ed','double + ed':'ضاعف الحرف الأخير ثم ed'};
+export const routeLabels:Record<PastRoute,string>={ed:'أضف ed',d:'أضف d','y → ied':'غيّر y إلى i ثم ed','double + ed':'في drop: ضاعف p ثم ed'};
 export const pastWords=[
  {base:'wait',past:'waited',ar:'ينتظر',pastAr:'انتظر',scene:'wait',rule:'ed'},
  {base:'kick',past:'kicked',ar:'يركل',pastAr:'ركل',scene:'kick',rule:'ed'},
@@ -23,7 +23,7 @@ export const pastWord=(base:string)=>pastWords.find(w=>w.base===base);
 export const pastStory=[
  {scene:'score',en:'Hashim didn’t wait. He kicked the ball and scored a goal.',ar:'لم ينتظر هاشم. ركل الكرة وسجّل هدفًا.'},
  {scene:'jump',en:'He jumped and shouted, but he didn’t laugh.',ar:'قفز وهتف، لكنه لم يضحك.'},
- {scene:'carry',en:'His friends carried him. His dad called his mom.',ar:'حمله أصدقاؤه. واتصل والده بوالدته.'},
+ {scene:'celebrate-carry',en:'His friends carried him. His dad called his mom.',ar:'حمله أصدقاؤه. واتصل والده بوالدته.'},
 ];
 export const pastWorkbook=[
  {section:'في ساحة المدرسة',items:[

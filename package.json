@@ -31,7 +31,8 @@
     "test:assistant": "node scripts/check-assistant.mjs",
     "test:initiatives": "node --experimental-strip-types scripts/check-initiatives.mjs",
     "test:result-requirements": "node --experimental-strip-types scripts/check-result-requirements.mjs",
-    "test:remedial": "node --experimental-strip-types scripts/check-remedial.mjs"
+    "test:remedial": "node --experimental-strip-types scripts/check-remedial.mjs",
+    "test:past-simple": "node scripts/check-past-simple.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

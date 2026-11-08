@@ -125,3 +125,18 @@ Yesterday, I … / On the weekend, I didn’t …
 - Use available relevant installed skills honestly; user installed find-skills and claude-inspired-websites in local Codex. Read actual SKILL.md before claiming use. Follow local AGENTS.md.
 - Preserve any local uncommitted work; use a separate worktree.
 - Always return the live website link after a completed deployment.
+
+
+## Codex continuation — implementation and verification completed 2026-11-09
+
+Continued in an isolated clone under work/grade4-past-20261109/site; the original local checkout was not modified. Source archive before continuation: ../before-continuation.zip. The handoff branch and its history are preserved.
+
+- Added scripts/check-past-simple.mjs (pnpm test:past-simple): real isolated compiled Worker + D1 coverage of all 16 canonical answers, sequential guards, private answer keys, immutable grading, shuffling/resume, incomplete and completed car replays, archive retention, best-result protection, single leaderboard entries, cross-session isolation, wrong/stale replay rejection and optional speed-mode replay prefixes.
+- Verified fake client completion dates are ignored: completion timestamps come from the server. Checked Saudi/Gregorian formatting and retention of the selected result's timestamp through inferior/in-progress retries.
+- Added reusable completion timestamp display to the public leaderboard and private teacher participants panel. Uses existing server-recorded completed values, with date, hours, minutes and seconds in Asia/Riyadh. No client clock or new database migration; the teacher's existing qualification threshold and deadline behavior are unchanged. The date identifies the displayed result's completed attempt, not initial registration or a newer unfinished retry. Historical results use existing saved completion dates; absent/invalid dates are not fabricated.
+- Added a specific Grade 4 header; clarified drop's pp + ed route, distinguished carrying books from the friends' celebration, and marked negative activities with a faded picture/cross. Fixed theme selectors to match data-theme and motion selectors to match data-site-effects.
+- Existing integration course counts updated for the newly registered lesson. TypeScript, production build, dedicated past-simple Worker tests, integration, result-requirements, home-can, time-place, quantity Worker tests and exam-prep checks passed.
+- Actual browser QA: desktop, 390px and 360px; story/Arabic translation, English pronunciation control, negative builder, spelling lab, all required practice, wrong route pause/reason, correct auto-next, keyboard route selection, stopped-server network failure and safe retry, 16-question completion and 14/16 certificate, refresh/resume, car-only replay, qualified results at a local 80% threshold and teacher timestamp view. Dark theme follows user preference independently of OS; site motion off yields no road animation and zero car transition. Device reduced-motion has a CSS fallback. Native playback audibility and OS reduced-motion toggling were not independently measured.
+- All test accounts and students were created only in isolated/local D1. No production student or owner records, secrets, private reports, PINs or uploads changed.
+
+Deploy through the existing main → Cloudflare Workers Builds path, preserve latest main using a normal fast-forward/merge, wait for successful deployment, then verify the direct lesson URL publicly. Deployment evidence is saved outside source in the local publication report.

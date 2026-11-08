@@ -85,7 +85,7 @@ export async function POST(req:Request){const receivedAt=Date.now();try{
   if(!await restartTensesGame(student,course))return reply({error:'تغيّرت المحاولة. أعد تحميل تقدمك قبل إعادة اللعبة.'},409);
   const current=await context(req,courseId);return reply(await snapshot(current.student,current.course,current.grade));
  }else if(body.action==='preposition-game-retry'||body.action==='past-car-retry'){
-  const first=prepositionGameStart(course);if(first===null||(body.action==='past-car-retry'&&courseId!==PAST_SIMPLE_COURSE_ID))return reply({error:'إعادة لعبة البالونات غير متاحة لهذا الدرس.'},400);
+  const first=prepositionGameStart(course);if(first===null||(body.action==='past-car-retry'&&courseId!==PAST_SIMPLE_COURSE_ID))return reply({error:body.action==='past-car-retry'?'إعادة سباق السيارة غير متاحة لهذا الدرس.':'إعادة لعبة البالونات غير متاحة لهذا الدرس.'},400);
   const counts=await db.prepare('SELECT (SELECT COUNT(*) FROM answers WHERE student=? AND question<?) AS quiz,(SELECT COUNT(*) FROM answers WHERE student=? AND question>=?) AS game,(SELECT COUNT(*) FROM reads WHERE student=?) AS reads').bind(id,first,id,first,id).first<{quiz:number;game:number;reads:number}>();
   if(counts?.quiz!==questions.filter(q=>q.id<first).length||!counts.game||counts.reads!==lessons.length)return reply({error:'أكمل المحطات السابقة وابدأ اللعبة أولًا.'},400);
   if(!await restartPrepositionGame(student,course))return reply({error:'تغيّرت المحاولة. أعد تحميل تقدمك.'},409);
