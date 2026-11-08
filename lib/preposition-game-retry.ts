@@ -1,10 +1,11 @@
+import {PAST_SIMPLE_COURSE_ID} from './past-simple-learning';
 import {database} from './database';
 import {ensureContinuousSpeed} from './continuous-speed';
 import type {TeacherCourse} from './course-types';
 import {TIME_PLACE_COURSE_ID} from './time-place-learning';
 import {HOME_CAN_COURSE_ID} from './home-can-learning';
 export function prepositionGameStart(course:TeacherCourse){
- const kind=course.id===TIME_PLACE_COURSE_ID?'preposition-balloon':course.id===HOME_CAN_COURSE_ID?'home-balloon':null;
+ const kind=course.id===TIME_PLACE_COURSE_ID?'preposition-balloon':course.id===HOME_CAN_COURSE_ID?'home-balloon':course.id===PAST_SIMPLE_COURSE_ID?'car-sort':null;
  const questions=course.definition.questions,index=questions.findIndex(q=>q.kind===kind);
  return kind&&index>0&&questions.slice(index).every(q=>q.kind===kind&&q.lesson===course.definition.lessons.length-1)?questions[index].id:null;
 }
