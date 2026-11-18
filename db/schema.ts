@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, primaryKey, index, blob } from 'drizzle-orm/sqlite-core';
 export const students=sqliteTable('students',{id:text('id').primaryKey(),name:text('name').notNull(),created:text('created').notNull(),completed:text('completed'),course:text('course').notNull().default('life-stories'),snapshot:text('snapshot')},t=>[index('idx_students_course').on(t.course)]);
 export const answers=sqliteTable('answers',{student:text('student').notNull().references(()=>students.id),question:integer('question').notNull(),choice:integer('choice').notNull(),correct:integer('correct').notNull()},t=>[primaryKey({columns:[t.student,t.question]})]);
 export const reads=sqliteTable('reads',{student:text('student').notNull().references(()=>students.id),lesson:integer('lesson').notNull()},t=>[primaryKey({columns:[t.student,t.lesson]})]);
@@ -36,3 +36,9 @@ export const assistantSettings=sqliteTable('assistant_settings',{id:integer('id'
 export const assistantUsage=sqliteTable('assistant_usage',{bucket:text('bucket').notNull(),window:integer('window').notNull(),count:integer('count').notNull().default(0),expires:integer('expires').notNull()},t=>[primaryKey({columns:[t.bucket,t.window]})]);
 export const assistantCalls=sqliteTable('assistant_calls',{request:text('request').primaryKey(),bucket:text('bucket').notNull(),created:integer('created').notNull()});
 export const assistantCourseScope=sqliteTable('assistant_course_scope',{id:integer('id').primaryKey(),mode:text('mode').notNull(),courseIds:text('course_ids').notNull(),updated:text('updated').notNull()});
+
+// Private teacher portfolio; separate from student evidence and public tools.
+export const teacherPortfolioProfile=sqliteTable('teacher_portfolio_profile',{id:integer('id').primaryKey(),data:text('data').notNull(),revision:integer('revision').notNull().default(1),updated:text('updated').notNull()});
+export const teacherPortfolioSections=sqliteTable('teacher_portfolio_sections',{id:text('id').primaryKey(),content:text('content').notNull().default(''),revision:integer('revision').notNull().default(1),created:text('created').notNull(),updated:text('updated').notNull()});
+export const teacherPortfolioFiles=sqliteTable('teacher_portfolio_files',{id:text('id').primaryKey(),sectionId:text('section_id').notNull(),fileName:text('file_name').notNull(),fileSize:integer('file_size').notNull(),description:text('description').notNull().default(''),receivedSize:integer('received_size').notNull().default(0),created:text('created').notNull(),completed:text('completed')},t=>[index('teacher_portfolio_files_section').on(t.sectionId,t.completed)]);
+export const teacherPortfolioChunks=sqliteTable('teacher_portfolio_chunks',{fileId:text('file_id').notNull().references(()=>teacherPortfolioFiles.id,{onDelete:'cascade'}),part:integer('part').notNull(),bytes:blob('bytes',{mode:'buffer'}).notNull(),hash:text('hash').notNull()},t=>[primaryKey({columns:[t.fileId,t.part]})]);
