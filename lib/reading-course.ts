@@ -199,7 +199,7 @@ export const readingChapters:ReadingChapter[] = [
         "tip": "ou /ʌ/ في young؛ /uː/ في soup؛ /ʊ/ في could. تعلّم الكلمة بنطقها."
       }
     ],
-    "note": "لا توجد قاعدة قصيرة تضمن نطق كل ou. في igh لا تُسمع gh، لكن ذلك لا يعمم على ghost أو enough. في /reading/reading-guide.pdf الصفحات ٢١–٣١ تجد الجداول والتطبيقات المصورة.",
+    "note": "لا توجد قاعدة قصيرة تضمن نطق كل ou. في igh لا تُسمع gh، لكن ذلك لا يعمم على ghost أو enough. في الدليل المصوّر، الصفحات ٢١–٣١، تجد الجداول والتطبيقات.",
     "passages": [
       {
         "title": "A Leaf and a Seat",
