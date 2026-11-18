@@ -1,0 +1,240 @@
+{
+  "sounds": [
+    {
+      "letter": "a",
+      "phones": "ae"
+    },
+    {
+      "letter": "b",
+      "phones": "b"
+    },
+    {
+      "letter": "c",
+      "phones": "k"
+    },
+    {
+      "letter": "d",
+      "phones": "d"
+    },
+    {
+      "letter": "e",
+      "phones": "eh"
+    },
+    {
+      "letter": "f",
+      "phones": "f"
+    },
+    {
+      "letter": "g",
+      "phones": "g"
+    },
+    {
+      "letter": "h",
+      "phones": "hh"
+    },
+    {
+      "letter": "i",
+      "phones": "ih"
+    },
+    {
+      "letter": "j",
+      "phones": "jh"
+    },
+    {
+      "letter": "k",
+      "phones": "k"
+    },
+    {
+      "letter": "l",
+      "phones": "l"
+    },
+    {
+      "letter": "m",
+      "phones": "m"
+    },
+    {
+      "letter": "n",
+      "phones": "n"
+    },
+    {
+      "letter": "o",
+      "phones": "aa"
+    },
+    {
+      "letter": "p",
+      "phones": "p"
+    },
+    {
+      "letter": "q",
+      "phones": "k w"
+    },
+    {
+      "letter": "r",
+      "phones": "r"
+    },
+    {
+      "letter": "s",
+      "phones": "s"
+    },
+    {
+      "letter": "t",
+      "phones": "t"
+    },
+    {
+      "letter": "u",
+      "phones": "ah"
+    },
+    {
+      "letter": "v",
+      "phones": "v"
+    },
+    {
+      "letter": "w",
+      "phones": "w"
+    },
+    {
+      "letter": "x",
+      "phones": "k s"
+    },
+    {
+      "letter": "y",
+      "phones": "y"
+    },
+    {
+      "letter": "z",
+      "phones": "z"
+    }
+  ],
+  "words": [
+    "ant",
+    "apple",
+    "back",
+    "bad",
+    "bag",
+    "bat",
+    "bear",
+    "beard",
+    "bird",
+    "board",
+    "book",
+    "boot",
+    "box",
+    "bread",
+    "breed",
+    "broad",
+    "cadge",
+    "cage",
+    "cap",
+    "cape",
+    "cash",
+    "cat",
+    "catch",
+    "chip",
+    "city",
+    "cog",
+    "cop",
+    "cot",
+    "cup",
+    "cut",
+    "dog",
+    "duck",
+    "egg",
+    "elephant",
+    "fan",
+    "fish",
+    "fox",
+    "future",
+    "game",
+    "gap",
+    "gem",
+    "give",
+    "goat",
+    "grain",
+    "green",
+    "grin",
+    "gum",
+    "guy",
+    "hat",
+    "hen",
+    "hoop",
+    "hop",
+    "hope",
+    "in",
+    "insect",
+    "jam",
+    "jet",
+    "jive",
+    "key",
+    "kid",
+    "kin",
+    "kit",
+    "kite",
+    "kitty",
+    "knee",
+    "lamb",
+    "lamp",
+    "leg",
+    "lime",
+    "lip",
+    "map",
+    "moon",
+    "near",
+    "neat",
+    "net",
+    "night",
+    "nor",
+    "nose",
+    "now",
+    "octopus",
+    "ox",
+    "pan",
+    "pat",
+    "pen",
+    "picnic",
+    "picture",
+    "pig",
+    "pin",
+    "plan",
+    "play",
+    "queen",
+    "quilt",
+    "red",
+    "run",
+    "sand",
+    "saw",
+    "see",
+    "she",
+    "ship",
+    "shop",
+    "sin",
+    "sip",
+    "sit",
+    "snow",
+    "soap",
+    "soup",
+    "star",
+    "stir",
+    "stop",
+    "store",
+    "sun",
+    "tap",
+    "tea",
+    "ten",
+    "thin",
+    "tin",
+    "tip",
+    "top",
+    "umbrella",
+    "up",
+    "van",
+    "vet",
+    "web",
+    "wet",
+    "wit",
+    "write",
+    "yellow",
+    "yes",
+    "zip",
+    "zoo"
+  ]
+}

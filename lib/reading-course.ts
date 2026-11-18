@@ -1,4 +1,4 @@
-export type ReadingChapter = {id:number;title:string;en:string;page:number;goal:string;patterns:{pattern:string;words:string;tip:string}[];note:string;passages:{title:string;text:string;page:number}[];sh:string;quiz:{prompt:string;options:string[];answer:number;reason:string}[]};
+export type ReadingChapter = {id:number;title:string;en:string;page:number;goal:string;patterns:{pattern:string;words:string;tip:string}[];note:string;passages:{title:string;text:string;page:number}[];sh:string;quiz:{word:string;prompt:string;options:string[];answer:number;reason:string}[]};
 export const readingChapters:ReadingChapter[] = [
   {
     "id": 1,
@@ -39,104 +39,42 @@ export const readingChapters:ReadingChapter[] = [
     "sh": "Sh! A fish! A fish is in a dish. Sh! Sh!",
     "quiz": [
       {
-        "prompt": "أي كلمة تبدأ بصوت /m/؟",
+        "word": "map",
+        "prompt": "كيف ننطق كلمة map؟",
         "options": [
           "map",
-          "sun",
-          "dog"
+          "cap",
+          "tap"
         ],
         "answer": 0,
-        "reason": "map تبدأ بالحرف m وصوته /m/."
+        "reason": "map تبدأ بصوت /m/؛ cap تبدأ بـ /k/ وtap بـ /t/."
       },
       {
-        "prompt": "أي حرف كبير يطابق b؟",
+        "word": "bat",
+        "prompt": "كيف ننطق كلمة bat؟",
         "options": [
-          "D",
-          "B",
-          "P"
+          "pat",
+          "bat",
+          "bad"
         ],
         "answer": 1,
-        "reason": "B وb شكلان للحرف نفسه."
+        "reason": "bat /bæt/ تبدأ بـ /b/ وتنتهي بـ /t/. اسمع الفرق بين b وp وبين t وd."
       },
       {
-        "prompt": "في النص، من يستطيع الجري؟",
+        "word": "sun",
+        "prompt": "كيف ننطق كلمة sun؟",
         "options": [
-          "Ben",
-          "A fish",
-          "Sam"
+          "sand",
+          "sin",
+          "sun"
         ],
         "answer": 2,
-        "reason": "النص يقول: Sam can run."
+        "reason": "sun /sʌn/ فيها u قصيرة /ʌ/، وليست i القصيرة في sin."
       }
     ]
   },
   {
     "id": 2,
-    "title": "العلة القصيرة والدمج",
-    "en": "Short vowels & blending",
-    "page": 5,
-    "goal": "انظر إلى حرف العلة في الوسط. انطق الأصوات من اليسار إلى اليمين، ثم صِلها لتقرأ الكلمة.",
-    "patterns": [
-      {
-        "pattern": "a · e",
-        "words": "cat map hat pen bed red",
-        "tip": "a /æ/ كما في cat؛ e /e/ كما في pen."
-      },
-      {
-        "pattern": "i · o · u",
-        "words": "sit pin pig hot pot top cup sun run",
-        "tip": "i /ɪ/ · o /ɑ/ في النموذج الأمريكي · u /ʌ/."
-      },
-      {
-        "pattern": "Blend",
-        "words": "map sat pin cup",
-        "tip": "m + a + p → map. قل الأصوات، وليس أسماء الحروف."
-      }
-    ],
-    "note": "تدرّب على pan ثم pen ثم pin: تغيير حرف العلة يغيّر الصوت والكلمة.",
-    "passages": [
-      {
-        "title": "Three Little Actions",
-        "text": "Sam can sit. Ben can hop. Mum can run.",
-        "page": 7
-      }
-    ],
-    "sh": "A fish can sit in a dish. A fish can swish. Sh! Sh!",
-    "quiz": [
-      {
-        "prompt": "ما حرف العلة في cat؟",
-        "options": [
-          "a",
-          "c",
-          "t"
-        ],
-        "answer": 0,
-        "reason": "الحرف الأوسط a يعطي الصوت القصير /æ/."
-      },
-      {
-        "prompt": "صِل p + i + n.",
-        "options": [
-          "pen",
-          "pin",
-          "pan"
-        ],
-        "answer": 1,
-        "reason": "دمج الأصوات /p/ + /ɪ/ + /n/ يعطي pin."
-      },
-      {
-        "prompt": "أي كلمة فيها صوت u القصير مثل cup؟",
-        "options": [
-          "seat",
-          "kite",
-          "sun"
-        ],
-        "answer": 2,
-        "reason": "sun وcup فيهما /ʌ/."
-      }
-    ]
-  },
-  {
-    "id": 3,
     "title": "حرفان وصوت واحد",
     "en": "Digraphs",
     "page": 8,
@@ -179,243 +117,46 @@ export const readingChapters:ReadingChapter[] = [
     "sh": "She sells seashells by the seashore. She has a shell in a dish. A fish swims by the shore.",
     "quiz": [
       {
-        "prompt": "أي تركيب يعطي /ʃ/ في fish؟",
+        "word": "she",
+        "prompt": "كيف ننطق كلمة she؟",
         "options": [
-          "ch",
-          "sh",
-          "th"
+          "see",
+          "she",
+          "tea"
         ],
         "answer": 1,
-        "reason": "الحرفان sh يمثلان صوتًا واحدًا /ʃ/."
+        "reason": "she /ʃiː/ تبدأ بـ sh /ʃ/؛ see /siː/ تبدأ بـ /s/؛ tea /tiː/ تبدأ بـ /t/."
       },
       {
-        "prompt": "أي كلمة تنتهي بصوت /ŋ/؟",
+        "word": "chip",
+        "prompt": "كيف ننطق كلمة chip؟",
         "options": [
-          "sock",
-          "bell",
-          "ring"
+          "ship",
+          "tip",
+          "chip"
         ],
         "answer": 2,
-        "reason": "ng في ring تعطي /ŋ/."
+        "reason": "chip /tʃɪp/ تبدأ بـ ch /tʃ/؛ ship تبدأ بـ sh /ʃ/."
       },
       {
-        "prompt": "في نص A Fish in a Shop، أين السمكة؟",
+        "word": "thin",
+        "prompt": "كيف ننطق كلمة thin؟",
         "options": [
-          "in a shop",
-          "on a ship",
-          "in a bath"
+          "thin",
+          "sin",
+          "tin"
         ],
         "answer": 0,
-        "reason": "الجملة الأولى: This fish is in a shop."
+        "reason": "thin /θɪn/ تبدأ بـ th /θ/؛ يمر الهواء بين طرف اللسان والأسنان."
       }
     ]
   },
   {
-    "id": 4,
-    "title": "الأصوات المتجاورة",
-    "en": "Consonant blends",
-    "page": 11,
-    "goal": "في التجمعات الساكنة نسمع الأصوات المتجاورة ونصلها دون حركة زائدة. بخلاف sh، نحتفظ بصوت كل حرف في pl.",
-    "patterns": [
-      {
-        "pattern": "st · bl · tr · pl",
-        "words": "stop star black blue tree train play plane plan",
-        "tip": "p + l + a + n → plan."
-      },
-      {
-        "pattern": "sl · sn · dr · gr",
-        "words": "slip sled snap snack drip drop grin grab",
-        "tip": "انطق كل ساكن ثم صِله بحرف العلة."
-      },
-      {
-        "pattern": "sm · sw · pr",
-        "words": "smell smile swim swan press print",
-        "tip": "s + w + i + m → swim."
-      },
-      {
-        "pattern": "qu · nk",
-        "words": "quick queen sink bank",
-        "tip": "qu /kw/؛ nk /ŋk/ في هذه الكلمات."
-      }
-    ],
-    "note": "بعض الأمثلة مثل plane وblue تحوي حركات ستتعلمها لاحقًا؛ استمع لها أولًا. ابدأ بالتدريب على plan وstop وslip.",
-    "passages": [
-      {
-        "title": "Sam Has a Plan",
-        "text": "Sam has a plan. He can go in a black truck. He is quick, but he can stop. He can stop at the bank.",
-        "page": 14
-      }
-    ],
-    "sh": "A ship stops by the shore. A small fish swims. She spots a shell on the sand.",
-    "quiz": [
-      {
-        "prompt": "في pl في plan نسمع…",
-        "options": [
-          "صوتًا واحدًا مثل sh",
-          "حرفًا صامتًا",
-          "صوتي p وl"
-        ],
-        "answer": 2,
-        "reason": "pl تجمع لصوتين، بخلاف sh التي تعطي صوتًا واحدًا."
-      },
-      {
-        "prompt": "صِل s + t + o + p.",
-        "options": [
-          "shop",
-          "stop",
-          "top"
-        ],
-        "answer": 1,
-        "reason": "نحافظ على صوتي s وt لنقرأ stop."
-      },
-      {
-        "prompt": "أي كلمة تبدأ بـ gr؟",
-        "options": [
-          "grin",
-          "drip",
-          "swim"
-        ],
-        "answer": 0,
-        "reason": "grin تبدأ بالصوتين /ɡ/ و/r/."
-      }
-    ]
-  },
-  {
-    "id": 5,
-    "title": "الحرف e الصامت",
-    "en": "Magic E",
-    "page": 15,
-    "goal": "قارن الكلمة القصيرة بالكلمة التي أضيفت إليها e. غالبًا يتغير صوت العلة إلى اسمه، ولا ننطق e الأخيرة.",
-    "patterns": [
-      {
-        "pattern": "a_e · i_e",
-        "words": "cap cape kit kite",
-        "tip": "cap → cape؛ kit → kite."
-      },
-      {
-        "pattern": "o_e · u_e",
-        "words": "hop hope cub cube not note cut cute",
-        "tip": "o تعمل أيضًا مع e الصامتة: hop → hope."
-      },
-      {
-        "pattern": "Exceptions",
-        "words": "love some have give",
-        "tip": "كلمات خاصة: love /lʌv/؛ some /sʌm/؛ have /hæv/؛ give /ɡɪv/."
-      }
-    ],
-    "note": "هذه قاعدة شائعة وليست مطلقة. u_e قد تعطي /juː/ في cube أو /uː/ في flute.",
-    "passages": [
-      {
-        "title": "Mike and a Cape",
-        "text": "Mike has a red cape. He has a cube in a bag. He can ride a bike home. I love his cape.",
-        "page": 17
-      }
-    ],
-    "sh": "She has a shell and a red cape. She can make a shape in the sand. A fish swims by.",
-    "quiz": [
-      {
-        "prompt": "أضف e إلى cap. ما الكلمة الجديدة؟",
-        "options": [
-          "cape",
-          "cup",
-          "cat"
-        ],
-        "answer": 0,
-        "reason": "cap → cape؛ تتغير العلة إلى /eɪ/."
-      },
-      {
-        "prompt": "أي كلمة لا تتبع النمط المعتاد للحركة الطويلة؟",
-        "options": [
-          "hope",
-          "kite",
-          "give"
-        ],
-        "answer": 2,
-        "reason": "give استثناء، وتبقى i قصيرة /ɪ/."
-      },
-      {
-        "prompt": "أي زوج يوضح أثر e الصامتة؟",
-        "options": [
-          "cat / dog",
-          "hop / hope",
-          "sun / run"
-        ],
-        "answer": 1,
-        "reason": "في hope نسمع /oʊ/ دون نطق e النهائية."
-      }
-    ]
-  },
-  {
-    "id": 6,
-    "title": "أصوات C وG",
-    "en": "Soft C & G",
-    "page": 18,
-    "goal": "انظر إلى الحرف الذي يأتي بعد c أو g. قبل e وi وy تُنطق c غالبًا /s/، وقد تُنطق g /dʒ/.",
-    "patterns": [
-      {
-        "pattern": "c + e / i / y",
-        "words": "cent cell city circle cycle",
-        "tip": "c /s/ غالبًا في هذه الأمثلة."
-      },
-      {
-        "pattern": "g + e / i / y",
-        "words": "gem gentle giant giraffe gym",
-        "tip": "g قد تعطي /dʒ/."
-      },
-      {
-        "pattern": "Hard g exceptions",
-        "words": "get give girl",
-        "tip": "g تبقى /ɡ/ في هذه الكلمات؛ لا نعمم القاعدة."
-      }
-    ],
-    "note": "لاحظ أن كلمة girl تجمع g الصلبة مع ir. استمع إلى الكلمة كاملة قبل القياس على نمط واحد.",
-    "passages": [
-      {
-        "title": "A Giant in a City",
-        "text": "A giant is in a city. He has a cent and a gem. He can cycle to a gym.",
-        "page": 20
-      }
-    ],
-    "sh": "She sees a shell in the city shop. A gentle giant has a shiny dish. The shell is in the dish.",
-    "quiz": [
-      {
-        "prompt": "صوت c في city هو…",
-        "options": [
-          "/k/",
-          "/s/",
-          "/ʃ/"
-        ],
-        "answer": 1,
-        "reason": "قبل i، c في city تعطي /s/."
-      },
-      {
-        "prompt": "أي كلمة تبدأ بـ g الصلبة /ɡ/؟",
-        "options": [
-          "gem",
-          "giant",
-          "get"
-        ],
-        "answer": 2,
-        "reason": "get استثناء مهم؛ g فيها /ɡ/."
-      },
-      {
-        "prompt": "أي كلمة تبدأ بصوت /dʒ/؟",
-        "options": [
-          "giant",
-          "girl",
-          "give"
-        ],
-        "answer": 0,
-        "reason": "g في giant تعطي /dʒ/."
-      }
-    ]
-  },
-  {
-    "id": 7,
-    "title": "حروف العلة المركبة",
-    "en": "Vowel teams",
+    "id": 3,
+    "title": "حروف العلة الثنائية والمركّبة",
+    "en": "Vowel digraphs & teams",
     "page": 21,
-    "goal": "قد تعطي كتابات مختلفة الصوت نفسه، وقد تعطي الحروف نفسها أصواتًا مختلفة. اقرأ مجموعات الأمثلة ثم النصوص الأربعة بالترتيب.",
+    "goal": "ابدأ بحروف العلة الثنائية مثل ee وea وai وoa. قد تعطي كتابات مختلفة الصوت نفسه، وقد تعطي الحروف نفسها أصواتًا مختلفة. ثم قارن التركيبات الأطول مثل igh وeigh.",
     "patterns": [
       {
         "pattern": "Long E",
@@ -484,54 +225,336 @@ export const readingChapters:ReadingChapter[] = [
     "sh": "She sells seashells by the seashore. The sheep sleeps near a green tree. She sees a boat on the blue sea.",
     "quiz": [
       {
-        "prompt": "أي كلمة فيها oo مثل book؟",
+        "word": "book",
+        "prompt": "كيف ننطق كلمة book؟",
         "options": [
-          "moon",
           "boot",
-          "foot"
+          "back",
+          "book"
         ],
         "answer": 2,
-        "reason": "book وfoot فيهما /ʊ/، بخلاف moon وboot /uː/."
+        "reason": "book /bʊk/ فيها oo القصيرة /ʊ/؛ boot فيها /uː/."
       },
       {
-        "prompt": "أي كلمة فيها ow مثل snow؟",
+        "word": "snow",
+        "prompt": "كيف ننطق كلمة snow؟",
         "options": [
-          "grow",
-          "cow",
-          "brown"
+          "snow",
+          "now",
+          "saw"
         ],
         "answer": 0,
-        "reason": "grow وsnow فيهما /oʊ/؛ cow وbrown فيهما /aʊ/."
+        "reason": "snow /snoʊ/ تبدأ بـ sn وفيها ow /oʊ/؛ now فيها /aʊ/."
       },
       {
-        "prompt": "أي كلمة فيها ea مثل head؟",
+        "word": "bread",
+        "prompt": "كيف ننطق كلمة bread؟",
         "options": [
-          "seat",
+          "breed",
           "bread",
-          "leaf"
+          "broad"
         ],
         "answer": 1,
-        "reason": "head وbread فيهما /e/."
+        "reason": "bread /brɛd/ فيها ea /ɛ/ مثل e في pen، وليست /iː/ في breed."
       },
       {
-        "prompt": "أي كلمة فيها ou مثل soup؟",
+        "word": "soup",
+        "prompt": "كيف ننطق كلمة soup؟",
         "options": [
-          "out",
-          "young",
-          "group"
+          "soap",
+          "sip",
+          "soup"
         ],
         "answer": 2,
-        "reason": "soup وgroup فيهما /uː/."
+        "reason": "soup /suːp/ فيها ou /uː/؛ soap فيها /oʊ/."
       },
       {
-        "prompt": "أي تركيب يعطي /aɪ/ في night؟",
+        "word": "night",
+        "prompt": "كيف ننطق كلمة night؟",
         "options": [
-          "igh",
-          "eigh",
-          "ee"
+          "night",
+          "net",
+          "neat"
         ],
         "answer": 0,
-        "reason": "igh في night وlight تعطي /aɪ/."
+        "reason": "night /naɪt/ فيها igh /aɪ/، وgh صامتة."
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "title": "العلة القصيرة والدمج",
+    "en": "Short vowels & blending",
+    "page": 5,
+    "goal": "انظر إلى حرف العلة في الوسط. انطق الأصوات من اليسار إلى اليمين، ثم صِلها لتقرأ الكلمة.",
+    "patterns": [
+      {
+        "pattern": "a · e",
+        "words": "cat map hat pen bed red",
+        "tip": "a /æ/ كما في cat؛ e /e/ كما في pen."
+      },
+      {
+        "pattern": "i · o · u",
+        "words": "sit pin pig hot pot top cup sun run",
+        "tip": "i /ɪ/ · o /ɑ/ في النموذج الأمريكي · u /ʌ/."
+      },
+      {
+        "pattern": "Blend",
+        "words": "map sat pin cup",
+        "tip": "m + a + p → map. قل الأصوات، وليس أسماء الحروف."
+      }
+    ],
+    "note": "تدرّب على pan ثم pen ثم pin: تغيير حرف العلة يغيّر الصوت والكلمة.",
+    "passages": [
+      {
+        "title": "Three Little Actions",
+        "text": "Sam can sit. Ben can hop. Mum can run.",
+        "page": 7
+      }
+    ],
+    "sh": "A fish can sit in a dish. A fish can swish. Sh! Sh!",
+    "quiz": [
+      {
+        "word": "cat",
+        "prompt": "كيف ننطق كلمة cat؟",
+        "options": [
+          "cut",
+          "cat",
+          "cot"
+        ],
+        "answer": 1,
+        "reason": "cat /kæt/ فيها /æ/؛ cut /kʌt/ فيها /ʌ/؛ cot /kɑt/ فيها /ɑ/ بالنطق الأمريكي."
+      },
+      {
+        "word": "pen",
+        "prompt": "كيف ننطق كلمة pen؟",
+        "options": [
+          "pan",
+          "pin",
+          "pen"
+        ],
+        "answer": 2,
+        "reason": "pen /pɛn/ فيها e قصيرة؛ pan /pæn/ وpin /pɪn/ مختلفتان."
+      },
+      {
+        "word": "cup",
+        "prompt": "كيف ننطق كلمة cup؟",
+        "options": [
+          "cup",
+          "cap",
+          "cop"
+        ],
+        "answer": 0,
+        "reason": "cup /kʌp/ فيها /ʌ/؛ ركز على صوت العلة في الوسط."
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "title": "الأصوات المتجاورة",
+    "en": "Consonant blends",
+    "page": 11,
+    "goal": "في التجمعات الساكنة نسمع الأصوات المتجاورة ونصلها دون حركة زائدة. بخلاف sh، نحتفظ بصوت كل حرف في pl.",
+    "patterns": [
+      {
+        "pattern": "st · bl · tr · pl",
+        "words": "stop star black blue tree train play plane plan",
+        "tip": "p + l + a + n → plan."
+      },
+      {
+        "pattern": "sl · sn · dr · gr",
+        "words": "slip sled snap snack drip drop grin grab",
+        "tip": "انطق كل ساكن ثم صِله بحرف العلة."
+      },
+      {
+        "pattern": "sm · sw · pr",
+        "words": "smell smile swim swan press print",
+        "tip": "s + w + i + m → swim."
+      },
+      {
+        "pattern": "qu · nk",
+        "words": "quick queen sink bank",
+        "tip": "qu /kw/؛ nk /ŋk/ في هذه الكلمات."
+      }
+    ],
+    "note": "بعض الأمثلة مثل plane وblue تحوي حركات ستتعلمها لاحقًا؛ استمع لها أولًا. ابدأ بالتدريب على plan وstop وslip.",
+    "passages": [
+      {
+        "title": "Sam Has a Plan",
+        "text": "Sam has a plan. He can go in a black truck. He is quick, but he can stop. He can stop at the bank.",
+        "page": 14
+      }
+    ],
+    "sh": "A ship stops by the shore. A small fish swims. She spots a shell on the sand.",
+    "quiz": [
+      {
+        "word": "plan",
+        "prompt": "كيف ننطق كلمة plan؟",
+        "options": [
+          "pan",
+          "play",
+          "plan"
+        ],
+        "answer": 2,
+        "reason": "plan /plæn/ تحتفظ بصوتي p وl. لا نحذف l فنقول pan."
+      },
+      {
+        "word": "stop",
+        "prompt": "كيف ننطق كلمة stop؟",
+        "options": [
+          "stop",
+          "top",
+          "shop"
+        ],
+        "answer": 0,
+        "reason": "stop /stɑp/ تبدأ بصوتي s وt. top تحذف s، وshop تبدأ بـ sh."
+      },
+      {
+        "word": "grin",
+        "prompt": "كيف ننطق كلمة grin؟",
+        "options": [
+          "green",
+          "grin",
+          "grain"
+        ],
+        "answer": 1,
+        "reason": "grin /ɡrɪn/ تبدأ بصوتي g وr، وفيها i قصيرة."
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "title": "الحرف e الصامت",
+    "en": "Magic E",
+    "page": 15,
+    "goal": "قارن الكلمة القصيرة بالكلمة التي أضيفت إليها e. غالبًا يتغير صوت العلة إلى اسمه، ولا ننطق e الأخيرة.",
+    "patterns": [
+      {
+        "pattern": "a_e · i_e",
+        "words": "cap cape kit kite",
+        "tip": "cap → cape؛ kit → kite."
+      },
+      {
+        "pattern": "o_e · u_e",
+        "words": "hop hope cub cube not note cut cute",
+        "tip": "o تعمل أيضًا مع e الصامتة: hop → hope."
+      },
+      {
+        "pattern": "Exceptions",
+        "words": "love some have give",
+        "tip": "كلمات خاصة: love /lʌv/؛ some /sʌm/؛ have /hæv/؛ give /ɡɪv/."
+      }
+    ],
+    "note": "هذه قاعدة شائعة وليست مطلقة. u_e قد تعطي /juː/ في cube أو /uː/ في flute.",
+    "passages": [
+      {
+        "title": "Mike and a Cape",
+        "text": "Mike has a red cape. He has a cube in a bag. He can ride a bike home. I love his cape.",
+        "page": 17
+      }
+    ],
+    "sh": "She has a shell and a red cape. She can make a shape in the sand. A fish swims by.",
+    "quiz": [
+      {
+        "word": "cape",
+        "prompt": "كيف ننطق كلمة cape؟",
+        "options": [
+          "cape",
+          "cap",
+          "cup"
+        ],
+        "answer": 0,
+        "reason": "cape /keɪp/ فيها a طويلة بسبب e الصامتة؛ cap فيها a قصيرة."
+      },
+      {
+        "word": "kite",
+        "prompt": "كيف ننطق كلمة kite؟",
+        "options": [
+          "kit",
+          "cut",
+          "kite"
+        ],
+        "answer": 2,
+        "reason": "kite /kaɪt/ فيها /aɪ/؛ لا تُنطق e الأخيرة."
+      },
+      {
+        "word": "hope",
+        "prompt": "كيف ننطق كلمة hope؟",
+        "options": [
+          "hop",
+          "hope",
+          "hoop"
+        ],
+        "answer": 1,
+        "reason": "hope /hoʊp/ فيها /oʊ/؛ hop فيها o قصيرة، وhoop فيها /uː/."
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "title": "أصوات C وG",
+    "en": "Soft C & G",
+    "page": 18,
+    "goal": "انظر إلى الحرف الذي يأتي بعد c أو g. قبل e وi وy تُنطق c غالبًا /s/، وقد تُنطق g /dʒ/.",
+    "patterns": [
+      {
+        "pattern": "c + e / i / y",
+        "words": "cent cell city circle cycle",
+        "tip": "c /s/ غالبًا في هذه الأمثلة."
+      },
+      {
+        "pattern": "g + e / i / y",
+        "words": "gem gentle giant giraffe gym",
+        "tip": "g قد تعطي /dʒ/."
+      },
+      {
+        "pattern": "Hard g exceptions",
+        "words": "get give girl",
+        "tip": "g تبقى /ɡ/ في هذه الكلمات؛ لا نعمم القاعدة."
+      }
+    ],
+    "note": "لاحظ أن كلمة girl تجمع g الصلبة مع ir. استمع إلى الكلمة كاملة قبل القياس على نمط واحد.",
+    "passages": [
+      {
+        "title": "A Giant in a City",
+        "text": "A giant is in a city. He has a cent and a gem. He can cycle to a gym.",
+        "page": 20
+      }
+    ],
+    "sh": "She sees a shell in the city shop. A gentle giant has a shiny dish. The shell is in the dish.",
+    "quiz": [
+      {
+        "word": "city",
+        "prompt": "كيف ننطق كلمة city؟",
+        "options": [
+          "kitty",
+          "city",
+          "sit"
+        ],
+        "answer": 1,
+        "reason": "city /ˈsɪti/ تبدأ بـ c اللينة /s/ وتنتهي بمقطع /ti/."
+      },
+      {
+        "word": "gem",
+        "prompt": "كيف ننطق كلمة gem؟",
+        "options": [
+          "gem",
+          "gum",
+          "game"
+        ],
+        "answer": 0,
+        "reason": "gem /dʒɛm/ تبدأ بـ g اللينة /dʒ/، وفيها e قصيرة."
+      },
+      {
+        "word": "give",
+        "prompt": "كيف ننطق كلمة give؟",
+        "options": [
+          "guy",
+          "jive",
+          "give"
+        ],
+        "answer": 2,
+        "reason": "give /ɡɪv/ استثناء: g صلبة /ɡ/، وi قصيرة رغم e الأخيرة."
       }
     ]
   },
@@ -574,34 +597,37 @@ export const readingChapters:ReadingChapter[] = [
     "sh": "She finds a shell near a chair. A shark swims far from the shore. She can hear the sea.",
     "quiz": [
       {
-        "prompt": "أي كلمة فيها ir مثل bird؟",
+        "word": "bird",
+        "prompt": "كيف ننطق كلمة bird؟",
         "options": [
-          "boat",
-          "girl",
-          "green"
+          "board",
+          "bird",
+          "beard"
         ],
         "answer": 1,
-        "reason": "bird وgirl فيهما /ɝ/ أمريكيًا."
+        "reason": "bird /bɝd/ فيها ir الأمريكية /ɝ/؛ قارِنها بـ board وbeard."
       },
       {
-        "prompt": "أي كلمة تتفق مع near في صوت ear؟",
+        "word": "near",
+        "prompt": "كيف ننطق كلمة near؟",
         "options": [
-          "hear",
+          "near",
           "bear",
-          "wear"
+          "nor"
         ],
         "answer": 0,
-        "reason": "near وhear فيهما /ɪr/؛ bear وwear فيهما /er/."
+        "reason": "near /nɪr/ فيها ear /ɪr/؛ bear /bɛr/ لها صوت مختلف."
       },
       {
-        "prompt": "أي كلمة فيها ar؟",
+        "word": "star",
+        "prompt": "كيف ننطق كلمة star؟",
         "options": [
-          "corn",
-          "nurse",
+          "store",
+          "stir",
           "star"
         ],
         "answer": 2,
-        "reason": "star تحتوي ar مثل car."
+        "reason": "star /stɑr/ فيها ar /ɑr/؛ store فيها or وstir فيها ir."
       }
     ]
   },
@@ -644,34 +670,37 @@ export const readingChapters:ReadingChapter[] = [
     "sh": "She writes a short note. She draws a shell and a lamb. The lamb sits near her knee.",
     "quiz": [
       {
-        "prompt": "ما الحرف الصامت في knee؟",
+        "word": "knee",
+        "prompt": "كيف ننطق كلمة knee؟",
         "options": [
-          "e",
-          "n",
-          "k"
-        ],
-        "answer": 2,
-        "reason": "kn في knee تبدأ بصوت /n/؛ لا نسمع k."
-      },
-      {
-        "prompt": "أي كلمة فيها b صامتة؟",
-        "options": [
-          "lamb",
-          "bat",
-          "boat"
-        ],
-        "answer": 0,
-        "reason": "lamb تُنطق دون صوت b الأخيرة."
-      },
-      {
-        "prompt": "ما الحرف الصامت في write؟",
-        "options": [
-          "r",
-          "w",
-          "t"
+          "key",
+          "knee",
+          "kin"
         ],
         "answer": 1,
-        "reason": "w لا تُنطق في write وwrist."
+        "reason": "knee /niː/ تبدأ بـ /n/ لأن k صامتة."
+      },
+      {
+        "word": "write",
+        "prompt": "كيف ننطق كلمة write؟",
+        "options": [
+          "write",
+          "wit",
+          "wet"
+        ],
+        "answer": 0,
+        "reason": "write /raɪt/ تبدأ بـ /r/؛ w صامتة وi طويلة."
+      },
+      {
+        "word": "lamb",
+        "prompt": "كيف ننطق كلمة lamb؟",
+        "options": [
+          "lamp",
+          "lime",
+          "lamb"
+        ],
+        "answer": 2,
+        "reason": "lamb /læm/ تنتهي بـ /m/؛ b الأخيرة صامتة."
       }
     ]
   },
@@ -714,34 +743,37 @@ export const readingChapters:ReadingChapter[] = [
     "sh": "She shows a picture of a village. A fish swims under the bridge. She can watch it from the shore.",
     "quiz": [
       {
-        "prompt": "أي تركيب في catch يعطي /tʃ/؟",
+        "word": "catch",
+        "prompt": "كيف ننطق كلمة catch؟",
         "options": [
-          "dge",
-          "tch",
-          "age"
+          "cash",
+          "catch",
+          "cat"
         ],
         "answer": 1,
-        "reason": "tch في catch تعطي صوتًا واحدًا /tʃ/."
+        "reason": "catch /kætʃ/ تنتهي بـ tch /tʃ/، وليست sh في cash."
       },
       {
-        "prompt": "أي كلمة نهايتها مثل page؟",
+        "word": "cage",
+        "prompt": "كيف ننطق كلمة cage؟",
         "options": [
-          "village",
-          "message",
-          "cage"
-        ],
-        "answer": 2,
-        "reason": "page وcage تنتهيان بـ /eɪdʒ/، بخلاف village وmessage."
-      },
-      {
-        "prompt": "في نص A Picture of a Village، ماذا يصطاد الولد؟",
-        "options": [
-          "a fish",
-          "a bird",
-          "a shell"
+          "cage",
+          "cadge",
+          "cog"
         ],
         "answer": 0,
-        "reason": "النص يقول: A boy can catch a fish."
+        "reason": "cage /keɪdʒ/ فيها /eɪ/ ونهاية /dʒ/؛ cadge فيها /æ/."
+      },
+      {
+        "word": "picture",
+        "prompt": "كيف ننطق كلمة picture؟",
+        "options": [
+          "picnic",
+          "future",
+          "picture"
+        ],
+        "answer": 2,
+        "reason": "picture /ˈpɪktʃɚ/ تنتهي بصوت /tʃɚ/ في النطق الأمريكي."
       }
     ]
   }
