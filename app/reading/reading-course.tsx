@@ -1,12 +1,14 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
+import {flushSync} from 'react-dom';
 import Link from 'next/link';
 import {CheckCircle2,ChevronLeft,ChevronRight,Download,Volume2,Square} from 'lucide-react';
 import SiteHeader from '../site-header';
 import {readingChapters} from '@/lib/reading-course';
 import {readingAlphabet} from '@/lib/reading-alphabet';
 import {readingPhonemeBank,readingWordBank} from './reading-phonemes';
-import ReadingMouthModels,{alphabetModels,chapterMouthModels} from './reading-mouth-models';
+import {ReadingMouthDialog,ReadingMouthPreview} from './reading-mouth-models';
+import {additionalMouthModels,readingMouthModelId,type MouthModelId} from './reading-mouth-data';
 import ReadingPatternCard from './reading-pattern-card';
 import {useReadingAudio} from './use-reading-audio';
 import {shPracticeTiming} from './sh-practice-timing';
@@ -27,12 +29,13 @@ export default function ReadingCourse(){
  const chapter=readingChapters[index];
  const practiceBank=`practice-v4-${chapter.id}`;
  const shSentences=chapter.sh.split(/(?<=[.!?])\s+/);
+ const [mouthModel,setMouthModel]=useState<MouthModelId|null>(null);
+ const mouthDialog=useRef<HTMLDialogElement>(null);
  const mouthVideo=useRef<HTMLVideoElement>(null);
  const {active:playing,notice:audioNotice,stop:stopAudio,play:playAudio}=useReadingAudio(
   alphabet?'alphabet':`chapter-${chapter.id}`,alphabet?undefined:practiceBank,
   alphabet||chapter.id<=2?'aep-consonants':'aep-vowels',
  );
- const mouthModels=alphabet?alphabetModels:chapterMouthModels[chapter.id];
  useEffect(()=>{
   const timer=window.setTimeout(()=>{
    try{
@@ -55,7 +58,17 @@ export default function ReadingCourse(){
   mouthVideo.current?.pause();
   return playAudio(...args);
  }
- const visualModels=mouthModels&&<ReadingMouthModels key={alphabet?'alphabet':chapter.id} ids={mouthModels} video={mouthVideo} onVideoPlay={stopAudio} onSound={playClip}/>;
+ function showMouthModel(id:MouthModelId){
+  stopPlayback();
+  // Keep playback in the tap handler so mobile browsers allow sound.
+  flushSync(()=>setMouthModel(id));
+  mouthDialog.current?.showModal();
+  void mouthVideo.current?.play().catch(()=>{});
+ }
+ function closeMouthModel(){
+  stopPlayback();
+  setMouthModel(null);
+ }
  function navigate(next:number){
   stopPlayback();setIndex(next);setAlphabet(false);setAnswers({});setHeard({});setSubmitted(false);
   window.history.replaceState(null,'',`#chapter-${next+1}`);window.scrollTo({top:0,behavior:'auto'});
@@ -92,12 +105,21 @@ export default function ReadingCourse(){
   {alphabet?<section className="reading-alphabet" aria-labelledby="alphabet-title">
    <header className="reading-alphabet-header"><div><p className="reading-kicker">YOUR FIRST SOUNDS · A–Z</p><h1 id="alphabet-title">الحروف وأصواتها</h1><p>اضغط الحرف الكبير لتسمع صوته، ثم استمع إلى الكلمتين. مع X، اسمع /ks/ في آخر الكلمتين.</p><p>نتعلم صوت الحرف داخل الكلمة، وليس اسمه. بعض الحروف لها أصوات أخرى ستأتي في الفصول التالية.</p></div><span className="reading-alphabet-badge">26 حرفًا<br/>52 كلمة</span></header>
    {audioControls}
-   {visualModels}
-   <div className="reading-alphabet-grid" dir="ltr">{readingAlphabet.map(item=><article className="reading-letter-card" key={item.letter}>
+   <div className="reading-alphabet-grid" dir="ltr">{readingAlphabet.map(item=>{
+    const model=readingMouthModelId(item.letter);
+    return <article className="reading-letter-card" key={item.letter}>
     <button type="button" className="reading-letter-sound" aria-label={`صوت الحرف ${item.letter.toUpperCase()}`} aria-pressed={playing===`sound-${item.letter}`} onClick={()=>void playClip('sound',item.letter)}><span lang="en">{item.letter.toUpperCase()}<small>{item.letter}</small></span><span className="reading-letter-ipa">/{item.ipa}/ <Volume2 size={18}/></span></button>
+    {model&&<ReadingMouthPreview id={model} context={item.letter.toUpperCase()} onShow={showMouthModel}/>}
     <div className="reading-letter-examples">{item.examples.map(word=><button type="button" key={word} aria-label={`استمع إلى ${word}`} aria-pressed={playing===`word-${word.toLowerCase()}`} onClick={()=>void playClip('word',word)}><Volume2 size={16}/><span lang="en">{word}</span></button>)}</div>
     <p dir="rtl">{item.tip}</p>
-   </article>)}</div>
+   </article>;
+   })}</div>
+   <section className="reading-extra-mouth" aria-labelledby="extra-mouth-heading">
+    <h2 id="extra-mouth-heading">أصوات إضافية في النطق الأمريكي</h2>
+    <div className="reading-extra-mouth-grid" dir="ltr">{additionalMouthModels.map(id=>
+     <ReadingMouthPreview key={id} id={id} showSound onShow={showMouthModel}/>
+    )}</div>
+   </section>
    <div className="reading-alphabet-footer"><p>الترتيب: الحروف ← الحروف الثنائية الساكنة ← حروف العلة الثنائية والمركّبة ← باقي أنماط القراءة.</p><button type="button" className="reading-primary" onClick={()=>navigate(0)}>تدريب الحروف واختبارها <ChevronLeft size={18}/></button><a href="/reading/reading-guide.pdf" className="reading-audio" target="_blank" rel="noreferrer"><Download size={18}/> الدليل الأصلي المصوّر</a></div>
   </section>:<>
    <div className="reading-progress"><span>اختبارات صوتية أُنجزت: <bdi dir="ltr">{completed} / {readingChapters.length}</bdi></span><progress value={completed} max={readingChapters.length}/><small>أفضل نتيجة محفوظة على هذا المتصفح فقط. نتائج الاختبارات النصية السابقة منفصلة عن هذه الاختبارات الصوتية الجديدة.</small></div>
@@ -123,9 +145,8 @@ export default function ReadingCourse(){
      <section aria-label="الشرح والتدريب">
       <h2>١. افهم النمط واسمع الكلمات</h2>
       <p>استمع إلى الصوت أو الكلمة، وانتبه إلى الحروف المظلّلة.</p>
-      {visualModels}
       <div className="reading-patterns">{chapter.patterns.map((pattern)=>
-       <ReadingPatternCard key={pattern.pattern} pattern={pattern} playing={playing} onPlay={playClip}/>
+       <ReadingPatternCard key={pattern.pattern} pattern={pattern} playing={playing} onPlay={playClip} onShowMouth={showMouthModel}/>
       )}</div>
       <aside className="reading-tip">💡 {chapter.note}</aside>
      </section>
@@ -137,6 +158,7 @@ export default function ReadingCourse(){
         <button type="button" className="reading-audio" aria-pressed={playing==='sound-sh'} onClick={()=>playClip('sound','sh')}>
          <Volume2 size={17} aria-hidden="true"/> اسمع صوت <bdi lang="en">sh</bdi>
         </button>
+        <ReadingMouthPreview id="sh" context="sh" onShow={showMouthModel}/>
         <button type="button" className="reading-audio" aria-pressed={playing==='practice-sh'} onClick={()=>void play('practice-sh',{bankName:practiceBank})}>
          <Volume2 size={17} aria-hidden="true"/> اسمع النص كاملًا
         </button>
@@ -178,5 +200,7 @@ export default function ReadingCourse(){
    نماذج الأصوات وفيديوهات حركة الفم من <a href="https://aepronunciation.com/app/" lang="en">American English Pronunciation</a> (<a href="/reading/aep-2.4.0/SOURCES.txt">المصادر</a> · <a href="/reading/aep-2.4.0/LICENSE.txt" lang="en">GPLv3</a>).
    {' '}تسجيلات كلمات من <a href="/reading/voice-v3/recordings-credits.txt" lang="en">Wikimedia Commons</a>، و<a href="/reading/voice-v3/audio-credits-v4.txt">مصادر إضافية</a>. بعض الكلمات والنصوص بصوت أمريكي مولّد.
   </footer>
+  <ReadingMouthDialog id={mouthModel} dialog={mouthDialog} video={mouthVideo} playing={playing} notice={audioNotice}
+   onClose={closeMouthModel} onVideoPlay={stopAudio} onSound={playClip}/>
  </main></div>;
 }

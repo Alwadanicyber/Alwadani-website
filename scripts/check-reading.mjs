@@ -3,7 +3,8 @@ import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {readingChapters,readingExampleWord} from '../lib/reading-course.ts';
 import {readingAlphabet} from '../lib/reading-alphabet.ts';
-import {clearWordBank,modelFocusBank,mouthModelIds,readingPhonemeBank,readingPhonemeId,readingWordBank} from '../app/reading/reading-phonemes.ts';
+import {clearWordBank,modelFocusBank,readingPhonemeBank,readingPhonemeId,readingWordBank} from '../app/reading/reading-phonemes.ts';
+import {additionalMouthModels,mouthModelIds,mouthModels,readingMouthModelId} from '../app/reading/reading-mouth-data.ts';
 import {shPracticeTiming} from '../app/reading/sh-practice-timing.ts';
 assert.equal(readingChapters.length,10);
 assert.deepEqual(readingChapters.map(c=>c.page),[2,8,21,5,11,15,18,32,35,37],'Requested order: letters, consonant digraphs, vowel digraphs, then the rest');
@@ -46,9 +47,30 @@ for(const word of ['saw','sun','up','me','new','loud','shoot']){
 const aepDirectory=new URL('../public/reading/aep-2.4.0/',import.meta.url);
 const aepSources=readFileSync(new URL('SOURCES.txt',aepDirectory),'utf8');
 assert.match(aepSources,/GPL|GNU General Public License/);
+assert.equal(mouthModelIds.length,47);
+assert.deepEqual([...mouthModelIds].sort(),mouthModelIds,'Preview tiles follow sound ID order');
+const previews=readFileSync(new URL('mouth-previews.webp',aepDirectory));
+assert(previews.subarray(8,12).equals(Buffer.from('WEBP')));
+const linkedModels=new Set(additionalMouthModels);
+for(const letter of readingAlphabet){
+ const model=readingMouthModelId(letter.letter);
+ if(model) linkedModels.add(model);
+}
+for(const chapter of readingChapters){
+ for(const pattern of chapter.patterns){
+  for(const group of pattern.groups){
+   for(const symbol of group.ipa.split(' ~ ')){
+    const model=readingMouthModelId(group.audio??readingPhonemeId(symbol));
+    if(model) linkedModels.add(model);
+   }
+  }
+ }
+}
+assert.deepEqual([...linkedModels].sort(),mouthModelIds,'Every video is reachable directly from a card');
+assert.equal(readingMouthModelId('c'),'k');
 for(const sound of mouthModelIds){
- assert.equal(readingPhonemeBank(sound),modelFocusBank);
- audioBytes(focus,`sound-${sound}`);
+ assert.equal(readingPhonemeId(mouthModels[sound].ipa),sound);
+ audioBytes(audioBank(readingPhonemeBank(sound)),`sound-${sound}`);
  assert(aepSources.split('\n').some(line=>line.startsWith(`${sound} | `)&&line.endsWith('.mp4')));
  const video=readFileSync(new URL(`${sound}.mp4`,aepDirectory));
  assert(video.length>10_000&&video.subarray(4,8).toString()==='ftyp',`Missing video for ${sound}`);
@@ -128,4 +150,4 @@ assert.deepEqual(she.options,['see','she','tea']);assert.equal(she.answer,1);
 assert(readingChapters[1].sh.startsWith('She sells seashells by the seashore.'));
 assert(readFileSync(new URL('../public/reading/reading-guide.pdf',import.meta.url)).subarray(0,5).equals(Buffer.from('%PDF-')));
 const catalog=readFileSync(new URL('../app/catalog.tsx',import.meta.url),'utf8');assert(catalog.includes('href="/reading"'));
-console.log('PASS: requested chapter order, 26 sound clips, 52 examples, 32 audio questions with distinct playable files, and complete practice and passage audio.');
+console.log('PASS: requested chapter order, 26 letter sounds, 47 mouth models, 52 examples, 32 audio questions with distinct playable files, and complete practice and passage audio.');

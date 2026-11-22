@@ -6,6 +6,7 @@ const phonemeIds: Partial<Record<string,string>> = {
  'θ':'th-unvoiced', 'ð':'th-voiced', 'ŋ':'ng', 'iː':'long-e', 'eɪ':'ay', 'aɪ':'long-i',
  'oʊ':'long-o', 'uː':'long-oo', 'ʊ':'short-oo', 'ɔ':'open-o', 'aʊ':'ow', 'ɔɪ':'oy',
  'ɝ':'er', 'ɪr':'ear', 'ɛr':'air', 'ɑr':'ar', 'ɔr':'or',
+ 'ʒ':'zh', 'ə':'schwa', 'ɾ':'flap-t', 'ɚ':'unstressed-er', 'ʔ':'glottal-stop',
 };
 
 export function readingPhonemeId(ipa:string):string|undefined {
@@ -24,16 +25,15 @@ export function readingWordBank(word:string):string|undefined {
  return correctedWords.has(name) ? clearWordBank : undefined;
 }
 
-export const mouthModelIds=['l','m','n','sh','u','long-e','long-o','open-o','i','th-voiced','th-unvoiced'] as const;
-export type MouthModelId=(typeof mouthModelIds)[number];
-
-const focusSounds=new Set<string>(mouthModelIds);
+const focusSounds=new Set(['l','m','n','sh','u','long-e','long-o','open-o','i','th-voiced','th-unvoiced']);
 const vowelSounds=new Set(['a','e','o','ay','long-i','long-oo','short-oo','ow','oy','er','ear','air','ar','or']);
+const extendedSounds=new Set(['zh','schwa','flap-t','unstressed-er','glottal-stop']);
 const referenceSounds=new Set(['c',...Object.values(phonemeIds)]);
 
 export function readingPhonemeBank(id:string):string|undefined {
  if(id==='q'||id==='x') return 'alphabet';
  if(focusSounds.has(id)) return modelFocusBank;
  if(vowelSounds.has(id)) return 'aep-vowels';
+ if(extendedSounds.has(id)) return 'aep-extended';
  return referenceSounds.has(id) ? 'aep-consonants' : undefined;
 }
