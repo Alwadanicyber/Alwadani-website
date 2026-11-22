@@ -1,0 +1,26 @@
+Alwadani Reading Course pronunciation updates
+
+Cup, knee, ship, shell and fish recordings are by Dvortygirl, shared and adapted under CC BY-SA 3.0.
+https://creativecommons.org/licenses/by-sa/3.0/
+https://commons.wikimedia.org/wiki/File:En-us-cup.ogg
+https://commons.wikimedia.org/wiki/File:En-us-knee.ogg
+https://commons.wikimedia.org/wiki/File:En-us-ship.ogg
+https://commons.wikimedia.org/wiki/File:En-us-shell.ogg
+https://commons.wikimedia.org/wiki/File:En-us-fish.ogg
+
+Saw was recorded by Knabrupt for Lingua Libre, shared and adapted under CC BY-SA 4.0.
+https://commons.wikimedia.org/wiki/File:LL-Q1860_(eng)-Knabrupt-saw.wav
+https://creativecommons.org/licenses/by-sa/4.0/
+
+Give was recorded and released into the public domain by Muke.
+https://commons.wikimedia.org/wiki/File:En-us-give.ogg
+
+Edits include trimming pauses, adjusting levels and encoding MP3. The isolated SH sound was extracted from the start of ship and is also heard in the SH practice lines.
+The hoe clip, the SH sentences and quiz options that could not be matched to one native speaker were synthesized using Kokoro.
+Credits for the existing human recordings used in quizzes are listed in recordings-credits.txt.
+
+The isolated L, M and N are excerpts from Peter Isotalo's phonetic recordings, adapted under CC BY-SA 3.0. The vowels around the consonants were removed, the levels adjusted and the excerpts encoded to MP3.
+https://commons.wikimedia.org/wiki/File:Alveolar_lateral_approximant.ogg
+https://commons.wikimedia.org/wiki/File:Bilabial_nasal.ogg
+https://commons.wikimedia.org/wiki/File:Alveolar_nasal.ogg
+https://creativecommons.org/licenses/by-sa/3.0/

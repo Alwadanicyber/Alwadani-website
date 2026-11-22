@@ -5,9 +5,10 @@ import {CheckCircle2,ChevronLeft,ChevronRight,Download,Volume2,Square} from 'luc
 import SiteHeader from '../site-header';
 import {readingChapters} from '@/lib/reading-course';
 import {readingAlphabet} from '@/lib/reading-alphabet';
-import {phonemeSlices,readingPhonemeBank} from './reading-phonemes';
+import {phonemeSlices,readingPhonemeBank,readingWordBank} from './reading-phonemes';
 import ReadingPatternCard from './reading-pattern-card';
 import {useReadingAudio} from './use-reading-audio';
+import {shPracticeTiming} from './sh-practice-timing';
 import './reading.css';
 
 // Old text-question results stay in v1; they do not count as sound-test results.
@@ -22,7 +23,12 @@ export default function ReadingCourse(){
  const [answers,setAnswers]=useState<Record<number,number>>({}),[heard,setHeard]=useState<Record<string,boolean>>({});
  const [submitted,setSubmitted]=useState(false),[best,setBest]=useState<Progress>({});
  const [notice,setNotice]=useState('');
- const {active:playing,notice:audioNotice,stop:stopAudio,play}=useReadingAudio(alphabet?'alphabet':`chapter-${index+1}`);
+ const chapter=readingChapters[index];
+ const practiceBank=`practice-v4-${chapter.id}`;
+ const shSentences=chapter.sh.split(/(?<=[.!?])\s+/);
+ const {active:playing,notice:audioNotice,stop:stopAudio,play}=useReadingAudio(
+  alphabet?'alphabet':`chapter-${chapter.id}`,alphabet?undefined:practiceBank,
+ );
  useEffect(()=>{
   const timer=window.setTimeout(()=>{
    try{
@@ -35,7 +41,6 @@ export default function ReadingCourse(){
   },0);
   return()=>window.clearTimeout(timer);
  },[]);
- const chapter=readingChapters[index];
  const score=chapter.quiz.reduce((n,q,i)=>n+(answers[i]===q.answer?1:0),0);
  const completed=Object.keys(best).length;
  function navigate(next:number){
@@ -48,12 +53,12 @@ export default function ReadingCourse(){
  function playClip(kind:'sound'|'word',value:string,id?:string){
   const sound=kind==='sound';
   void play(`${kind}-${value.toLowerCase()}`,{
-   id, slice:sound?phonemeSlices[value]:undefined, bankName:sound?readingPhonemeBank(value):undefined,
+   id, slice:sound?phonemeSlices[value]:undefined, bankName:sound?readingPhonemeBank(value):readingWordBank(value),
   });
  }
  function playQuizWord(word:string,question:number,key:string){
   void play(`word-${word.toLowerCase()}`,{
-   id:key,quizQuestion:question,
+   id:key,quizQuestion:question,bankName:practiceBank,
    onStart:()=>setHeard(previous=>({...previous,[key]:true})),
   });
  }
@@ -82,7 +87,23 @@ export default function ReadingCourse(){
    <div className="reading-alphabet-footer"><p>الترتيب: الحروف ← الحروف الثنائية الساكنة ← حروف العلة الثنائية والمركّبة ← باقي أنماط القراءة.</p><button type="button" className="reading-primary" onClick={()=>navigate(0)}>تدريب الحروف واختبارها <ChevronLeft size={18}/></button><a href="/reading/reading-guide.pdf" className="reading-audio" target="_blank" rel="noreferrer"><Download size={18}/> الدليل الأصلي المصوّر</a></div>
   </section>:<>
    <div className="reading-progress"><span>اختبارات صوتية أُنجزت: <bdi dir="ltr">{completed} / {readingChapters.length}</bdi></span><progress value={completed} max={readingChapters.length}/><small>أفضل نتيجة محفوظة على هذا المتصفح فقط. نتائج الاختبارات النصية السابقة منفصلة عن هذه الاختبارات الصوتية الجديدة.</small></div>
-   <div className="reading-layout"><nav className="reading-chapters" aria-label="فصول دورة القراءة"><h2>رحلتك بالترتيب</h2>{readingChapters.map((c,i)=><button type="button" key={c.id} aria-current={index===i?'step':undefined} onClick={()=>navigate(i)}><span className="reading-number">{String(c.id).padStart(2,'0')}</span><span>{c.title}<small lang="en" dir="ltr">{c.en}</small></span>{best[c.id]!==undefined&&<span className="reading-best" dir="ltr" aria-label={`أفضل نتيجة ${best[c.id]} من ${c.quiz.length}`}>{best[c.id]}/{c.quiz.length}</span>}</button>)}</nav>
+   <div className="reading-layout">
+    <nav className="reading-chapters" aria-label="فصول دورة القراءة">
+     <h2>رحلتك بالترتيب</h2>
+     <div className="reading-chapter-select">
+      <label htmlFor="reading-chapter-select">اختر الفصل</label>
+      <select id="reading-chapter-select" value={index} onChange={event=>navigate(Number(event.target.value))}>
+       {readingChapters.map((item,i)=><option key={item.id} value={i}>{item.id}. {item.title}</option>)}
+      </select>
+     </div>
+     <div className="reading-chapter-list">
+      {readingChapters.map((item,i)=><button type="button" key={item.id} aria-current={index===i?'step':undefined} onClick={()=>navigate(i)}>
+       <span className="reading-number">{String(item.id).padStart(2,'0')}</span>
+       <span>{item.title}<small lang="en" dir="ltr">{item.en}</small></span>
+       {best[item.id]!==undefined&&<span className="reading-best" dir="ltr" aria-label={`أفضل نتيجة ${best[item.id]} من ${item.quiz.length}`}>{best[item.id]}/{item.quiz.length}</span>}
+      </button>)}
+     </div>
+    </nav>
     <article className="reading-content" aria-labelledby="chapter-title"><div className="reading-chapter-label">الفصل {chapter.id} من {readingChapters.length} · <a href={`/reading/reading-guide.pdf#page=${chapter.page}`} target="_blank" rel="noreferrer">الشرح المصوّر في الدليل ↗</a></div><h1 id="chapter-title">{chapter.title}</h1><p className="reading-goal">{chapter.goal}</p>
      {chapter.id===1&&<button type="button" className="reading-audio" onClick={showAlphabet}>افتح لوحة الحروف: ٢٦ حرفًا ومثالان لكل حرف</button>}
      <section aria-label="الشرح والتدريب">
@@ -94,7 +115,34 @@ export default function ReadingCourse(){
       <aside className="reading-tip">💡 {chapter.note}</aside>
      </section>
      <section className="reading-passages"><h2>٢. اقرأ وطبّق</h2><p>اسمع النموذج، ثم اقرأ بنفسك. عند التعثر، قسّم الكلمة إلى أصوات وادمجها مرة أخرى.</p>{chapter.passages.map(p=><div key={p.page} className="reading-passage"><div className="reading-passage-top"><h3 lang="en" dir="ltr">{p.title}</h3><div className="reading-passage-buttons"><button type="button" className="reading-audio" aria-pressed={playing===`passage-${p.page}`} onClick={()=>void play(`passage-${p.page}`)}><Volume2 size={17}/> استمع للنص</button><button type="button" className="reading-audio" aria-pressed={playing===`slow-passage-${p.page}`} onClick={()=>void play(`slow-passage-${p.page}`)}>استمع ببطء</button></div></div><p lang="en" dir="ltr" className="reading-english">{p.text}</p><a href={`/reading/reading-guide.pdf#page=${p.page}`} target="_blank" rel="noreferrer">من الدليل · صفحة {p.page} ↗</a></div>)}</section>
-     <section className="reading-sh"><div className="reading-passage-top"><h2>٣. دقيقة مع صوت <b lang="en">sh /ʃ/</b></h2><button type="button" className="reading-audio" aria-pressed={playing==='practice-sh'} onClick={()=>void play('practice-sh')}><Volume2 size={17}/> استمع ببطء</button></div><p>قراءة إضافية بمساعدة المعلم؛ قد تحتوي أنماطًا لم ندرسها بعد. ابدأ ببطء، ثم كرّر بسلاسة. الحروف المظللة هي sh.</p><p className="reading-english" lang="en" dir="ltr"><Highlight text={chapter.sh}/></p><p>قل <b lang="en">ship → fish → shell</b>. تدرّب على الصوت، ولا تحاول الفوز بالسرعة.</p></section>
+     <section className="reading-sh" aria-labelledby="reading-sh-heading">
+      <div className="reading-passage-top">
+       <h2 id="reading-sh-heading">٣. دقيقة مع صوت <bdi lang="en">sh /ʃ/</bdi></h2>
+       <div className="reading-passage-buttons">
+        <button type="button" className="reading-audio" aria-pressed={playing==='sound-sh'} onClick={()=>playClip('sound','sh')}>
+         <Volume2 size={17} aria-hidden="true"/> اسمع صوت <bdi lang="en">sh</bdi>
+        </button>
+        <button type="button" className="reading-audio" aria-pressed={playing==='practice-sh'} onClick={()=>void play('practice-sh',{bankName:practiceBank})}>
+         <Volume2 size={17} aria-hidden="true"/> اسمع النص كاملًا
+        </button>
+       </div>
+      </div>
+      <p>اسمع <bdi lang="en">sh</bdi> في أول الكلمة أو آخرها، ثم استمع إلى الجمل وكرّرها.</p>
+      <div className="reading-word-bank" lang="en" dir="ltr">
+       {['ship','fish','shell'].map(word=><button type="button" key={word} aria-label={`Listen: ${word}`} aria-pressed={playing===`sh-word:${word}`} onClick={()=>playClip('word',word,`sh-word:${word}`)}>
+        <Volume2 size={15} aria-hidden="true"/><span><Highlight text={word}/></span>
+       </button>)}
+      </div>
+      <ol className="reading-sh-sentences" lang="en" dir="ltr">
+       {shSentences.map((sentence,i)=>{
+        const id=`practice-sh:${i}`;
+        return <li key={id}><button type="button" className="reading-sh-sentence" aria-label={`Listen to sentence ${i+1}: ${sentence}`} aria-pressed={playing===id}
+         onClick={()=>void play('practice-sh',{id,bankName:practiceBank,range:shPracticeTiming[chapter.id][i]})}>
+         <Volume2 size={18} aria-hidden="true"/><span><Highlight text={sentence}/></span>
+        </button></li>;
+       })}
+      </ol>
+     </section>
      {audioControls}
      <section className="reading-quiz" aria-labelledby="quiz-title"><h2 id="quiz-title">٤. اختر النطق الصحيح</h2><p>اقرأ الكلمة، واسمع الخيارات الصوتية، ثم اختر النطق المطابق. يمكنك تشغيل كل خيار أكثر من مرة. لن تظهر الكلمات خلف الخيارات إلا بعد التصحيح.</p><form onSubmit={e=>{e.preventDefault();submit();}}>{chapter.quiz.map((q,qi)=><fieldset key={`${chapter.id}-${qi}`}><legend><span>كيف ننطق هذه الكلمة؟</span><strong className="reading-target-word" lang="en" dir="ltr">{q.word}</strong></legend><div className="reading-sound-options">{q.options.map((word,oi)=>{
       const key=`${qi}:${oi}`,correct=submitted&&oi===q.answer,wrong=submitted&&answers[qi]===oi&&!correct;
@@ -111,6 +159,6 @@ export default function ReadingCourse(){
     </article>
    </div>
   </>}
-  <footer className="reading-source">تسجيلات أصوات الحروف والأنماط من <a href="https://soundsamerican.net/" lang="en">Sounds American</a> (<a href="https://soundsamerican.net/article/terms_of_use" lang="en">CC BY-NC-ND 4.0</a>). معظم الكلمات وصوتا L وX والصوت الأخير في bell من تسجيلات أمريكية بواسطة <a href="/reading/voice-v3/recordings-credits.txt" lang="en">Dvortygirl · Wikimedia Commons</a>. النصوص وبعض الكلمات وصوت qu بصوت أمريكي مولّد بواسطة Kokoro. <a href="https://www.readingrockets.org/reading-101/reading-101-learning-modules/course-modules/phonological-and-phonemic-awareness/practice">تدريب إضافي على نطق الأصوات من Reading Rockets</a>.</footer>
+  <footer className="reading-source">تسجيلات أصوات الحروف والأنماط من <a href="https://soundsamerican.net/" lang="en">Sounds American</a> (<a href="https://soundsamerican.net/article/terms_of_use" lang="en">CC BY-NC-ND 4.0</a>). معظم الكلمات وصوت X والصوت الأخير في bell من تسجيلات أمريكية بواسطة <a href="/reading/voice-v3/recordings-credits.txt" lang="en">Dvortygirl · Wikimedia Commons</a>. بعض النصوص والكلمات بصوت أمريكي مولّد بواسطة Kokoro. <a href="/reading/voice-v3/audio-credits-v4.txt">مصادر تسجيلات النطق الإضافية</a>. <a href="https://www.readingrockets.org/reading-101/reading-101-learning-modules/course-modules/phonological-and-phonemic-awareness/practice">تدريب إضافي على نطق الأصوات من Reading Rockets</a>.</footer>
  </main></div>;
 }

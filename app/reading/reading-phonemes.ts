@@ -11,8 +11,6 @@ export const phonemeSlices: Partial<Record<string, readonly [number, number]>> =
  'i': [3, 0.6],
  'j': [35, 0.7],
  'k': [21, 0.85],
- 'm': [37, 0.9],
- 'n': [36, 0.9],
  'o': [9, 0.65],
  'p': [17, 0.85],
  'r': [40, 0.8],
@@ -24,7 +22,6 @@ export const phonemeSlices: Partial<Record<string, readonly [number, number]>> =
  'y': [42, 0.4],
  'z': [30, 0.94],
  'ay': [4, 0.7],
- 'sh': [31, 0.96],
  'ch': [34, 0.7],
  'th-unvoiced': [27, 0.65],
  'th-voiced': [28, 0.8],
@@ -58,6 +55,14 @@ export function readingPhonemeId(ipa:string):string|undefined {
  return phonemeIds[ipa];
 }
 
+export const clearWordBank='clear-words-v4';
+const correctedWords=new Set(['saw','hoe','cup','knee','give','ship','fish','shell']);
+
+export function readingWordBank(word:string):string|undefined {
+ return correctedWords.has(word.toLowerCase()) ? clearWordBank : undefined;
+}
+
 export function readingPhonemeBank(id:string):string|undefined {
- return id==='l'||id==='q'||id==='x' ? 'alphabet' : undefined;
+ if(id==='sh'||id==='l'||id==='m'||id==='n') return clearWordBank;
+ return id==='q'||id==='x' ? 'alphabet' : undefined;
 }

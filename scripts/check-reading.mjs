@@ -3,7 +3,8 @@ import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {readingChapters,readingExampleWord} from '../lib/reading-course.ts';
 import {readingAlphabet} from '../lib/reading-alphabet.ts';
-import {phonemeSlices,readingPhonemeBank,readingPhonemeId} from '../app/reading/reading-phonemes.ts';
+import {clearWordBank,phonemeSlices,readingPhonemeBank,readingPhonemeId,readingWordBank} from '../app/reading/reading-phonemes.ts';
+import {shPracticeTiming} from '../app/reading/sh-practice-timing.ts';
 assert.equal(readingChapters.length,10);
 assert.deepEqual(readingChapters.map(c=>c.page),[2,8,21,5,11,15,18,32,35,37],'Requested order: letters, consonant digraphs, vowel digraphs, then the rest');
 assert.equal(readingChapters.reduce((n,c)=>n+c.quiz.length,0),32);
@@ -37,6 +38,16 @@ for (const [offset,duration] of Object.values(phonemeSlices)){
  assert(offset>=0 && duration>0 && offset+duration<51);
 }
 const alphabet = audioBank('alphabet');
+const corrected=audioBank(clearWordBank);
+for(const word of ['saw','hoe','cup','knee','give','ship','fish','shell']){
+ assert.equal(readingWordBank(word),clearWordBank);
+ audioBytes(corrected,`word-${word}`);
+}
+for(const sound of ['sh','l','m','n']){
+ assert.equal(readingPhonemeBank(sound),clearWordBank);
+ audioBytes(corrected,`sound-${sound}`);
+}
+assert.equal(new Set(['l','m','n'].map(letter=>corrected[`sound-${letter}`])).size,3);
 const recordedWords = new Set(readFileSync(new URL('recordings-credits.txt',voiceDirectory),'utf8')
  .split('Original recordings:\n')[1].trim().split('\n').map(line=>line.split(':')[0]));
 for(const word of ['box','dog','duck','fox','leg','lip','up']) assert(recordedWords.has(word),`Missing recording credit for ${word}`);
@@ -45,7 +56,10 @@ for(const letter of readingAlphabet){
  assert.equal(letter.examples.length,2,'Each letter must have exactly two example words');
  assert.equal(new Set(letter.examples).size,2);
  assert(letter.phones&&letter.ipa&&letter.tip);
- if (!phonemeSlices[letter.letter]) audioBytes(alphabet,`sound-${letter.letter}`);
+ if (!phonemeSlices[letter.letter]){
+  const bank=readingPhonemeBank(letter.letter)===clearWordBank ? corrected : alphabet;
+  audioBytes(bank,`sound-${letter.letter}`);
+ }
  for(const word of letter.examples)audioBytes(alphabet,`word-${word.toLowerCase()}`);
 }
 assert.equal(readingAlphabet.find(a=>a.letter==='q').phones,'k w');
@@ -65,7 +79,10 @@ for(const [i,c] of readingChapters.entries()){
    assert(group.spellings.length);
    for(const symbol of group.ipa.split(' ~ ')){
     const sound=group.audio??readingPhonemeId(symbol);
-    if(sound&&!phonemeSlices[sound]) audioBytes(readingPhonemeBank(sound)?alphabet:bank,`sound-${sound}`);
+    if(sound&&!phonemeSlices[sound]){
+     const overrideBank=readingPhonemeBank(sound);
+     audioBytes(overrideBank?audioBank(overrideBank):bank,`sound-${sound}`);
+    }
    }
    for(const spelling of group.spellings){
     assert(spelling.letters&&spelling.examples.length);
@@ -81,18 +98,22 @@ for(const [i,c] of readingChapters.entries()){
   audioBytes(bank,`passage-${passage.page}`);
   audioBytes(bank,`slow-passage-${passage.page}`);
  }
- audioBytes(bank,'practice-sh');
+ const practiceBank=audioBank(`practice-v4-${c.id}`);
+ audioBytes(practiceBank,'practice-sh');
+ const ranges=shPracticeTiming[c.id];
+ assert.equal(ranges.length,c.sh.split(/(?<=[.!?])\s+/).length);
+ for(const [index,[start,duration]] of ranges.entries()){
+  assert(start>=0&&duration>0);
+  if(index>0) assert(start>=ranges[index-1][0]+ranges[index-1][1]);
+ }
  for(const [index,q] of c.quiz.entries()){
   assert(q.word&&q.prompt&&q.reason);assert.equal(q.options.length,3);
   assert.equal(new Set(q.options).size,3);
   assert(Number.isInteger(q.answer)&&q.answer>=0&&q.answer<3);
   assert.equal(q.options[q.answer],q.word,'Correct sound must pronounce the displayed word');
-  const hasSyntheticChoice=q.options.some(w=>!recordedWords.has(w.toLowerCase()));
   const hashes=q.options.map(w=>{
-   const word=w.toLowerCase(), key=`word-${word}`, quizKey=`quiz-${index}-${key}`;
-   const needsMatchingVoice=hasSyntheticChoice&&recordedWords.has(word);
-   assert.equal(Boolean(bank[quizKey]),needsMatchingVoice,'Quiz options must use a consistent voice');
-   return createHash('sha256').update(audioBytes(bank,needsMatchingVoice?quizKey:key)).digest('hex');
+   const word=w.toLowerCase();
+   return createHash('sha256').update(audioBytes(practiceBank,`quiz-${index}-word-${word}`)).digest('hex');
   });
   assert.equal(new Set(hashes).size,3,'Sound options must not be identical recordings');
  }

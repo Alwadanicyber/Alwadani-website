@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
+import {clearWordBank} from './reading-phonemes';
 
 const audioDirectory = '/reading/voice-v3';
 const bankVersion = '2';
@@ -33,7 +34,7 @@ function loadPhonemes() {
 
 type Slice = readonly [offset: number, length: number];
 
-export function useReadingAudio(bank: string) {
+export function useReadingAudio(bank: string, practiceBank?: string) {
  const [active, setActive] = useState('');
  const [notice, setNotice] = useState('');
  const audioContext = useRef<AudioContext|null>(null);
@@ -44,7 +45,9 @@ export function useReadingAudio(bank: string) {
  useEffect(() => {
   void loadBank(bank).catch(() => {});
   void loadPhonemes().catch(() => {});
- }, [bank]);
+  void loadBank(clearWordBank).catch(() => {});
+  if (practiceBank) void loadBank(practiceBank).catch(() => {});
+ }, [bank,practiceBank]);
 
  useEffect(() => {
   const buffers = decoded.current;
@@ -68,7 +71,7 @@ export function useReadingAudio(bank: string) {
   setNotice('');
  }
 
- async function play(clip: string, options: {slice?: Slice; id?: string; quizQuestion?: number; bankName?: string; onStart?: () => void} = {}) {
+ async function play(clip: string, options: {slice?: Slice; range?: Slice; id?: string; quizQuestion?: number; bankName?: string; onStart?: () => void} = {}) {
   stop();
   const current = request.current.version;
   const quizClip = options.quizQuestion === undefined ? clip : `quiz-${options.quizQuestion}-${clip}`;
@@ -104,7 +107,8 @@ export function useReadingAudio(bank: string) {
      setActive('');
     }
    };
-   if (options.slice) player.start(0, ...options.slice);
+   const range = options.slice ?? options.range;
+   if (range) player.start(0, ...range);
    else player.start();
    source.current = player;
    options.onStart?.();
