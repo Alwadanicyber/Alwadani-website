@@ -260,4 +260,3 @@ export const readingAlphabet = [
     "tip": "صوت قريب من s، مع اهتزاز الصوت."
   }
 ] as const;
-export function readingAudioPath(kind:"sound"|"word",value:string){return `/reading/audio/${kind}-${value.toLowerCase()}.mp3`;}

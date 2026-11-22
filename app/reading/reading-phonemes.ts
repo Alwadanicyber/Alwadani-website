@@ -1,0 +1,38 @@
+// Offsets in the original Sounds American IPA chart recording.
+export const phonemeSlices: Partial<Record<string, readonly [number, number]>> = {
+ 'a': [6, 0.7],
+ 'b': [18, 0.85],
+ 'c': [21, 0.85],
+ 'd': [20, 0.85],
+ 'e': [5, 0.6],
+ 'f': [25, 0.7],
+ 'g': [22, 0.85],
+ 'h': [33, 0.46],
+ 'i': [3, 0.6],
+ 'j': [35, 0.7],
+ 'k': [21, 0.85],
+ 'l': [39, 0.9],
+ 'm': [37, 0.9],
+ 'n': [36, 0.9],
+ 'o': [9, 0.65],
+ 'p': [17, 0.85],
+ 'r': [40, 0.8],
+ 's': [29, 0.86],
+ 't': [19, 0.85],
+ 'u': [8, 0.65],
+ 'v': [26, 0.8],
+ 'w': [41, 0.9],
+ 'y': [42, 0.4],
+ 'z': [30, 0.94],
+ 'ay': [4, 0.7],
+ 'sh': [31, 0.96],
+ 'ch': [34, 0.7],
+ 'th-unvoiced': [27, 0.65],
+ 'th-voiced': [28, 0.8],
+};
+
+export const patternSounds: Partial<Record<string, {id: string; label: string}[]>> = {
+ 'sh · ch': [{id: 'sh', label: 'sh /ʃ/'}, {id: 'ch', label: 'ch /tʃ/'}],
+ th: [{id: 'th-unvoiced', label: 'th /θ/'}, {id: 'th-voiced', label: 'th /ð/'}],
+ 'Long A': [{id: 'ay', label: 'ay /eɪ/'}],
+};
