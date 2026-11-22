@@ -4,13 +4,107 @@
 .reading-view-tabs{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px}.reading-view-tabs button{border:1px solid var(--rd-line);background:var(--rd-paper);color:var(--rd-ink);padding:12px 18px;border-radius:12px;font:inherit;cursor:pointer}.reading-view-tabs button[aria-pressed=true]{background:var(--rd-accent);color:#fff}.reading-alphabet{background:var(--rd-paper);border:1px solid var(--rd-line);border-radius:26px;padding:32px}.reading-alphabet-header{display:flex;justify-content:space-between;gap:28px;align-items:center;border-bottom:1px solid var(--rd-line);padding-bottom:22px;margin-bottom:20px}.reading-alphabet h1{font-size:clamp(30px,4vw,48px);margin:12px 0}.reading-alphabet-header p{max-width:760px;line-height:1.9}.reading-alphabet-badge{background:#f7edcf;border-radius:24px;padding:24px;flex-shrink:0;color:#71551d;font-weight:800;text-align:center;line-height:2}.reading-alphabet-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-top:24px}.reading-letter-card{background:#f5f7ef;border:1px solid var(--rd-line);border-radius:18px;padding:16px;min-width:0}.reading-letter-sound{display:flex;flex-direction:column;align-items:center;gap:5px;width:100%;padding:8px 0 16px;color:var(--rd-ink);background:none;border:0;cursor:pointer}.reading-letter-sound>span:first-child{font:700 64px/1.2 Georgia,serif;letter-spacing:3px}.reading-letter-sound small{font-size:44px;margin-left:8px}.reading-letter-ipa{display:flex;align-items:center;gap:12px;font:18px Georgia,serif;color:var(--rd-accent)}.reading-letter-sound[aria-pressed=true]{background:#dcebd9;border-radius:12px}.reading-letter-examples{display:grid;grid-template-columns:1fr 1fr;gap:8px}.reading-letter-examples button{display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--rd-line);border-radius:9px;padding:12px 5px;background:var(--rd-paper);color:var(--rd-ink);font:17px Georgia,serif;cursor:pointer;min-width:0}.reading-letter-examples button[aria-pressed=true]{border:2px solid var(--rd-accent)}.reading-letter-card p{line-height:1.8;font-size:13px;margin:14px 0 0;color:#53685b}.reading-alphabet-footer{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:28px}.reading-alphabet-footer p{width:100%;line-height:1.9}.reading-content>h1{font-size:30px;margin:12px 0}.reading-content section>h2{font-size:21px;margin:24px 0 14px}.reading-pattern h3{font:700 22px Georgia,serif;margin:0;text-align:left}.reading-passage-top h3{font:700 23px Georgia,serif;margin:0}.reading-sh .reading-passage-top h2{font-size:21px;margin:0}.reading-target-word{display:block;font:700 40px/1.6 Georgia,serif;text-align:left;color:var(--rd-accent);margin:12px 0}.reading-quiz legend{width:100%}.reading-sound-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.reading-sound-option{padding:14px;border:1px solid var(--rd-line);border-radius:14px;background:var(--rd-paper);min-width:0}.reading-sound-option.is-selected{border:2px solid var(--rd-accent);background:#eff5e9}.reading-sound-option.is-correct{background:#e4f3df;border-color:#679b5b}.reading-sound-option.is-wrong{background:#fff1e5;border-color:#c89257}.reading-choice-play{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;width:100%;font:inherit;cursor:pointer;padding:18px 5px;border:0;background:none;color:var(--rd-ink);border-radius:8px}.reading-choice-play[aria-pressed=true]{background:#dcebd9}.reading-sound-option label{display:flex;gap:8px;align-items:center;padding:12px 0 0;border-top:1px solid var(--rd-line);font-size:13px;cursor:pointer;line-height:1.7}.reading-sound-option input{width:18px;height:18px;accent-color:var(--rd-accent);flex-shrink:0}.reading-sound-option label:has(input:disabled){cursor:default}.reading-choice-reveal{display:flex;gap:8px;align-items:center;justify-content:center;font:700 23px Georgia,serif;margin-top:14px}.reading-quiz fieldset{margin-top:20px}html[data-theme=dark] .reading-view-tabs button[aria-pressed=true]{background:#276b53}html[data-theme=dark] .reading-letter-card{background:#21392e}html[data-theme=dark] .reading-letter-card p{color:#b6c8b9}html[data-theme=dark] .reading-letter-sound[aria-pressed=true],html[data-theme=dark] .reading-choice-play[aria-pressed=true],html[data-theme=dark] .reading-sound-option.is-selected{background:#2e513e}html[data-theme=dark] .reading-sound-option.is-correct{background:#294d32}html[data-theme=dark] .reading-sound-option.is-wrong{background:#593d28}@media(max-width:1050px){.reading-alphabet-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.reading-sound-options{grid-template-columns:1fr}.reading-choice-play{flex-direction:row;padding:14px 8px}.reading-sound-option label{padding-top:8px}.reading-target-word{text-align:center}}@media(max-width:620px){.reading-alphabet{padding:18px;border-radius:18px}.reading-alphabet-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.reading-alphabet-header{display:block}.reading-alphabet-badge{display:none}.reading-letter-card{padding:10px}.reading-letter-sound>span:first-child{font-size:51px}.reading-letter-sound small{font-size:35px}.reading-letter-examples{grid-template-columns:1fr}.reading-letter-examples button{padding:10px;font-size:19px}.reading-letter-card p{font-size:12px}.reading-view-tabs{gap:7px}.reading-view-tabs button{padding:10px;font-size:13px}}@media print{.reading-view-tabs,.reading-alphabet-footer,.reading-alphabet .reading-audio-controls{display:none}.reading-alphabet-grid{grid-template-columns:repeat(4,1fr)}.reading-letter-card{break-inside:avoid}}
 
 .reading-passage-buttons{display:flex;gap:8px;flex-wrap:wrap}
-.reading-pattern-sounds:not(:empty){display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .reading-word-bank button[aria-pressed=true],.reading-audio[aria-pressed=true]{
  background:var(--rd-accent);color:var(--rd-paper);border-color:var(--rd-accent);
 }
 .reading-source a{color:var(--rd-accent)}
 
-.reading-ending-example{
- margin-top:12px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+.reading-sound-groups {
+ display:grid;
+ gap:12px;
+ margin-top:14px;
 }
-.reading-ending-example mark{color:inherit;background:none;text-decoration:underline}
+.reading-sound-groups--tiles {
+ grid-template-columns:repeat(auto-fit,minmax(min(100%,11rem),1fr));
+}
+.reading-sound-group {
+ min-width:0;
+ padding:12px;
+ border:1px solid var(--rd-line);
+ border-radius:12px;
+ background:color-mix(in srgb,var(--rd-accent) 6%,var(--rd-paper));
+}
+.reading-sound-group--ending {
+ grid-column:1/-1;
+}
+.reading-sound-head {
+ display:flex;
+ flex-wrap:wrap;
+ align-items:center;
+ gap:8px;
+ padding-bottom:10px;
+ margin-bottom:10px;
+ border-bottom:1px solid var(--rd-line);
+}
+.reading-sound-trigger,.reading-sound-notation {
+ display:inline-flex;
+ align-items:center;
+ gap:8px;
+ min-height:44px;
+ font:700 24px/1.2 Georgia,serif;
+}
+.reading-sound-trigger {
+ padding:6px 12px;
+ border:1px solid transparent;
+ border-radius:8px;
+ background:var(--rd-accent);
+ color:var(--rd-paper);
+ cursor:pointer;
+}
+.reading-sound-trigger[aria-pressed=true] {
+ background:var(--rd-ink);
+}
+.reading-sound-notation {
+ color:var(--rd-accent);
+}
+.reading-sound-position {
+ font-size:.85rem;
+}
+.reading-spellings {
+ display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(min(100%,7.8rem),1fr));
+ gap:10px;
+}
+.reading-spelling {
+ min-width:0;
+ padding:10px;
+ border-radius:8px;
+ background:var(--rd-paper);
+}
+.reading-spelling h4 {
+ margin:0 0 8px;
+ color:var(--rd-ink);
+ font:700 21px/1.2 Georgia,serif;
+}
+.reading-spelling .reading-word-bank {
+ gap:6px;
+}
+.reading-spelling .reading-word-bank button {
+ min-height:44px;
+ padding:6px 8px;
+}
+.reading-spelling mark {
+ background:color-mix(in srgb,var(--rd-accent) 16%,transparent);
+ border-radius:3px;
+ color:var(--rd-accent);
+ font-weight:700;
+ text-decoration:underline;
+ text-underline-offset:.18em;
+}
+.reading-spelling button[aria-pressed=true] mark {
+ background:transparent;
+ color:inherit;
+}
+.reading-pattern .reading-pattern-note {
+ margin:10px 0 0;
+ font-size:.9rem;
+}
+@media(max-width:480px){
+ .reading-pattern{padding:12px}
+ .reading-sound-group{padding:9px}
+ .reading-sound-groups--tiles{grid-template-columns:repeat(auto-fit,minmax(min(100%,8.25rem),1fr))}
+}
+@media print{
+ .reading-sound-trigger{padding:0;border:0;background:none;color:inherit}
+ .reading-sound-trigger svg,.reading-spelling button svg{display:none}
+}

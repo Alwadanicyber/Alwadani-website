@@ -68,11 +68,12 @@ export function useReadingAudio(bank: string) {
   setNotice('');
  }
 
- async function play(clip: string, options: {slice?: Slice; id?: string; quizQuestion?: number; onStart?: () => void} = {}) {
+ async function play(clip: string, options: {slice?: Slice; id?: string; quizQuestion?: number; bankName?: string; onStart?: () => void} = {}) {
   stop();
   const current = request.current.version;
   const quizClip = options.quizQuestion === undefined ? clip : `quiz-${options.quizQuestion}-${clip}`;
-  const audioKey = options.slice ? 'phonemes' : `${bank}/${quizClip}`;
+  const bankName = options.bankName ?? bank;
+  const audioKey = options.slice ? 'phonemes' : `${bankName}/${quizClip}`;
   setActive(options.id ?? clip);
   try {
    const context = audioContext.current ??= new AudioContext();
@@ -82,7 +83,7 @@ export function useReadingAudio(bank: string) {
    if (!audio) {
     const bytes = options.slice
      ? loadPhonemes().then(data => data.slice(0))
-     : loadBank(bank).then(data => {
+     : loadBank(bankName).then(data => {
         const value = data[quizClip] ?? data[clip];
         if (!value) throw new Error('Reading audio clip missing');
         return Uint8Array.from(atob(value), character => character.charCodeAt(0)).buffer;

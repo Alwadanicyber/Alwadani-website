@@ -1,4 +1,24 @@
-export type ReadingChapter = {id:number;title:string;en:string;page:number;goal:string;patterns:{pattern:string;words:string;tip:string;endingExample?:{letter:string;word:string}}[];note:string;passages:{title:string;text:string;page:number}[];sh:string;quiz:{word:string;prompt:string;options:string[];answer:number;reason:string}[]};
+export type ReadingSpelling = {letters:string; examples:string[]};
+export type ReadingSoundGroup = {ipa:string; spellings:ReadingSpelling[]; atEnd?:boolean; audio?:string};
+export type ReadingPattern = {pattern:string; groups:ReadingSoundGroup[]; tip?:string};
+export type ReadingChapter = {
+ id:number; title:string; en:string; page:number; goal:string; patterns:ReadingPattern[]; note:string;
+ passages:{title:string; text:string; page:number}[]; sh:string;
+ quiz:{word:string; prompt:string; options:string[]; answer:number; reason:string}[];
+};
+
+// Brackets mark only the letters students should focus on, including split spellings like a…e.
+function spelling(letters:string, examples:string):ReadingSpelling {
+ return {letters, examples:examples.split(' ')};
+}
+
+function sound(ipa:string, ...spellings:ReadingSpelling[]):ReadingSoundGroup {
+ return {ipa, spellings};
+}
+
+export function readingExampleWord(example:string):string {
+ return example.replace(/[\[\]]/g,'');
+}
 export const readingChapters:ReadingChapter[] = [
   {
     "id": 1,
@@ -8,26 +28,51 @@ export const readingChapters:ReadingChapter[] = [
     "goal": "ميّز اسم الحرف عن صوته، واقرأ الحروف الكبيرة والصغيرة. استخدم صوت الحرف عند الدمج، دون إضافة حركة بعد كل ساكن.",
     "patterns": [
       {
-        "pattern": "A–G",
-        "words": "ant bat cat dog egg fan gap",
-        "tip": "A /æ/ · B /b/ · C /k/ · D /d/ · E /ɛ/ · F /f/ · G /ɡ/"
+        pattern: 'A–G',
+        groups: [
+          sound('æ', spelling('A','[a]nt')),
+          sound('b', spelling('B','[b]at')),
+          sound('k', spelling('C','[c]at')),
+          sound('d', spelling('D','[d]og')),
+          sound('ɛ', spelling('E','[e]gg')),
+          sound('f', spelling('F','[f]an')),
+          sound('ɡ', spelling('G','[g]ap')),
+        ],
       },
       {
-        "pattern": "H–M",
-        "words": "hat in jam kid leg map",
-        "tip": "H /h/ · I /ɪ/ · J /dʒ/ · K /k/ · L /l/ · M /m/"
+        pattern: 'H–M',
+        groups: [
+          sound('h', spelling('H','[h]at')),
+          sound('ɪ', spelling('I','[i]n')),
+          sound('dʒ', spelling('J','[j]am')),
+          sound('k', spelling('K','[k]id')),
+          sound('l', spelling('L','[l]eg')),
+          sound('m', spelling('M','[m]ap')),
+        ],
       },
       {
-        "pattern": "N–T",
-        "words": "net ox pen quit red sun top",
-        "tip": "N /n/ · O /ɑ/ · P /p/ · qu /kw/ · R /ɹ/ · S /s/ · T /t/"
+        pattern: 'N–T',
+        groups: [
+          sound('n', spelling('N','[n]et')),
+          sound('ɑ', spelling('O','[o]x')),
+          sound('p', spelling('P','[p]en')),
+          sound('kw', spelling('qu','[qu]it')),
+          sound('ɹ', spelling('R','[r]ed')),
+          sound('s', spelling('S','[s]un')),
+          sound('t', spelling('T','[t]op')),
+        ],
       },
       {
-        "pattern": "U–Z",
-        "words": "up van wet yes zip",
-        "tip": "U /ʌ/ · V /v/ · W /w/ · X /ks/ · Y /j/ · Z /z/",
-        "endingExample": {"letter": "X", "word": "box"}
-      }
+        pattern: 'U–Z',
+        groups: [
+          sound('ʌ', spelling('U','[u]p')),
+          sound('v', spelling('V','[v]an')),
+          sound('w', spelling('W','[w]et')),
+          sound('j', spelling('Y','[y]es')),
+          sound('z', spelling('Z','[z]ip')),
+          {...sound('ks', spelling('X','bo[x]')), atEnd:true},
+        ],
+      },
     ],
     "note": "الحروف قد يكون لها أكثر من صوت. هذه أمثلة أولية، والرموز الصوتية للمعلم. النطق هنا أمريكي؛ لا نعتمد على الكتابة العربية وحدها.",
     "passages": [
@@ -82,30 +127,45 @@ export const readingChapters:ReadingChapter[] = [
     "goal": "اقرأ الحرفين معًا كوحدة صوتية. قارن sh في ship مع ch في chip، ثم استمع إلى صوتي th.",
     "patterns": [
       {
-        "pattern": "sh · ch",
-        "words": "ship fish chip chin",
-        "tip": "اسمع sh /ʃ/ في ship، ثم ch /tʃ/ في chip."
+        pattern: 'sh · ch',
+        groups: [
+          sound('ʃ', spelling('sh','[sh]ip fi[sh]')),
+          sound('tʃ', spelling('ch','[ch]ip [ch]in')),
+        ],
       },
       {
-        "pattern": "th",
-        "words": "thin bath this that",
-        "tip": "ضع طرف اللسان بين الأسنان. اسمع /θ/ بلا اهتزاز في thin وbath، و/ð/ مع اهتزاز الصوت في this وthat."
+        pattern: 'th',
+        tip: 'ضع طرف لسانك بين الأسنان. اسمع /θ/ بلا اهتزاز، و/ð/ مع اهتزاز الصوت.',
+        groups: [
+          sound('θ', spelling('th','[th]in ba[th]')),
+          sound('ð', spelling('th','[th]is [th]at')),
+        ],
       },
       {
-        "pattern": "ph · wh",
-        "words": "phone photo when which",
-        "tip": "اسمع ph /f/ في phone وphoto، وwh /w/ في when وwhich."
+        pattern: 'ph · wh',
+        groups: [
+          sound('f', spelling('ph','[ph]one [ph]oto')),
+          sound('w', spelling('wh','[wh]en [wh]ich')),
+        ],
       },
       {
-        "pattern": "ck · ng",
-        "words": "duck sock sing ring",
-        "tip": "اسمع ck /k/ في duck وsock، وng /ŋ/ في sing وring دون نطق g منفصلة."
+        pattern: 'ck · ng',
+        tip: 'في sing وring تسمع /ŋ/، دون g منفصلة.',
+        groups: [
+          sound('k', spelling('ck','du[ck] so[ck]')),
+          sound('ŋ', spelling('ng','si[ng] ri[ng]')),
+        ],
       },
       {
-        "pattern": "ff · ll · ss · zz",
-        "words": "off puff bell hill kiss mess buzz fizz",
-        "tip": "اقرأ كل زوج بصوت واحد. استمع إلى ff في off، وll في bell، وss في kiss، وzz في buzz."
-      }
+        pattern: 'ff · ll · ss · zz',
+        tip: 'اقرأ الحرفين المكررين بصوت واحد.',
+        groups: [
+          sound('f', spelling('ff','o[ff] pu[ff]')),
+          {...sound('l', spelling('ll','be[ll] hi[ll]')), audio:'ll'},
+          sound('s', spelling('ss','ki[ss] me[ss]')),
+          sound('z', spelling('zz','bu[zz] fi[zz]')),
+        ],
+      },
     ],
     "note": "قل sh بهواء مستمر دون إضافة حركة. تدريب she sells الأصعب أدناه للترديد بمساعدة المعلم، وليس اختبار سرعة.",
     "passages": [
@@ -160,45 +220,80 @@ export const readingChapters:ReadingChapter[] = [
     "goal": "ابدأ بحروف العلة الثنائية مثل ee وea وai وoa. قد تعطي كتابات مختلفة الصوت نفسه، وقد تعطي الحروف نفسها أصواتًا مختلفة. ثم قارن التركيبات الأطول مثل igh وeigh.",
     "patterns": [
       {
-        "pattern": "Long E",
-        "words": "feet green seat leaf key monkey",
-        "tip": "ee وea وey تعطي /iː/ في هذه الأمثلة."
+        pattern: 'Long E',
+        groups: [sound('iː',
+          spelling('ee','f[ee]t gr[ee]n'),
+          spelling('ea','s[ea]t l[ea]f'),
+          spelling('ey','k[ey] monk[ey]'),
+        )],
       },
       {
-        "pattern": "Long A",
-        "words": "rain train day play vein veil eight weight break steak",
-        "tip": "ai وay وei وeigh وea في هذه الكلمات تعطي /eɪ/."
+        pattern: 'Long A',
+        groups: [sound('eɪ',
+          spelling('ai','r[ai]n tr[ai]n'),
+          spelling('ay','d[ay] pl[ay]'),
+          spelling('ei','v[ei]n v[ei]l'),
+          spelling('eigh','[eigh]t w[eigh]t'),
+          spelling('ea','br[ea]k st[ea]k'),
+        )],
       },
       {
-        "pattern": "Long I",
-        "words": "pie tie light night my fly type style",
-        "tip": "ie وigh وy وy_e في هذه الكلمات تعطي /aɪ/."
+        pattern: 'Long I',
+        groups: [sound('aɪ',
+          spelling('ie','p[ie] t[ie]'),
+          spelling('igh','l[igh]t n[igh]t'),
+          spelling('y','m[y] fl[y]'),
+          spelling('y…e','t[y]p[e] st[y]l[e]'),
+        )],
       },
       {
-        "pattern": "Long O",
-        "words": "boat coat snow grow toe hoe",
-        "tip": "oa وow وoe تعطي /oʊ/ هنا."
+        pattern: 'Long O',
+        groups: [sound('oʊ',
+          spelling('oa','b[oa]t c[oa]t'),
+          spelling('ow','sn[ow] gr[ow]'),
+          spelling('oe','t[oe] h[oe]'),
+        )],
       },
       {
-        "pattern": "More long vowels",
-        "words": "blue glue new few these theme field chief flute rule",
-        "tip": "ue وew وe_e وie وu_e لها أمثلة مختلفة. blue /uː/، few /juː/."
+        pattern: 'More long vowels',
+        groups: [
+          sound('uː',
+            spelling('ue','bl[ue] gl[ue]'),
+            spelling('ew','n[ew]'),
+            spelling('u…e','fl[u]t[e] r[u]l[e]'),
+          ),
+          sound('juː', spelling('ew','f[ew]')),
+          sound('iː',
+            spelling('e…e','th[e]s[e] th[e]m[e]'),
+            spelling('ie','f[ie]ld ch[ie]f'),
+          ),
+        ],
       },
       {
-        "pattern": "oo · ea",
-        "words": "boot moon book foot head bread",
-        "tip": "oo /uː/ في moon و/ʊ/ في book؛ ea /e/ في head."
+        pattern: 'oo · ea',
+        groups: [
+          sound('uː', spelling('oo','b[oo]t m[oo]n')),
+          sound('ʊ', spelling('oo','b[oo]k f[oo]t')),
+          sound('ɛ', spelling('ea','h[ea]d br[ea]d')),
+        ],
       },
       {
-        "pattern": "oi · oy · ou · ow · au · aw",
-        "words": "coin oil boy toy out cloud cow brown sauce August saw law",
-        "tip": "oi وoy /ɔɪ/؛ ou وow /aʊ/ هنا؛ au وaw تختلف قليلًا باختلاف اللهجة."
+        pattern: 'oi · oy · ou · ow · au · aw',
+        tip: 'مع au وaw قد تسمع /ɔ/ أو /ɑ/ حسب اللهجة الأمريكية.',
+        groups: [
+          sound('ɔɪ', spelling('oi','c[oi]n [oi]l'), spelling('oy','b[oy] t[oy]')),
+          sound('aʊ', spelling('ou','[ou]t cl[ou]d'), spelling('ow','c[ow] br[ow]n')),
+          sound('ɔ ~ ɑ', spelling('au','s[au]ce [Au]gust'), spelling('aw','s[aw] l[aw]')),
+        ],
       },
       {
-        "pattern": "ou alternatives",
-        "words": "young touch soup group could would",
-        "tip": "ou /ʌ/ في young؛ /uː/ في soup؛ /ʊ/ في could. تعلّم الكلمة بنطقها."
-      }
+        pattern: 'ou alternatives',
+        groups: [
+          sound('ʌ', spelling('ou','y[ou]ng t[ou]ch')),
+          sound('uː', spelling('ou','s[ou]p gr[ou]p')),
+          sound('ʊ', spelling('ou','c[ou]ld w[ou]ld')),
+        ],
+      },
     ],
     "note": "لا توجد قاعدة قصيرة تضمن نطق كل ou. في igh لا تُسمع gh، لكن ذلك لا يعمم على ghost أو enough. في الدليل المصوّر، الصفحات ٢١–٣١، تجد الجداول والتطبيقات.",
     "passages": [
@@ -290,20 +385,30 @@ export const readingChapters:ReadingChapter[] = [
     "goal": "انظر إلى حرف العلة في الوسط. انطق الأصوات من اليسار إلى اليمين، ثم صِلها لتقرأ الكلمة.",
     "patterns": [
       {
-        "pattern": "a · e",
-        "words": "cat map hat pen bed red",
-        "tip": "a /æ/ كما في cat؛ e /e/ كما في pen."
+        pattern: 'a · e',
+        groups: [
+          sound('æ', spelling('a','c[a]t m[a]p h[a]t')),
+          sound('ɛ', spelling('e','p[e]n b[e]d r[e]d')),
+        ],
       },
       {
-        "pattern": "i · o · u",
-        "words": "sit pin pig hot pot top cup sun run",
-        "tip": "i /ɪ/ · o /ɑ/ في النموذج الأمريكي · u /ʌ/."
+        pattern: 'i · o · u',
+        groups: [
+          sound('ɪ', spelling('i','s[i]t p[i]n p[i]g')),
+          sound('ɑ', spelling('o','h[o]t p[o]t t[o]p')),
+          sound('ʌ', spelling('u','c[u]p s[u]n r[u]n')),
+        ],
       },
       {
-        "pattern": "Blend",
-        "words": "map sat pin cup",
-        "tip": "m + a + p → map. قل الأصوات، وليس أسماء الحروف."
-      }
+        pattern: 'Blend',
+        tip: 'ابدأ من اليسار وصِل الأصوات لتقرأ الكلمة.',
+        groups: [
+          sound('', spelling('m + a + p','map')),
+          sound('', spelling('s + a + t','sat')),
+          sound('', spelling('p + i + n','pin')),
+          sound('', spelling('c + u + p','cup')),
+        ],
+      },
     ],
     "note": "تدرّب على pan ثم pen ثم pin: تغيير حرف العلة يغيّر الصوت والكلمة.",
     "passages": [
@@ -358,25 +463,38 @@ export const readingChapters:ReadingChapter[] = [
     "goal": "في التجمعات الساكنة نسمع الأصوات المتجاورة ونصلها دون حركة زائدة. بخلاف sh، نحتفظ بصوت كل حرف في pl.",
     "patterns": [
       {
-        "pattern": "st · bl · tr · pl",
-        "words": "stop star black blue tree train play plane plan",
-        "tip": "p + l + a + n → plan."
+        pattern: 'st · bl · tr · pl',
+        groups: [
+          sound('st', spelling('st','[st]op [st]ar')),
+          sound('bl', spelling('bl','[bl]ack [bl]ue')),
+          sound('tr', spelling('tr','[tr]ee [tr]ain')),
+          sound('pl', spelling('pl','[pl]ay [pl]ane [pl]an')),
+        ],
       },
       {
-        "pattern": "sl · sn · dr · gr",
-        "words": "slip sled snap snack drip drop grin grab",
-        "tip": "انطق كل ساكن ثم صِله بحرف العلة."
+        pattern: 'sl · sn · dr · gr',
+        groups: [
+          sound('sl', spelling('sl','[sl]ip [sl]ed')),
+          sound('sn', spelling('sn','[sn]ap [sn]ack')),
+          sound('dr', spelling('dr','[dr]ip [dr]op')),
+          sound('ɡr', spelling('gr','[gr]in [gr]ab')),
+        ],
       },
       {
-        "pattern": "sm · sw · pr",
-        "words": "smell smile swim swan press print",
-        "tip": "s + w + i + m → swim."
+        pattern: 'sm · sw · pr',
+        groups: [
+          sound('sm', spelling('sm','[sm]ell [sm]ile')),
+          sound('sw', spelling('sw','[sw]im [sw]an')),
+          sound('pr', spelling('pr','[pr]ess [pr]int')),
+        ],
       },
       {
-        "pattern": "qu · nk",
-        "words": "quick queen sink bank",
-        "tip": "qu /kw/؛ nk /ŋk/ في هذه الكلمات."
-      }
+        pattern: 'qu · nk',
+        groups: [
+          sound('kw', spelling('qu','[qu]ick [qu]een')),
+          sound('ŋk', spelling('nk','si[nk] ba[nk]')),
+        ],
+      },
     ],
     "note": "بعض الأمثلة مثل plane وblue تحوي حركات ستتعلمها لاحقًا؛ استمع لها أولًا. ابدأ بالتدريب على plan وstop وslip.",
     "passages": [
@@ -431,20 +549,32 @@ export const readingChapters:ReadingChapter[] = [
     "goal": "قارن الكلمة القصيرة بالكلمة التي أضيفت إليها e. غالبًا يتغير صوت العلة إلى اسمه، ولا ننطق e الأخيرة.",
     "patterns": [
       {
-        "pattern": "a_e · i_e",
-        "words": "cap cape kit kite",
-        "tip": "cap → cape؛ kit → kite."
+        pattern: 'a…e · i…e',
+        groups: [
+          sound('æ', spelling('a','c[a]p')),
+          sound('eɪ', spelling('a…e','c[a]p[e]')),
+          sound('ɪ', spelling('i','k[i]t')),
+          sound('aɪ', spelling('i…e','k[i]t[e]')),
+        ],
       },
       {
-        "pattern": "o_e · u_e",
-        "words": "hop hope cub cube not note cut cute",
-        "tip": "o تعمل أيضًا مع e الصامتة: hop → hope."
+        pattern: 'o…e · u…e',
+        groups: [
+          sound('ɑ', spelling('o','h[o]p n[o]t')),
+          sound('oʊ', spelling('o…e','h[o]p[e] n[o]t[e]')),
+          sound('ʌ', spelling('u','c[u]b c[u]t')),
+          sound('juː', spelling('u…e','c[u]b[e] c[u]t[e]')),
+        ],
       },
       {
-        "pattern": "Exceptions",
-        "words": "love some have give",
-        "tip": "كلمات خاصة: love /lʌv/؛ some /sʌm/؛ have /hæv/؛ give /ɡɪv/."
-      }
+        pattern: 'Exceptions',
+        tip: 'في هذه الكلمات تبقى العلة قصيرة رغم وجود e الأخيرة.',
+        groups: [
+          sound('ʌ', spelling('o…e','l[o]v[e] s[o]m[e]')),
+          sound('æ', spelling('a…e','h[a]v[e]')),
+          sound('ɪ', spelling('i…e','g[i]v[e]')),
+        ],
+      },
     ],
     "note": "هذه قاعدة شائعة وليست مطلقة. u_e قد تعطي /juː/ في cube أو /uː/ في flute.",
     "passages": [
@@ -499,20 +629,28 @@ export const readingChapters:ReadingChapter[] = [
     "goal": "انظر إلى الحرف الذي يأتي بعد c أو g. قبل e وi وy تُنطق c غالبًا /s/، وقد تُنطق g /dʒ/.",
     "patterns": [
       {
-        "pattern": "c + e / i / y",
-        "words": "cent cell city circle cycle",
-        "tip": "c /s/ غالبًا في هذه الأمثلة."
+        pattern: 'c + e / i / y',
+        groups: [sound('s',
+          spelling('ce','[c]ent [c]ell'),
+          spelling('ci','[c]ity [c]ircle'),
+          spelling('cy','[c]ycle'),
+        )],
       },
       {
-        "pattern": "g + e / i / y",
-        "words": "gem gentle giant giraffe gym",
-        "tip": "g قد تعطي /dʒ/."
+        pattern: 'g + e / i / y',
+        groups: [sound('dʒ',
+          spelling('ge','[g]em [g]entle'),
+          spelling('gi','[g]iant [g]iraffe'),
+          spelling('gy','[g]ym'),
+        )],
       },
       {
-        "pattern": "Hard g exceptions",
-        "words": "get give girl",
-        "tip": "g تبقى /ɡ/ في هذه الكلمات؛ لا نعمم القاعدة."
-      }
+        pattern: 'Hard g exceptions',
+        groups: [sound('ɡ',
+          spelling('ge','[g]et'),
+          spelling('gi','[g]ive [g]irl'),
+        )],
+      },
     ],
     "note": "لاحظ أن كلمة girl تجمع g الصلبة مع ir. استمع إلى الكلمة كاملة قبل القياس على نمط واحد.",
     "passages": [
@@ -567,25 +705,37 @@ export const readingChapters:ReadingChapter[] = [
     "goal": "استمع إلى تأثير r في صوت العلة. الأمثلة هنا بنطق أمريكي، ولا يوجد مقابل عربي دقيق لكل صوت.",
     "patterns": [
       {
-        "pattern": "ar · or",
-        "words": "car star fork corn",
-        "tip": "ar /ɑr/؛ or /ɔr/."
+        pattern: 'ar · or',
+        groups: [
+          sound('ɑr', spelling('ar','c[ar] st[ar]')),
+          sound('ɔr', spelling('or','f[or]k c[or]n')),
+        ],
       },
       {
-        "pattern": "er · ir · ur",
-        "words": "her term bird girl turn nurse",
-        "tip": "تتقارب هذه المجموعات في /ɝ/ في الأمثلة المعروضة."
+        pattern: 'er · ir · ur',
+        groups: [sound('ɝ',
+          spelling('er','h[er] t[er]m'),
+          spelling('ir','b[ir]d g[ir]l'),
+          spelling('ur','t[ur]n n[ur]se'),
+        )],
       },
       {
-        "pattern": "air · ear · eer",
-        "words": "hair chair near hear deer peer",
-        "tip": "chair /er/؛ near وdeer /ɪr/."
+        pattern: 'air · ear · eer',
+        groups: [
+          sound('ɛr', spelling('air','h[air] ch[air]')),
+          sound('ɪr', spelling('ear','n[ear] h[ear]'), spelling('eer','d[eer] p[eer]')),
+        ],
       },
       {
-        "pattern": "Compare ea and ear",
-        "words": "sea teach head bread break steak hear near bear wear",
-        "tip": "ea /iː/ أو /e/ أو /eɪ/ هنا؛ ear /ɪr/ في near و/er/ في bear."
-      }
+        pattern: 'Compare ea and ear',
+        groups: [
+          sound('iː', spelling('ea','s[ea] t[ea]ch')),
+          sound('ɛ', spelling('ea','h[ea]d br[ea]d')),
+          sound('eɪ', spelling('ea','br[ea]k st[ea]k')),
+          sound('ɪr', spelling('ear','h[ear] n[ear]')),
+          sound('ɛr', spelling('ear','b[ear] w[ear]')),
+        ],
+      },
     ],
     "note": "لا تضع bear وwear مع break وsteak تحت صوت واحد. tear يتغير نطقها بحسب المعنى، لذلك نبدأ بأمثلة واضحة مثل near وbear.",
     "passages": [
@@ -640,25 +790,25 @@ export const readingChapters:ReadingChapter[] = [
     "goal": "قد نكتب حرفًا دون أن نسمع صوته. تعلّم هذه الأنماط داخل كلماتها، ولا تحذف الحرف في كل الكلمات الإنجليزية.",
     "patterns": [
       {
-        "pattern": "kn",
-        "words": "knee knife",
-        "tip": "k لا تُسمع في هذين المثالين؛ نبدأ بصوت /n/."
+        pattern: 'kn',
+        tip: 'في هاتين الكلمتين k صامتة.',
+        groups: [sound('n', spelling('kn','[kn]ee [kn]ife'))],
       },
       {
-        "pattern": "wr",
-        "words": "write wrist",
-        "tip": "w لا تُسمع؛ نبدأ بصوت /r/."
+        pattern: 'wr',
+        tip: 'في هاتين الكلمتين w صامتة.',
+        groups: [sound('ɹ', spelling('wr','[wr]ite [wr]ist'))],
       },
       {
-        "pattern": "mb",
-        "words": "lamb thumb",
-        "tip": "b لا تُسمع في نهاية هاتين الكلمتين."
+        pattern: 'mb',
+        tip: 'في هاتين الكلمتين b صامتة.',
+        groups: [sound('m', spelling('mb','la[mb] thu[mb]'))],
       },
       {
-        "pattern": "igh review",
-        "words": "night light",
-        "tip": "gh صامتة هنا، والمجموعة igh تعطي /aɪ/."
-      }
+        pattern: 'igh review',
+        tip: 'في هاتين الكلمتين gh صامتة.',
+        groups: [sound('aɪ', spelling('igh','n[igh]t l[igh]t'))],
+      },
     ],
     "note": "قارن night وghost وenough: gh صامتة في الأولى، و/ɡ/ في الثانية، و/f/ في الثالثة. استمع إلى كل كلمة.",
     "passages": [
@@ -713,25 +863,24 @@ export const readingChapters:ReadingChapter[] = [
     "goal": "اقرأ tch وdge معًا، ثم قارن نهايات الكلمات كاملة. لا نعامل كل نهاية من ثلاثة حروف على أنها صوت واحد.",
     "patterns": [
       {
-        "pattern": "tch",
-        "words": "catch watch",
-        "tip": "tch /tʃ/؛ صوت واحد."
+        pattern: 'tch',
+        groups: [sound('tʃ', spelling('tch','ca[tch] wa[tch]'))],
       },
       {
-        "pattern": "dge",
-        "words": "badge bridge",
-        "tip": "dge /dʒ/؛ صوت واحد."
+        pattern: 'dge',
+        groups: [sound('dʒ', spelling('dge','ba[dge] bri[dge]'))],
       },
       {
-        "pattern": "age",
-        "words": "page cage village message",
-        "tip": "/eɪdʒ/ في page وcage؛ /ɪdʒ/ في village وmessage."
+        pattern: 'age',
+        groups: [
+          sound('eɪdʒ', spelling('age','p[age] c[age]')),
+          sound('ɪdʒ', spelling('age','vill[age] mess[age]')),
+        ],
       },
       {
-        "pattern": "ture",
-        "words": "picture future",
-        "tip": "غالبًا /tʃɚ/ في هذين المثالين بالنطق الأمريكي."
-      }
+        pattern: 'ture',
+        groups: [sound('tʃɚ', spelling('ture','pic[ture] fu[ture]'))],
+      },
     ],
     "note": "age لا تُنطق دائمًا مثل page. mature ليست مثالًا مناسبًا لتعميم نهاية picture، لأن حركتها ونبرها مختلفان.",
     "passages": [

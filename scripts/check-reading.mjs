@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
-import {readingChapters} from '../lib/reading-course.ts';
+import {readingChapters,readingExampleWord} from '../lib/reading-course.ts';
 import {readingAlphabet} from '../lib/reading-alphabet.ts';
-import {phonemeSlices,patternSounds} from '../app/reading/reading-phonemes.ts';
+import {phonemeSlices,readingPhonemeBank,readingPhonemeId} from '../app/reading/reading-phonemes.ts';
 assert.equal(readingChapters.length,10);
 assert.deepEqual(readingChapters.map(c=>c.page),[2,8,21,5,11,15,18,32,35,37],'Requested order: letters, consonant digraphs, vowel digraphs, then the rest');
 assert.equal(readingChapters.reduce((n,c)=>n+c.quiz.length,0),32);
@@ -22,11 +22,17 @@ assert(phonemes.length>100000,'The original phoneme recording must be present');
 assert.deepEqual(phonemeSlices.ay,[4,.7]);
 assert.equal(phonemeSlices.l,undefined,'L must use the recorded initial sound');
 assert.equal(phonemeSlices.x,undefined,'X must use the recorded final sound');
-const lastLetterGroup=readingChapters[0].patterns.find(p=>p.pattern==='U–Z');
-assert.deepEqual(lastLetterGroup.endingExample,{letter:'X',word:'box'});
-assert(!lastLetterGroup.tip.includes('box')&&!lastLetterGroup.words.split(' ').includes('box'));
-const consonantSounds=readingChapters[1].patterns.flatMap(p=>patternSounds[p.pattern]?.map(sound=>sound.id)??[]);
-assert.deepEqual(consonantSounds,['sh','ch','th-unvoiced','th-voiced','ph','wh','ck','ng','ff','ll','ss','zz']);
+const lastLetterGroup=readingChapters[0].patterns.find(p=>p.pattern==='U–Z').groups.at(-1);
+assert.deepEqual(lastLetterGroup,{ipa:'ks',atEnd:true,spellings:[{letters:'X',examples:['bo[x]']}]});
+assert.equal(readingPhonemeBank(readingPhonemeId('ks')),'alphabet');
+const digraphs=readingChapters[1].patterns;
+assert.deepEqual(digraphs.find(p=>p.pattern==='th').groups.map(g=>g.ipa),['θ','ð']);
+assert(digraphs.every(p=>p.groups.every(g=>g.audio||readingPhonemeId(g.ipa))));
+const vowelTeams=readingChapters[2].patterns;
+const longA=vowelTeams.find(p=>p.pattern==='Long A').groups;
+assert.deepEqual(longA.map(g=>g.ipa),['eɪ']);
+assert.deepEqual(longA[0].spellings.find(s=>s.letters==='ay').examples,['d[ay]','pl[ay]']);
+assert.deepEqual(vowelTeams.find(p=>p.pattern==='oo · ea').groups.map(g=>g.ipa),['uː','ʊ','ɛ']);
 for (const [offset,duration] of Object.values(phonemeSlices)){
  assert(offset>=0 && duration>0 && offset+duration<51);
 }
@@ -47,21 +53,29 @@ assert.equal(readingAlphabet.find(a=>a.letter==='x').phones,'k s');
 for(const [i,c] of readingChapters.entries()){
  assert.equal(c.id,i+1);
  assert(c.title&&c.en&&c.goal&&c.note);
- assert(c.patterns.length>0&&c.patterns.every(p=>p.pattern&&p.words&&p.tip));
+ assert(c.patterns.length>0&&c.patterns.every(p=>p.pattern&&p.groups.length));
  assert(c.passages.length>0&&c.passages.every(p=>p.title&&p.text&&p.page>=c.page));
  assert(/sh/i.test(c.sh));assert(c.quiz.length>=3);
  const bank = audioBank(`chapter-${c.id}`);
- if(c.id===2){
-  for(const sound of consonantSounds){
-   if(!phonemeSlices[sound]) audioBytes(bank,`sound-${sound}`);
-  }
- }
  for(const word of ['box','dog','duck','fox','leg','lip','up']){
   if(bank[`word-${word}`]) assert.equal(bank[`word-${word}`],alphabet[`word-${word}`]);
  }
  for(const pattern of c.patterns){
-  for(const word of pattern.words.split(' ')) audioBytes(bank,`word-${word.toLowerCase()}`);
-  if(pattern.endingExample) audioBytes(bank,`word-${pattern.endingExample.word.toLowerCase()}`);
+  for(const group of pattern.groups){
+   assert(group.spellings.length);
+   for(const symbol of group.ipa.split(' ~ ')){
+    const sound=group.audio??readingPhonemeId(symbol);
+    if(sound&&!phonemeSlices[sound]) audioBytes(readingPhonemeBank(sound)?alphabet:bank,`sound-${sound}`);
+   }
+   for(const spelling of group.spellings){
+    assert(spelling.letters&&spelling.examples.length);
+    for(const example of spelling.examples){
+     assert.match(example,/^(?:[a-z]|\[[a-z]+\])+$/i,'Spellings need balanced letter highlights');
+     if(group.ipa) assert(example.includes('['),'Sound examples should highlight the relevant letters');
+     audioBytes(bank,`word-${readingExampleWord(example).toLowerCase()}`);
+    }
+   }
+  }
  }
  for(const passage of c.passages){
   audioBytes(bank,`passage-${passage.page}`);

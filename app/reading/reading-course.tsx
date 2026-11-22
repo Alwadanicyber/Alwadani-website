@@ -5,7 +5,8 @@ import {CheckCircle2,ChevronLeft,ChevronRight,Download,Volume2,Square} from 'luc
 import SiteHeader from '../site-header';
 import {readingChapters} from '@/lib/reading-course';
 import {readingAlphabet} from '@/lib/reading-alphabet';
-import {phonemeSlices,patternSounds} from './reading-phonemes';
+import {phonemeSlices,readingPhonemeBank} from './reading-phonemes';
+import ReadingPatternCard from './reading-pattern-card';
 import {useReadingAudio} from './use-reading-audio';
 import './reading.css';
 
@@ -14,12 +15,6 @@ const storageKey='alwadani-reading-sounds-v2';
 type Progress=Record<string,number>;
 function Highlight({text}:{text:string}){
  return <>{text.split(/(sh)/gi).map((part,i)=>part.toLowerCase()==='sh'?<mark key={i}>{part}</mark>:part)}</>;
-}
-
-function ReadingTip({text,english}:{text:string;english:boolean}){
- if(english) return <bdi lang="en" dir="ltr">{text}</bdi>;
- const segments=text.split(/((?:\/[^/\r\n]+\/|[A-Za-z][A-Za-z’'_-]*)(?:[ \t]+(?:\/[^/\r\n]+\/|[A-Za-z][A-Za-z’'_-]*))*)/gu);
- return <>{segments.map((segment,i)=>i%2?<bdi key={i} lang="en" dir="ltr">{segment}</bdi>:segment)}</>;
 }
 
 export default function ReadingCourse(){
@@ -50,8 +45,11 @@ export default function ReadingCourse(){
  function showAlphabet(){
   stopAudio();setAlphabet(true);window.history.replaceState(null,'','#alphabet');window.scrollTo({top:0,behavior:'auto'});
  }
- function playClip(kind:'sound'|'word',value:string){
-  void play(`${kind}-${value.toLowerCase()}`,{slice:kind==='sound'?phonemeSlices[value]:undefined});
+ function playClip(kind:'sound'|'word',value:string,id?:string){
+  const sound=kind==='sound';
+  void play(`${kind}-${value.toLowerCase()}`,{
+   id, slice:sound?phonemeSlices[value]:undefined, bankName:sound?readingPhonemeBank(value):undefined,
+  });
  }
  function playQuizWord(word:string,question:number,key:string){
   void play(`word-${word.toLowerCase()}`,{
@@ -89,30 +87,10 @@ export default function ReadingCourse(){
      {chapter.id===1&&<button type="button" className="reading-audio" onClick={showAlphabet}>افتح لوحة الحروف: ٢٦ حرفًا ومثالان لكل حرف</button>}
      <section aria-label="الشرح والتدريب">
       <h2>١. افهم النمط واسمع الكلمات</h2>
-      <p>اضغط الصوت أو الكلمة لسماعها، ثم كرّرها.</p>
-      <div className="reading-patterns">{chapter.patterns.map(({pattern,words,tip,endingExample})=>{
-       const sounds=patternSounds[pattern];
-       return <div className="reading-pattern" key={pattern}>
-        <h3 lang="en" dir="ltr">{pattern}</h3>
-        <p><ReadingTip text={tip} english={chapter.id===1}/></p>
-        {sounds&&<div className="reading-pattern-sounds">
-         {sounds.map(({id,label})=><button key={id} type="button" className="reading-audio" aria-pressed={playing===`sound-${id}`} onClick={()=>playClip('sound',id)}>
-          <Volume2 size={17}/> استمع إلى <bdi lang="en" dir="ltr">{label}</bdi>
-         </button>)}
-        </div>}
-        <div className="reading-word-bank" lang="en" dir="ltr">
-         {words.split(' ').map((word,i)=><button type="button" key={i} aria-pressed={playing===`word-${word.toLowerCase()}`} onClick={()=>playClip('word',word)} aria-label={`Listen: ${word}`}>
-          <Volume2 size={14}/>{word}
-         </button>)}
-        </div>
-        {endingExample&&<div className="reading-ending-example">
-         <span>اسمع صوت <bdi lang="en">{endingExample.letter}</bdi> في آخر الكلمة</span>
-         <button type="button" className="reading-audio" aria-label={`Listen: ${endingExample.word}`} aria-pressed={playing===`word-${endingExample.word}`} onClick={()=>playClip('word',endingExample.word)}>
-          <Volume2 size={14}/><bdi lang="en">{endingExample.word.slice(0,-1)}<mark>{endingExample.word.slice(-1)}</mark></bdi>
-         </button>
-        </div>}
-       </div>;
-      })}</div>
+      <p>استمع إلى الصوت أو الكلمة، وانتبه إلى الحروف المظلّلة.</p>
+      <div className="reading-patterns">{chapter.patterns.map((pattern)=>
+       <ReadingPatternCard key={pattern.pattern} pattern={pattern} playing={playing} onPlay={playClip}/>
+      )}</div>
       <aside className="reading-tip">💡 {chapter.note}</aside>
      </section>
      <section className="reading-passages"><h2>٢. اقرأ وطبّق</h2><p>اسمع النموذج، ثم اقرأ بنفسك. عند التعثر، قسّم الكلمة إلى أصوات وادمجها مرة أخرى.</p>{chapter.passages.map(p=><div key={p.page} className="reading-passage"><div className="reading-passage-top"><h3 lang="en" dir="ltr">{p.title}</h3><div className="reading-passage-buttons"><button type="button" className="reading-audio" aria-pressed={playing===`passage-${p.page}`} onClick={()=>void play(`passage-${p.page}`)}><Volume2 size={17}/> استمع للنص</button><button type="button" className="reading-audio" aria-pressed={playing===`slow-passage-${p.page}`} onClick={()=>void play(`slow-passage-${p.page}`)}>استمع ببطء</button></div></div><p lang="en" dir="ltr" className="reading-english">{p.text}</p><a href={`/reading/reading-guide.pdf#page=${p.page}`} target="_blank" rel="noreferrer">من الدليل · صفحة {p.page} ↗</a></div>)}</section>
