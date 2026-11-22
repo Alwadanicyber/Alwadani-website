@@ -32,6 +32,7 @@ const referenceSounds=new Set(['c',...Object.values(phonemeIds)]);
 
 export function readingPhonemeBank(id:string):string|undefined {
  if(id==='q'||id==='x') return 'alphabet';
+ if(id==='ll') return 'final-l';
  if(focusSounds.has(id)) return modelFocusBank;
  if(vowelSounds.has(id)) return 'aep-vowels';
  if(extendedSounds.has(id)) return 'aep-extended';

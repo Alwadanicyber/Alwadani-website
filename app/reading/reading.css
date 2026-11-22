@@ -267,3 +267,28 @@
 @media print {
  .reading-mouth-preview,.reading-mouth-dialog,.reading-extra-mouth {display:none}
 }
+
+.reading-sound-in-word {
+ font:600 .78rem/1.35 system-ui,sans-serif;
+}
+.reading-mouth-picture--final-l {
+ background-size:cover;
+ background-position:center;
+}
+.reading-final-l-visuals {
+ display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr));
+ gap:10px;
+ align-items:center;
+}
+.reading-final-l-visuals img {
+ display:block;
+ width:100%;
+ height:auto;
+ border-radius:8px;
+}
+.reading-mouth-options .reading-mouth-preview[aria-pressed=true] {
+ border-color:var(--rd-accent);
+ box-shadow:inset 0 0 0 1px var(--rd-accent);
+}
+.reading-sequence-video {margin-top:10px}

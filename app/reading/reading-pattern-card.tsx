@@ -1,14 +1,14 @@
 import {Volume2} from 'lucide-react';
 import {readingExampleWord, type ReadingPattern} from '@/lib/reading-course';
 import {readingPhonemeId} from './reading-phonemes';
-import {readingMouthModelId,type MouthModelId} from './reading-mouth-data';
+import {readingMouthSelection,type MouthSelection} from './reading-mouth-data';
 import {ReadingMouthPreview} from './reading-mouth-models';
 
 type Props = {
  pattern: ReadingPattern;
  playing: string;
  onPlay: (kind:'sound'|'word', value:string, id:string) => void;
- onShowMouth: (id:MouthModelId) => void;
+ onShowMouth: (selection:MouthSelection) => void;
 };
 
 function ReadingTip({text}:{text:string}){
@@ -32,21 +32,27 @@ export default function ReadingPatternCard({pattern,playing,onPlay,onShowMouth}:
   <div className={`reading-sound-groups${compact?' reading-sound-groups--tiles':''}`} lang="en" dir="ltr">
    {pattern.groups.map((group,index)=>{
     const letters=group.spellings.map(spelling=>spelling.letters).join(', ');
+    const examples=group.spellings.flatMap(spelling=>spelling.examples.map(readingExampleWord));
     const groupId=`${pattern.pattern}:${index}`;
     return <div key={groupId} className={`reading-sound-group${group.atEnd?' reading-sound-group--ending':''}`}>
      {group.ipa&&<div className="reading-sound-head">
       {group.ipa.split(' ~ ').map(symbol=>{
        const audio=group.audio??readingPhonemeId(symbol);
-       const model=readingMouthModelId(audio);
+       const selection=readingMouthSelection(symbol,audio,examples);
+       const contextualWord=!audio&&selection?.kind==='sequence' ? selection.example : undefined;
        const id=`${groupId}:sound:${symbol}`;
        const notation=`/${symbol}/`;
        return <div className="reading-sound-model" key={symbol}>
-        {audio
-        ? <button className="reading-sound-trigger" type="button" aria-label={`Listen to ${notation} in ${letters}`} aria-pressed={playing===id} onClick={()=>onPlay('sound',audio,id)}>
-           <Volume2 size={17} aria-hidden="true"/><span>{notation}</span>
-          </button>
-        : <span className="reading-sound-notation">{notation}</span>}
-        {model&&<ReadingMouthPreview id={model} context={letters} onShow={onShowMouth}/>}
+        {audio||contextualWord
+         ? <button className="reading-sound-trigger" type="button"
+            aria-label={contextualWord?`Listen to ${notation} in ${contextualWord}`:`Listen to ${notation} in ${letters}`}
+            aria-pressed={playing===id}
+            onClick={()=>contextualWord ? onPlay('word',contextualWord,id) : audio&&onPlay('sound',audio,id)}>
+            <Volume2 size={17} aria-hidden="true"/><span>{notation}</span>
+            {contextualWord&&<span className="reading-sound-in-word" lang="ar" dir="rtl">في <bdi lang="en">{contextualWord}</bdi></span>}
+           </button>
+         : <span className="reading-sound-notation">{notation}</span>}
+        {selection&&<ReadingMouthPreview selection={selection} context={letters} onShow={onShowMouth}/>}
        </div>;
       })}
       {group.atEnd&&<span className="reading-sound-position" lang="ar" dir="rtl">في آخر الكلمة</span>}

@@ -57,3 +57,27 @@ export function readingMouthModelId(sound: string|undefined): MouthModelId|undef
  if(sound==='c') return 'k';
  return sound&&Object.hasOwn(mouthModels,sound) ? sound as MouthModelId : undefined;
 }
+
+const soundSequences: Partial<Record<string, {ids:readonly [MouthModelId,MouthModelId]; preferred?:string}>> = {
+ 'kw': {ids:['k','w']}, 'ks': {ids:['k','s']}, 'juː': {ids:['y','long-oo']},
+ 'st': {ids:['s','t']}, 'bl': {ids:['b','l'],preferred:'blue'}, 'tr': {ids:['t','r']},
+ 'pl': {ids:['p','l']}, 'sl': {ids:['s','l']}, 'sn': {ids:['s','n']},
+ 'dr': {ids:['d','r'],preferred:'drop'}, 'ɡr': {ids:['g','r'],preferred:'grab'}, 'sm': {ids:['s','m']},
+ 'sw': {ids:['s','w']}, 'pr': {ids:['p','r']}, 'ŋk': {ids:['ng','k']},
+ 'eɪdʒ': {ids:['ay','j']}, 'ɪdʒ': {ids:['i','j'],preferred:'message'}, 'tʃɚ': {ids:['ch','unstressed-er']},
+};
+
+export type MouthSelection =
+ | {kind:'video'; id:MouthModelId}
+ | {kind:'final-l'}
+ | {kind:'sequence'; ipa:string; ids:readonly [MouthModelId,MouthModelId]; example:string};
+
+export function readingMouthSelection(ipa:string,sound:string|undefined,examples:readonly string[]): MouthSelection|undefined {
+ if(ipa==='l'&&sound==='ll') return {kind:'final-l'};
+ const modelId=readingMouthModelId(sound);
+ if(modelId&&mouthModels[modelId].ipa===ipa) return {kind:'video',id:modelId};
+ const sequence=soundSequences[ipa];
+ if(!sequence||!examples.length) return;
+ const example=examples.find(word=>word===sequence.preferred)??examples[0];
+ return {kind:'sequence',ipa,ids:sequence.ids,example};
+}

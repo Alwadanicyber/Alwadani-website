@@ -5,7 +5,7 @@ Original files and corresponding source: https://github.com/suragch/aePronunciat
 License: GNU General Public License, version 3. See LICENSE.txt in this directory.
 The media are provided without warranty under that license. The license here applies to the AEP media. Alwadani's own interface and other sources have their own terms.
 
-The audio files are bundled as Base64 MP3 data in the course's voice-v3/aep-*.json files. The MP4s in this directory are renamed copies. Each media file listed below matches the original bytes in both the APK and the version 2.4.0 source checkout.
+The audio files are bundled as Base64 MP3 data in the course's voice-v3/aep-*.json files. The MP4s in this directory are renamed copies. The original audio and MP4s were matched to the APK and the version 2.4.0 source checkout. Adaptations are noted below.
 The preview image contains still frames from the 47 original MP4s.
 
 Alwadani clip | audio bundle | original MP3 | original MP4 (when available)
@@ -64,3 +64,6 @@ schwa | aep-extended | single_shwua.mp3 | v_schwa.mp4
 flap-t | aep-extended | single_flap_t.mp3 | v_flap_t.mp4
 unstressed-er | aep-extended | single_er_unstressed.mp3 | v_er_unstressed.mp4
 glottal-stop | aep-extended | single_glottal_stop.mp3 | v_glottal_stop.mp4
+
+The ll clip uses the second articulation from single_l.mp3, trimmed, level-adjusted and encoded to MP3. The l.mp4 video is the unchanged original. The course's tongue-position diagram is original and based on https://opentextbooks.rug.nl/americanenglishphonetics2/chapter/12-3-1-approximants-l/.
+ll | final-l | single_l.mp3 | v_l.mp4

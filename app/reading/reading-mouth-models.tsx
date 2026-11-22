@@ -1,29 +1,39 @@
-import {useId,type RefObject} from 'react';
+import {useId,useState,type ReactNode,type RefObject} from 'react';
+import {flushSync} from 'react-dom';
 import {Play,Volume2,X} from 'lucide-react';
-import {mouthModels,mouthModelIds,type MouthModelId} from './reading-mouth-data';
+import {mouthModels,mouthModelIds,type MouthModelId,type MouthSelection} from './reading-mouth-data';
 import {readingWordBank} from './reading-phonemes';
 
+const finalLImage='/reading/final-l.webp';
+
+function MouthPicture({id}:{id:MouthModelId}){
+ const tile=mouthModelIds.indexOf(id);
+ return <span className="reading-mouth-picture" aria-hidden="true"
+  style={{backgroundPosition:`${tile%8*100/7}% ${Math.floor(tile/8)*20}%`}}><Play size={13}/></span>;
+}
+
 type PreviewProps={
- id:MouthModelId;
+ selection:MouthSelection;
  context?:string;
  showSound?:boolean;
- onShow:(id:MouthModelId)=>void;
+ onShow:(selection:MouthSelection)=>void;
 };
 
-export function ReadingMouthPreview({id,context,showSound,onShow}:PreviewProps){
- const {ipa,example}=mouthModels[id];
- const tile=mouthModelIds.indexOf(id);
- const label=showSound ? `/${ipa}/ ${example} · شاهد النطق` : `شاهد النطق /${ipa}/`;
+export function ReadingMouthPreview({selection,context,showSound,onShow}:PreviewProps){
+ const model=selection.kind==='video'?mouthModels[selection.id]:null;
+ const ipa=selection.kind==='sequence'?selection.ipa:model?.ipa??'l';
+ const label=showSound&&model ? `/${ipa}/ ${model.example} · شاهد النطق` : `شاهد النطق /${ipa}/`;
  return <button type="button" className="reading-mouth-preview" dir="rtl" lang="ar" aria-haspopup="dialog"
-   aria-label={context?`${label} · ${context}`:label} onClick={()=>onShow(id)}>
-  <span className="reading-mouth-picture" aria-hidden="true"
-    style={{backgroundPosition:`${tile%8*100/7}% ${Math.floor(tile/8)*20}%`}}><Play size={13}/></span>
-  <span>{showSound?<><bdi dir="ltr">/{ipa}/</bdi> <bdi lang="en" dir="ltr">{example}</bdi></>:'شاهد النطق'}</span>
+   aria-label={context?`${label} · ${context}`:label} onClick={()=>onShow(selection)}>
+  {selection.kind==='final-l'
+   ? <span className="reading-mouth-picture reading-mouth-picture--final-l" aria-hidden="true" style={{backgroundImage:`url(${finalLImage})`}}/>
+   : <MouthPicture id={selection.kind==='video'?selection.id:selection.ids[0]}/>}
+  <span>{showSound&&model?<><bdi dir="ltr">/{ipa}/</bdi> <bdi lang="en" dir="ltr">{model.example}</bdi></>:'شاهد النطق'}</span>
  </button>;
 }
 
 type DialogProps={
- id:MouthModelId|null;
+ selection:MouthSelection|null;
  dialog:RefObject<HTMLDialogElement|null>;
  video:RefObject<HTMLVideoElement|null>;
  playing:string;
@@ -33,28 +43,79 @@ type DialogProps={
  onSound:(kind:'sound'|'word',value:string)=>void;
 };
 
-export function ReadingMouthDialog({id,dialog,video,playing,notice,onClose,onVideoPlay,onSound}:DialogProps){
+function MouthVideo({id,video,onPlay}:{id:MouthModelId;video:DialogProps['video'];onPlay:()=>void}){
+ return <video key={id} ref={video} controls playsInline preload="none" width={320} height={180}
+  aria-label={`حركة الفم للصوت /${mouthModels[id].ipa}/`} src={`/reading/aep-2.4.0/${id}.mp4`} onPlay={onPlay}/>;
+}
+
+function ClipButton({kind,value,playing,onSound,children}:{
+ kind:'sound'|'word';value:string;playing:string;onSound:DialogProps['onSound'];children:ReactNode;
+}){
+ return <button type="button" className="reading-audio" aria-pressed={playing===`${kind}-${value}`} onClick={()=>onSound(kind,value)}>
+  <Volume2 size={16} aria-hidden="true"/> {children}
+ </button>;
+}
+
+export function ReadingMouthDialog({selection,dialog,video,playing,notice,onClose,onVideoPlay,onSound}:DialogProps){
  const title=useId();
- const model=id===null?null:mouthModels[id];
- return <dialog className="reading-mouth-dialog" ref={dialog} aria-labelledby={title} onClose={onClose}>
-  {id&&model&&<>
+ const [component,setComponent]=useState<MouthModelId|null>(null);
+ const model=selection?.kind==='video'?mouthModels[selection.id]:null;
+ const ipa=selection?.kind==='sequence'?selection.ipa:model?.ipa??'l';
+ const finalL=selection?.kind==='final-l';
+ const clipProps={playing,onSound};
+ function playComponent(id:MouthModelId){
+  video.current?.pause();
+  // Start playback inside the tap for mobile browsers.
+  flushSync(()=>setComponent(id));
+  void video.current?.play().catch(()=>{});
+ }
+ function close(){
+  setComponent(null);
+  onClose();
+ }
+ return <dialog className="reading-mouth-dialog" ref={dialog} aria-labelledby={title} onClose={close}>
+  {selection&&<>
    <header className="reading-mouth-dialog-header">
-    <h2 id={title}>حركة الفم <bdi dir="ltr">/{model.ipa}/</bdi></h2>
+    <h2 id={title}>
+     {finalL?'صوت اللام في آخر الكلمة':selection.kind==='sequence'?'الأصوات بالترتيب':'حركة الفم'} <bdi dir="ltr">/{ipa}/</bdi>
+    </h2>
     <button type="button" className="reading-audio" aria-label="إغلاق فيديو النطق" onClick={()=>dialog.current?.close()}><X size={20} aria-hidden="true"/></button>
    </header>
-   <video key={id} ref={video} controls playsInline preload="none" width={320} height={180}
-    aria-label={`حركة الفم للصوت /${model.ipa}/`} src={`/reading/aep-2.4.0/${id}.mp4`} onPlay={onVideoPlay}/>
-   <p>{model.tip}</p>
-   <div className="reading-mouth-options">
-    <button type="button" className="reading-audio" aria-pressed={playing===`sound-${id}`} onClick={()=>onSound('sound',id)}>
-     <Volume2 size={16} aria-hidden="true"/> اسمع الصوت <bdi dir="ltr">/{model.ipa}/</bdi>
-    </button>
-    {readingWordBank(model.example)
-     ? <button type="button" className="reading-audio" aria-pressed={playing===`word-${model.example}`} onClick={()=>onSound('word',model.example)}>
-         <Volume2 size={16} aria-hidden="true"/> <bdi lang="en" dir="ltr">{model.example}</bdi>
-       </button>
-     : <span>مثال <bdi lang="en" dir="ltr">{model.example}</bdi></span>}
-   </div>
+   {selection.kind==='video'&&model&&<>
+    <MouthVideo id={selection.id} video={video} onPlay={onVideoPlay}/>
+    <p>{model.tip}</p>
+    <div className="reading-mouth-options">
+     <ClipButton kind="sound" value={selection.id} {...clipProps}>اسمع الصوت <bdi dir="ltr">/{ipa}/</bdi></ClipButton>
+     {readingWordBank(model.example)
+      ? <ClipButton kind="word" value={model.example} {...clipProps}><bdi lang="en">{model.example}</bdi></ClipButton>
+      : <span>مثال <bdi lang="en" dir="ltr">{model.example}</bdi></span>}
+    </div>
+   </>}
+   {finalL&&<>
+    <div className="reading-final-l-visuals">
+     <MouthVideo id="l" video={video} onPlay={onVideoPlay}/>
+     {/* The diagram shows tongue placement inside the mouth. */}
+     {/* eslint-disable-next-line @next/next/no-img-element */}
+     <img src={finalLImage} width="400" height="246" alt="طرف اللسان عند اللثة، ومؤخرته مرفوعة نحو سقف الفم اللين"/>
+    </div>
+    <p>في آخر الكلمة نسمع <bdi dir="ltr">[ɫ]</bdi>. المس اللثة خلف الأسنان العليا بطرف اللسان (١)، وارفع مؤخرته قليلًا (٢). قل اللام مرة واحدة.</p>
+    <div className="reading-mouth-options">
+     <ClipButton kind="sound" value="ll" {...clipProps}>اسمع <bdi dir="ltr">[ɫ]</bdi></ClipButton>
+     <ClipButton kind="word" value="bell" {...clipProps}><bdi lang="en">bell</bdi></ClipButton>
+     <ClipButton kind="word" value="hill" {...clipProps}><bdi lang="en">hill</bdi></ClipButton>
+    </div>
+   </>}
+   {selection.kind==='sequence'&&<>
+    <div className="reading-mouth-options" dir="ltr">
+     {selection.ids.map(id=><button className="reading-mouth-preview" key={id} type="button"
+      aria-label={`شاهد النطق /${mouthModels[id].ipa}/`} aria-pressed={component===id} onClick={()=>playComponent(id)}>
+      <MouthPicture id={id}/><bdi>/{mouthModels[id].ipa}/</bdi>
+     </button>)}
+    </div>
+    {component&&<div className="reading-sequence-video"><MouthVideo id={component} video={video} onPlay={onVideoPlay}/></div>}
+    <p>شاهد كل صوت، ثم استمع إلى الصوتين متصلين داخل الكلمة.</p>
+    <ClipButton kind="word" value={selection.example} {...clipProps}>اسمع المثال <bdi lang="en">{selection.example}</bdi></ClipButton>
+   </>}
    {notice&&<p role="status">{notice}</p>}
   </>}
  </dialog>;

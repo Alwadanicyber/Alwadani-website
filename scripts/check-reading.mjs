@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {readingChapters,readingExampleWord} from '../lib/reading-course.ts';
 import {readingAlphabet} from '../lib/reading-alphabet.ts';
 import {clearWordBank,modelFocusBank,readingPhonemeBank,readingPhonemeId,readingWordBank} from '../app/reading/reading-phonemes.ts';
-import {additionalMouthModels,mouthModelIds,mouthModels,readingMouthModelId} from '../app/reading/reading-mouth-data.ts';
+import {additionalMouthModels,mouthModelIds,mouthModels,readingMouthModelId,readingMouthSelection} from '../app/reading/reading-mouth-data.ts';
 import {shPracticeTiming} from '../app/reading/sh-practice-timing.ts';
 assert.equal(readingChapters.length,10);
 assert.deepEqual(readingChapters.map(c=>c.page),[2,8,21,5,11,15,18,32,35,37],'Requested order: letters, consonant digraphs, vowel digraphs, then the rest');
@@ -49,6 +49,14 @@ const aepSources=readFileSync(new URL('SOURCES.txt',aepDirectory),'utf8');
 assert.match(aepSources,/GPL|GNU General Public License/);
 assert.equal(mouthModelIds.length,47);
 assert.deepEqual([...mouthModelIds].sort(),mouthModelIds,'Preview tiles follow sound ID order');
+assert.equal(readingPhonemeBank('ll'),'final-l');
+const finalL=audioBytes(audioBank('final-l'),'sound-ll');
+assert.notDeepEqual(finalL,audioBytes(audioBank('chapter-2'),'sound-ll'));
+assert(aepSources.includes('ll | final-l | single_l.mp3 | v_l.mp4'));
+const finalLDiagram=readFileSync(new URL('../public/reading/final-l.webp',import.meta.url));
+assert(finalLDiagram.subarray(8,12).equals(Buffer.from('WEBP')));
+assert.deepEqual(readingMouthSelection('l','ll',['bell','hill']),{kind:'final-l'});
+assert.equal(readingMouthSelection('l','m',['bell']),undefined,'A video with a mismatched IPA must not appear');
 const previews=readFileSync(new URL('mouth-previews.webp',aepDirectory));
 assert(previews.subarray(8,12).equals(Buffer.from('WEBP')));
 const linkedModels=new Set(additionalMouthModels);
@@ -84,6 +92,7 @@ for(const letter of readingAlphabet){
  assert.equal(letter.examples.length,2,'Each letter must have exactly two example words');
  assert.equal(new Set(letter.examples).size,2);
  assert(letter.phones&&letter.ipa&&letter.tip);
+ checkSelection(letter.ipa,letter.letter,letter.examples,alphabet);
  const soundBank=readingPhonemeBank(letter.letter);
  assert(soundBank,`Missing alphabet bank for ${letter.letter}`);
  audioBytes(audioBank(soundBank),`sound-${letter.letter}`);
@@ -91,7 +100,25 @@ for(const letter of readingAlphabet){
 }
 assert.equal(readingAlphabet.find(a=>a.letter==='q').phones,'k w');
 assert.equal(readingAlphabet.find(a=>a.letter==='x').phones,'k s');
+function checkSelection(symbol,audio,examples,bank){
+ const selection=readingMouthSelection(symbol,audio,examples);
+ assert(selection,`Missing visual for /${symbol}/`);
+ if(selection.kind==='video') assert.equal(mouthModels[selection.id].ipa,symbol);
+ if(selection.kind==='final-l'){
+  assert.equal(symbol,'l');
+  assert.equal(audio,'ll');
+  assert.deepEqual(examples,['bell','hill']);
+ }
+ if(selection.kind==='sequence'){
+  assert.equal(selection.ids.map(id=>mouthModels[id].ipa).join('').replaceAll('ɹ','r'),symbol);
+  assert(examples.includes(selection.example));
+  const wordBank=readingWordBank(selection.example);
+  audioBytes(wordBank?audioBank(wordBank):bank,`word-${selection.example}`);
+ }
+}
+let chapterSoundCount=0;
 for(const [i,c] of readingChapters.entries()){
+
  assert.equal(c.id,i+1);
  assert(c.title&&c.en&&c.goal&&c.note);
  assert(c.patterns.length>0&&c.patterns.every(p=>p.pattern&&p.groups.length));
@@ -104,8 +131,11 @@ for(const [i,c] of readingChapters.entries()){
  for(const pattern of c.patterns){
   for(const group of pattern.groups){
    assert(group.spellings.length);
-   for(const symbol of group.ipa.split(' ~ ')){
+   const examples=group.spellings.flatMap(spelling=>spelling.examples.map(readingExampleWord));
+   for(const symbol of group.ipa.split(' ~ ').filter(Boolean)){
+    chapterSoundCount++;
     const sound=group.audio??readingPhonemeId(symbol);
+    checkSelection(symbol,sound,examples,bank);
     if(sound){
      const overrideBank=readingPhonemeBank(sound);
      audioBytes(overrideBank?audioBank(overrideBank):bank,`sound-${sound}`);
@@ -145,9 +175,10 @@ for(const [i,c] of readingChapters.entries()){
   assert.equal(new Set(hashes).size,3,'Sound options must not be identical recordings');
  }
 }
+assert.equal(chapterSoundCount,106);
 const she=readingChapters[1].quiz.find(q=>q.word==='she');
 assert.deepEqual(she.options,['see','she','tea']);assert.equal(she.answer,1);
 assert(readingChapters[1].sh.startsWith('She sells seashells by the seashore.'));
 assert(readFileSync(new URL('../public/reading/reading-guide.pdf',import.meta.url)).subarray(0,5).equals(Buffer.from('%PDF-')));
 const catalog=readFileSync(new URL('../app/catalog.tsx',import.meta.url),'utf8');assert(catalog.includes('href="/reading"'));
-console.log('PASS: requested chapter order, 26 letter sounds, 47 mouth models, 52 examples, 32 audio questions with distinct playable files, and complete practice and passage audio.');
+console.log('PASS: requested chapter order, 26 letter sounds, 106 chapter sound placements, 47 source videos, 52 examples, 32 audio questions with distinct playable files, and complete practice and passage audio.');
