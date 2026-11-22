@@ -1,11 +1,12 @@
 'use client';
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
 import {CheckCircle2,ChevronLeft,ChevronRight,Download,Volume2,Square} from 'lucide-react';
 import SiteHeader from '../site-header';
 import {readingChapters} from '@/lib/reading-course';
 import {readingAlphabet} from '@/lib/reading-alphabet';
-import {phonemeSlices,readingPhonemeBank,readingWordBank} from './reading-phonemes';
+import {readingPhonemeBank,readingWordBank} from './reading-phonemes';
+import ReadingMouthModels,{alphabetModels,chapterMouthModels} from './reading-mouth-models';
 import ReadingPatternCard from './reading-pattern-card';
 import {useReadingAudio} from './use-reading-audio';
 import {shPracticeTiming} from './sh-practice-timing';
@@ -26,9 +27,12 @@ export default function ReadingCourse(){
  const chapter=readingChapters[index];
  const practiceBank=`practice-v4-${chapter.id}`;
  const shSentences=chapter.sh.split(/(?<=[.!?])\s+/);
- const {active:playing,notice:audioNotice,stop:stopAudio,play}=useReadingAudio(
+ const mouthVideo=useRef<HTMLVideoElement>(null);
+ const {active:playing,notice:audioNotice,stop:stopAudio,play:playAudio}=useReadingAudio(
   alphabet?'alphabet':`chapter-${chapter.id}`,alphabet?undefined:practiceBank,
+  alphabet||chapter.id<=2?'aep-consonants':'aep-vowels',
  );
+ const mouthModels=alphabet?alphabetModels:chapterMouthModels[chapter.id];
  useEffect(()=>{
   const timer=window.setTimeout(()=>{
    try{
@@ -43,17 +47,26 @@ export default function ReadingCourse(){
  },[]);
  const score=chapter.quiz.reduce((n,q,i)=>n+(answers[i]===q.answer?1:0),0);
  const completed=Object.keys(best).length;
+ function stopPlayback(){
+  mouthVideo.current?.pause();
+  stopAudio();
+ }
+ function play(...args:Parameters<typeof playAudio>){
+  mouthVideo.current?.pause();
+  return playAudio(...args);
+ }
+ const visualModels=mouthModels&&<ReadingMouthModels key={alphabet?'alphabet':chapter.id} ids={mouthModels} video={mouthVideo} onVideoPlay={stopAudio} onSound={playClip}/>;
  function navigate(next:number){
-  stopAudio();setIndex(next);setAlphabet(false);setAnswers({});setHeard({});setSubmitted(false);
+  stopPlayback();setIndex(next);setAlphabet(false);setAnswers({});setHeard({});setSubmitted(false);
   window.history.replaceState(null,'',`#chapter-${next+1}`);window.scrollTo({top:0,behavior:'auto'});
  }
  function showAlphabet(){
-  stopAudio();setAlphabet(true);window.history.replaceState(null,'','#alphabet');window.scrollTo({top:0,behavior:'auto'});
+  stopPlayback();setAlphabet(true);window.history.replaceState(null,'','#alphabet');window.scrollTo({top:0,behavior:'auto'});
  }
  function playClip(kind:'sound'|'word',value:string,id?:string){
   const sound=kind==='sound';
   void play(`${kind}-${value.toLowerCase()}`,{
-   id, slice:sound?phonemeSlices[value]:undefined, bankName:sound?readingPhonemeBank(value):readingWordBank(value),
+   id, bankName:sound?readingPhonemeBank(value):readingWordBank(value),
   });
  }
  function playQuizWord(word:string,question:number,key:string){
@@ -64,11 +77,11 @@ export default function ReadingCourse(){
  }
  function submit(){
   if(Object.keys(answers).length!==chapter.quiz.length)return;
-  stopAudio();setSubmitted(true);
+  stopPlayback();setSubmitted(true);
   const next={...best,[chapter.id]:Math.max(best[chapter.id]??0,score)};setBest(next);
   try{localStorage.setItem(storageKey,JSON.stringify(next));}catch{setNotice('ظهرت نتيجتك، لكن تعذّر حفظها في هذا المتصفح.');}
  }
- const audioControls=<div className="reading-audio-controls"><button type="button" className="reading-audio" onClick={stopAudio}><Square size={14}/> إيقاف الصوت</button><span role="status" aria-live="polite">{audioNotice}</span></div>;
+ const audioControls=<div className="reading-audio-controls"><button type="button" className="reading-audio" onClick={stopPlayback}><Square size={14}/> إيقاف الصوت</button><span role="status" aria-live="polite">{audioNotice}</span></div>;
  return <div className="reading-page" dir="rtl"><SiteHeader/><main id="main-content" className="reading-main">
   <Link className="reading-back" href="/?grade=general">← العودة إلى الدروس العامة / الأخرى</Link>
   <div className="reading-view-tabs" role="group" aria-label="صفحات دورة القراءة">
@@ -79,6 +92,7 @@ export default function ReadingCourse(){
   {alphabet?<section className="reading-alphabet" aria-labelledby="alphabet-title">
    <header className="reading-alphabet-header"><div><p className="reading-kicker">YOUR FIRST SOUNDS · A–Z</p><h1 id="alphabet-title">الحروف وأصواتها</h1><p>اضغط الحرف الكبير لتسمع صوته، ثم استمع إلى الكلمتين. مع X، اسمع /ks/ في آخر الكلمتين.</p><p>نتعلم صوت الحرف داخل الكلمة، وليس اسمه. بعض الحروف لها أصوات أخرى ستأتي في الفصول التالية.</p></div><span className="reading-alphabet-badge">26 حرفًا<br/>52 كلمة</span></header>
    {audioControls}
+   {visualModels}
    <div className="reading-alphabet-grid" dir="ltr">{readingAlphabet.map(item=><article className="reading-letter-card" key={item.letter}>
     <button type="button" className="reading-letter-sound" aria-label={`صوت الحرف ${item.letter.toUpperCase()}`} aria-pressed={playing===`sound-${item.letter}`} onClick={()=>void playClip('sound',item.letter)}><span lang="en">{item.letter.toUpperCase()}<small>{item.letter}</small></span><span className="reading-letter-ipa">/{item.ipa}/ <Volume2 size={18}/></span></button>
     <div className="reading-letter-examples">{item.examples.map(word=><button type="button" key={word} aria-label={`استمع إلى ${word}`} aria-pressed={playing===`word-${word.toLowerCase()}`} onClick={()=>void playClip('word',word)}><Volume2 size={16}/><span lang="en">{word}</span></button>)}</div>
@@ -109,6 +123,7 @@ export default function ReadingCourse(){
      <section aria-label="الشرح والتدريب">
       <h2>١. افهم النمط واسمع الكلمات</h2>
       <p>استمع إلى الصوت أو الكلمة، وانتبه إلى الحروف المظلّلة.</p>
+      {visualModels}
       <div className="reading-patterns">{chapter.patterns.map((pattern)=>
        <ReadingPatternCard key={pattern.pattern} pattern={pattern} playing={playing} onPlay={playClip}/>
       )}</div>
@@ -152,13 +167,16 @@ export default function ReadingCourse(){
        {submitted&&<span className="reading-choice-reveal" lang="en" dir="ltr">{word}{correct&&<CheckCircle2 size={18}/>}</span>}
       </div>;
      })}</div>{submitted&&<p className="reading-feedback">{answers[qi]===q.answer?'أحسنت!':'محاولة جيدة، اسمع النطق الصحيح ثم جرّب مجددًا.'} {q.reason}</p>}</fieldset>)}
-      {!submitted?<button className="reading-primary" type="submit" disabled={Object.keys(answers).length!==chapter.quiz.length}>اعرض نتيجة الاستماع</button>:<div className="reading-result" role="status"><strong>نتيجتك: <bdi dir="ltr">{score} / {chapter.quiz.length}</bdi></strong><p>{score===chapter.quiz.length?'أحسنت الاستماع! يمكنك متابعة الفصل التالي.':'يمكنك إعادة تشغيل الخيارات ومراجعة التفسير، ثم المحاولة من جديد.'}</p><p>أفضل نتيجة: <bdi dir="ltr">{best[chapter.id]} / {chapter.quiz.length}</bdi></p><button type="button" className="reading-audio" onClick={()=>{stopAudio();setAnswers({});setHeard({});setSubmitted(false);}}>إعادة الاختبار الصوتي</button></div>}
+      {!submitted?<button className="reading-primary" type="submit" disabled={Object.keys(answers).length!==chapter.quiz.length}>اعرض نتيجة الاستماع</button>:<div className="reading-result" role="status"><strong>نتيجتك: <bdi dir="ltr">{score} / {chapter.quiz.length}</bdi></strong><p>{score===chapter.quiz.length?'أحسنت الاستماع! يمكنك متابعة الفصل التالي.':'يمكنك إعادة تشغيل الخيارات ومراجعة التفسير، ثم المحاولة من جديد.'}</p><p>أفضل نتيجة: <bdi dir="ltr">{best[chapter.id]} / {chapter.quiz.length}</bdi></p><button type="button" className="reading-audio" onClick={()=>{stopPlayback();setAnswers({});setHeard({});setSubmitted(false);}}>إعادة الاختبار الصوتي</button></div>}
      </form></section>
      <footer className="reading-pagination"><button type="button" onClick={()=>index===0?showAlphabet():navigate(index-1)}><ChevronRight size={18}/> {index===0?'لوحة الحروف':'الفصل السابق'}</button>{index<readingChapters.length-1?<button type="button" className="reading-primary" onClick={()=>navigate(index+1)}>الفصل التالي <ChevronLeft size={18}/></button>:<Link className="reading-download" href="/?grade=general">العودة إلى الدروس</Link>}</footer>
      <p className="reading-source">المصدر: دليل أساسيات القراءة الإنجليزية المرفق. ترتيب الفصول مكيّف لبدء الحروف ثم الحروف الثنائية ثم حروف العلة المركّبة. الاختبارات وفقرات sh تدريب إضافي.</p>
     </article>
    </div>
   </>}
-  <footer className="reading-source">تسجيلات أصوات الحروف والأنماط من <a href="https://soundsamerican.net/" lang="en">Sounds American</a> (<a href="https://soundsamerican.net/article/terms_of_use" lang="en">CC BY-NC-ND 4.0</a>). معظم الكلمات وصوت X والصوت الأخير في bell من تسجيلات أمريكية بواسطة <a href="/reading/voice-v3/recordings-credits.txt" lang="en">Dvortygirl · Wikimedia Commons</a>. بعض النصوص والكلمات بصوت أمريكي مولّد بواسطة Kokoro. <a href="/reading/voice-v3/audio-credits-v4.txt">مصادر تسجيلات النطق الإضافية</a>. <a href="https://www.readingrockets.org/reading-101/reading-101-learning-modules/course-modules/phonological-and-phonemic-awareness/practice">تدريب إضافي على نطق الأصوات من Reading Rockets</a>.</footer>
+  <footer className="reading-source">
+   نماذج الأصوات وفيديوهات حركة الفم من <a href="https://aepronunciation.com/app/" lang="en">American English Pronunciation</a> (<a href="/reading/aep-2.4.0/SOURCES.txt">المصادر</a> · <a href="/reading/aep-2.4.0/LICENSE.txt" lang="en">GPLv3</a>).
+   {' '}تسجيلات كلمات من <a href="/reading/voice-v3/recordings-credits.txt" lang="en">Wikimedia Commons</a>، و<a href="/reading/voice-v3/audio-credits-v4.txt">مصادر إضافية</a>. بعض الكلمات والنصوص بصوت أمريكي مولّد.
+  </footer>
  </main></div>;
 }

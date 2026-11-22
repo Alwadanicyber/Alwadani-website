@@ -1,46 +1,3 @@
-// Offsets in the original Sounds American IPA chart recording.
-export const phonemeSlices: Partial<Record<string, readonly [number, number]>> = {
- 'a': [6, 0.7],
- 'b': [18, 0.85],
- 'c': [21, 0.85],
- 'd': [20, 0.85],
- 'e': [5, 0.6],
- 'f': [25, 0.7],
- 'g': [22, 0.85],
- 'h': [33, 0.46],
- 'i': [3, 0.6],
- 'j': [35, 0.7],
- 'k': [21, 0.85],
- 'o': [9, 0.65],
- 'p': [17, 0.85],
- 'r': [40, 0.8],
- 's': [29, 0.86],
- 't': [19, 0.85],
- 'u': [8, 0.65],
- 'v': [26, 0.8],
- 'w': [41, 0.9],
- 'y': [42, 0.4],
- 'z': [30, 0.94],
- 'ay': [4, 0.7],
- 'ch': [34, 0.7],
- 'th-unvoiced': [27, 0.65],
- 'th-voiced': [28, 0.8],
- ng: [38, 0.9],
- 'long-e': [2, 0.9],
- 'long-i': [14, 0.7],
- 'long-o': [12, 0.7],
- 'long-oo': [10, 0.65],
- 'short-oo': [11, 0.65],
- 'open-o': [13, 0.6],
- 'ow': [15, 0.8],
- 'oy': [16, 0.7],
- 'er': [43, 0.8],
- 'ear': [45, 0.74],
- 'air': [46, 0.74],
- 'ar': [47, 0.72],
- 'or': [48, 0.76],
-};
-
 // Letter audio also serves as the model for spellings with the same sound.
 const phonemeIds: Partial<Record<string,string>> = {
  'æ':'a', 'b':'b', 'k':'k', 'd':'d', 'ɛ':'e', 'f':'f', 'ɡ':'g', 'h':'h', 'ɪ':'i',
@@ -55,14 +12,28 @@ export function readingPhonemeId(ipa:string):string|undefined {
  return phonemeIds[ipa];
 }
 
+
 export const clearWordBank='clear-words-v4';
-const correctedWords=new Set(['saw','hoe','cup','knee','give','ship','fish','shell']);
+export const modelFocusBank='aep-focus';
+const correctedWords=new Set(['hoe','cup','knee','give','ship','fish','shell']);
+const referenceWords=new Set(['saw','sun','up','me','new','loud','shoot']);
 
 export function readingWordBank(word:string):string|undefined {
- return correctedWords.has(word.toLowerCase()) ? clearWordBank : undefined;
+ const name=word.toLowerCase();
+ if(referenceWords.has(name)) return modelFocusBank;
+ return correctedWords.has(name) ? clearWordBank : undefined;
 }
 
+export const mouthModelIds=['l','m','n','sh','u','long-e','long-o','open-o','i','th-voiced','th-unvoiced'] as const;
+export type MouthModelId=(typeof mouthModelIds)[number];
+
+const focusSounds=new Set<string>(mouthModelIds);
+const vowelSounds=new Set(['a','e','o','ay','long-i','long-oo','short-oo','ow','oy','er','ear','air','ar','or']);
+const referenceSounds=new Set(['c',...Object.values(phonemeIds)]);
+
 export function readingPhonemeBank(id:string):string|undefined {
- if(id==='sh'||id==='l'||id==='m'||id==='n') return clearWordBank;
- return id==='q'||id==='x' ? 'alphabet' : undefined;
+ if(id==='q'||id==='x') return 'alphabet';
+ if(focusSounds.has(id)) return modelFocusBank;
+ if(vowelSounds.has(id)) return 'aep-vowels';
+ return referenceSounds.has(id) ? 'aep-consonants' : undefined;
 }

@@ -1,9 +1,8 @@
 import {useEffect, useRef, useState} from 'react';
-import {clearWordBank} from './reading-phonemes';
+import {clearWordBank,modelFocusBank} from './reading-phonemes';
 
 const audioDirectory = '/reading/voice-v3';
 const bankVersion = '2';
-const phonemeFile = `${audioDirectory}/sounds-american.mp3`;
 type Bank = Record<string, string>;
 
 function fetchAudio<T>(path: string, read: (response: Response) => Promise<T>) {
@@ -26,15 +25,9 @@ function loadBank(name: string) {
  return bank;
 }
 
-let phonemes: Promise<ArrayBuffer> | undefined;
-function loadPhonemes() {
- return phonemes ??= fetchAudio(phonemeFile, response => response.arrayBuffer())
-  .catch(error => { phonemes = undefined; throw error; });
-}
-
 type Slice = readonly [offset: number, length: number];
 
-export function useReadingAudio(bank: string, practiceBank?: string) {
+export function useReadingAudio(bank: string, practiceBank?: string, soundsBank?: string) {
  const [active, setActive] = useState('');
  const [notice, setNotice] = useState('');
  const audioContext = useRef<AudioContext|null>(null);
@@ -44,10 +37,11 @@ export function useReadingAudio(bank: string, practiceBank?: string) {
 
  useEffect(() => {
   void loadBank(bank).catch(() => {});
-  void loadPhonemes().catch(() => {});
+  void loadBank(modelFocusBank).catch(() => {});
+  if (soundsBank) void loadBank(soundsBank).catch(() => {});
   void loadBank(clearWordBank).catch(() => {});
   if (practiceBank) void loadBank(practiceBank).catch(() => {});
- }, [bank,practiceBank]);
+ }, [bank,practiceBank,soundsBank]);
 
  useEffect(() => {
   const buffers = decoded.current;
@@ -71,12 +65,12 @@ export function useReadingAudio(bank: string, practiceBank?: string) {
   setNotice('');
  }
 
- async function play(clip: string, options: {slice?: Slice; range?: Slice; id?: string; quizQuestion?: number; bankName?: string; onStart?: () => void} = {}) {
+ async function play(clip: string, options: {range?: Slice; id?: string; quizQuestion?: number; bankName?: string; onStart?: () => void} = {}) {
   stop();
   const current = request.current.version;
   const quizClip = options.quizQuestion === undefined ? clip : `quiz-${options.quizQuestion}-${clip}`;
   const bankName = options.bankName ?? bank;
-  const audioKey = options.slice ? 'phonemes' : `${bankName}/${quizClip}`;
+  const audioKey = `${bankName}/${quizClip}`;
   setActive(options.id ?? clip);
   try {
    const context = audioContext.current ??= new AudioContext();
@@ -84,13 +78,11 @@ export function useReadingAudio(bank: string, practiceBank?: string) {
    const ready = context.state === 'running' ? Promise.resolve() : context.resume();
    let audio = decoded.current.get(audioKey);
    if (!audio) {
-    const bytes = options.slice
-     ? loadPhonemes().then(data => data.slice(0))
-     : loadBank(bankName).then(data => {
-        const value = data[quizClip] ?? data[clip];
-        if (!value) throw new Error('Reading audio clip missing');
-        return Uint8Array.from(atob(value), character => character.charCodeAt(0)).buffer;
-       });
+    const bytes = loadBank(bankName).then(data => {
+     const value = data[quizClip];
+     if (!value) throw new Error('Reading audio clip missing');
+     return Uint8Array.from(atob(value), character => character.charCodeAt(0)).buffer;
+    });
     audio = bytes.then(data => context.decodeAudioData(data))
      .catch(error => { decoded.current.delete(audioKey); throw error; });
     decoded.current.set(audioKey, audio);
@@ -107,8 +99,7 @@ export function useReadingAudio(bank: string, practiceBank?: string) {
      setActive('');
     }
    };
-   const range = options.slice ?? options.range;
-   if (range) player.start(0, ...range);
+   if (options.range) player.start(0, ...options.range);
    else player.start();
    source.current = player;
    options.onStart?.();

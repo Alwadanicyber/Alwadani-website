@@ -1,0 +1,60 @@
+American English Pronunciation (AEP) 2.4.0 media
+Original project and media by Suragch Development.
+Project: https://aepronunciation.com/app/
+Original files and corresponding source: https://github.com/suragch/aePronunciation/tree/0a9b9b905afb4c8e15edc0512338d799c30c8161/app/src/main/res/raw
+License: GNU General Public License, version 3. See LICENSE.txt in this directory.
+The media are provided without warranty under that license. The license here applies to the AEP media. Alwadani's own interface and other sources have their own terms.
+
+The audio files are bundled as Base64 MP3 data in the course's voice-v3/aep-*.json files. The MP4s in this directory are renamed copies. Each media file listed below matches the original bytes in both the APK and the version 2.4.0 source checkout.
+
+Alwadani clip | audio bundle | original MP3 | original MP4 (when available)
+a | aep-vowels | single_ae.mp3
+b | aep-consonants | single_b.mp3
+c | aep-consonants | single_k.mp3
+d | aep-consonants | single_d.mp3
+e | aep-vowels | single_e.mp3
+f | aep-consonants | single_f.mp3
+g | aep-consonants | single_g.mp3
+h | aep-consonants | single_h.mp3
+i | aep-focus | single_i_short.mp3 | v_i_short.mp4
+j | aep-consonants | single_dzh.mp3
+k | aep-consonants | single_k.mp3
+l | aep-focus | single_l.mp3 | v_l.mp4
+m | aep-focus | single_m.mp3 | v_m.mp4
+n | aep-focus | single_n.mp3 | v_n.mp4
+o | aep-vowels | single_a.mp3
+p | aep-consonants | single_p.mp3
+r | aep-consonants | single_r.mp3
+s | aep-consonants | single_s.mp3
+t | aep-consonants | single_t.mp3
+u | aep-focus | single_v_upsidedown.mp3 | v_v_upsidedown.mp4
+v | aep-consonants | single_v.mp3
+w | aep-consonants | single_w.mp3
+y | aep-consonants | single_j.mp3
+z | aep-consonants | single_z.mp3
+ay | aep-vowels | single_ei.mp3
+ch | aep-consonants | single_ch.mp3
+sh | aep-focus | single_sh.mp3 | v_sh.mp4
+th-unvoiced | aep-focus | single_th_voiceless.mp3 | v_th_voiceless.mp4
+th-voiced | aep-focus | single_th_voiced.mp3 | v_th_voiced.mp4
+ng | aep-consonants | single_ng.mp3
+long-e | aep-focus | single_i.mp3 | v_i.mp4
+long-i | aep-vowels | single_ai.mp3
+long-o | aep-focus | single_ou.mp3 | v_ou.mp4
+long-oo | aep-vowels | single_u.mp3
+short-oo | aep-vowels | single_u_short.mp3
+open-o | aep-focus | single_c_backwards.mp3 | v_c_backwards.mp4
+ow | aep-vowels | single_au.mp3
+oy | aep-vowels | single_oi.mp3
+er | aep-vowels | single_er_stressed.mp3
+ear | aep-vowels | single_ir.mp3
+air | aep-vowels | single_er.mp3
+ar | aep-vowels | single_ar.mp3
+or | aep-vowels | single_or.mp3
+word-saw | aep-focus | word_saw.mp3
+word-sun | aep-focus | word_sun.mp3
+word-up | aep-focus | word_up.mp3
+word-me | aep-focus | word_me.mp3
+word-new | aep-focus | word_new.mp3
+word-loud | aep-focus | word_loud.mp3
+word-shoot | aep-focus | word_shoot.mp3

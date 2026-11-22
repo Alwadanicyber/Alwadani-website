@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {readingChapters,readingExampleWord} from '../lib/reading-course.ts';
 import {readingAlphabet} from '../lib/reading-alphabet.ts';
-import {clearWordBank,phonemeSlices,readingPhonemeBank,readingPhonemeId,readingWordBank} from '../app/reading/reading-phonemes.ts';
+import {clearWordBank,modelFocusBank,mouthModelIds,readingPhonemeBank,readingPhonemeId,readingWordBank} from '../app/reading/reading-phonemes.ts';
 import {shPracticeTiming} from '../app/reading/sh-practice-timing.ts';
 assert.equal(readingChapters.length,10);
 assert.deepEqual(readingChapters.map(c=>c.page),[2,8,21,5,11,15,18,32,35,37],'Requested order: letters, consonant digraphs, vowel digraphs, then the rest');
@@ -15,14 +15,12 @@ function audioBank(name){
 }
 function audioBytes(bank,key){
  const bytes = Buffer.from(bank[key] ?? '', 'base64');
- assert(bytes.length > 1000 && bytes.subarray(0,3).toString()==='ID3',`Missing MP3: ${key}`);
+ const isMp3=bytes.subarray(0,3).toString()==='ID3'||(bytes[0]===0xff&&(bytes[1]&0xe0)===0xe0);
+ assert(bytes.length>1000&&isMp3,`Missing MP3: ${key}`);
  return bytes;
 }
-const phonemes=readFileSync(new URL('sounds-american.mp3',voiceDirectory));
-assert(phonemes.length>100000,'The original phoneme recording must be present');
-assert.deepEqual(phonemeSlices.ay,[4,.7]);
-assert.equal(phonemeSlices.l,undefined,'L must use the recorded initial sound');
-assert.equal(phonemeSlices.x,undefined,'X must use the recorded final sound');
+assert.equal(readingPhonemeBank('ay'),'aep-vowels');
+assert.equal(readingPhonemeBank('l'),modelFocusBank);
 const lastLetterGroup=readingChapters[0].patterns.find(p=>p.pattern==='U–Z').groups.at(-1);
 assert.deepEqual(lastLetterGroup,{ipa:'ks',atEnd:true,spellings:[{letters:'X',examples:['bo[x]']}]});
 assert.equal(readingPhonemeBank(readingPhonemeId('ks')),'alphabet');
@@ -34,20 +32,28 @@ const longA=vowelTeams.find(p=>p.pattern==='Long A').groups;
 assert.deepEqual(longA.map(g=>g.ipa),['eɪ']);
 assert.deepEqual(longA[0].spellings.find(s=>s.letters==='ay').examples,['d[ay]','pl[ay]']);
 assert.deepEqual(vowelTeams.find(p=>p.pattern==='oo · ea').groups.map(g=>g.ipa),['uː','ʊ','ɛ']);
-for (const [offset,duration] of Object.values(phonemeSlices)){
- assert(offset>=0 && duration>0 && offset+duration<51);
-}
-const alphabet = audioBank('alphabet');
+const alphabet=audioBank('alphabet');
 const corrected=audioBank(clearWordBank);
-for(const word of ['saw','hoe','cup','knee','give','ship','fish','shell']){
+const focus=audioBank(modelFocusBank);
+for(const word of ['hoe','cup','knee','give','ship','fish','shell']){
  assert.equal(readingWordBank(word),clearWordBank);
  audioBytes(corrected,`word-${word}`);
 }
-for(const sound of ['sh','l','m','n']){
- assert.equal(readingPhonemeBank(sound),clearWordBank);
- audioBytes(corrected,`sound-${sound}`);
+for(const word of ['saw','sun','up','me','new','loud','shoot']){
+ assert.equal(readingWordBank(word),modelFocusBank);
+ audioBytes(focus,`word-${word}`);
 }
-assert.equal(new Set(['l','m','n'].map(letter=>corrected[`sound-${letter}`])).size,3);
+const aepDirectory=new URL('../public/reading/aep-2.4.0/',import.meta.url);
+const aepSources=readFileSync(new URL('SOURCES.txt',aepDirectory),'utf8');
+assert.match(aepSources,/GPL|GNU General Public License/);
+for(const sound of mouthModelIds){
+ assert.equal(readingPhonemeBank(sound),modelFocusBank);
+ audioBytes(focus,`sound-${sound}`);
+ assert(aepSources.split('\n').some(line=>line.startsWith(`${sound} | `)&&line.endsWith('.mp4')));
+ const video=readFileSync(new URL(`${sound}.mp4`,aepDirectory));
+ assert(video.length>10_000&&video.subarray(4,8).toString()==='ftyp',`Missing video for ${sound}`);
+}
+assert.equal(new Set(['l','m','n'].map(letter=>focus[`sound-${letter}`])).size,3);
 const recordedWords = new Set(readFileSync(new URL('recordings-credits.txt',voiceDirectory),'utf8')
  .split('Original recordings:\n')[1].trim().split('\n').map(line=>line.split(':')[0]));
 for(const word of ['box','dog','duck','fox','leg','lip','up']) assert(recordedWords.has(word),`Missing recording credit for ${word}`);
@@ -56,10 +62,9 @@ for(const letter of readingAlphabet){
  assert.equal(letter.examples.length,2,'Each letter must have exactly two example words');
  assert.equal(new Set(letter.examples).size,2);
  assert(letter.phones&&letter.ipa&&letter.tip);
- if (!phonemeSlices[letter.letter]){
-  const bank=readingPhonemeBank(letter.letter)===clearWordBank ? corrected : alphabet;
-  audioBytes(bank,`sound-${letter.letter}`);
- }
+ const soundBank=readingPhonemeBank(letter.letter);
+ assert(soundBank,`Missing alphabet bank for ${letter.letter}`);
+ audioBytes(audioBank(soundBank),`sound-${letter.letter}`);
  for(const word of letter.examples)audioBytes(alphabet,`word-${word.toLowerCase()}`);
 }
 assert.equal(readingAlphabet.find(a=>a.letter==='q').phones,'k w');
@@ -79,7 +84,7 @@ for(const [i,c] of readingChapters.entries()){
    assert(group.spellings.length);
    for(const symbol of group.ipa.split(' ~ ')){
     const sound=group.audio??readingPhonemeId(symbol);
-    if(sound&&!phonemeSlices[sound]){
+    if(sound){
      const overrideBank=readingPhonemeBank(sound);
      audioBytes(overrideBank?audioBank(overrideBank):bank,`sound-${sound}`);
     }
