@@ -9,3 +9,8 @@
  background:var(--rd-accent);color:var(--rd-paper);border-color:var(--rd-accent);
 }
 .reading-source a{color:var(--rd-accent)}
+
+.reading-ending-example{
+ margin-top:12px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+}
+.reading-ending-example mark{color:inherit;background:none;text-decoration:underline}

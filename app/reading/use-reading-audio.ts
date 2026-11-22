@@ -1,6 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 
 const audioDirectory = '/reading/voice-v3';
+const bankVersion = '2';
 const phonemeFile = `${audioDirectory}/sounds-american.mp3`;
 type Bank = Record<string, string>;
 
@@ -17,7 +18,7 @@ const banks = new Map<string, Promise<Bank>>();
 function loadBank(name: string) {
  let bank = banks.get(name);
  if (!bank) {
-  bank = fetchAudio<Bank>(`${audioDirectory}/${name}.json`, response => response.json())
+  bank = fetchAudio<Bank>(`${audioDirectory}/${name}.json?v=${bankVersion}`, response => response.json())
    .catch(error => { banks.delete(name); throw error; });
   banks.set(name, bank);
  }
@@ -67,10 +68,11 @@ export function useReadingAudio(bank: string) {
   setNotice('');
  }
 
- async function play(clip: string, options: {slice?: Slice; id?: string; onStart?: () => void} = {}) {
+ async function play(clip: string, options: {slice?: Slice; id?: string; quizQuestion?: number; onStart?: () => void} = {}) {
   stop();
   const current = request.current.version;
-  const audioKey = options.slice ? 'phonemes' : `${bank}/${clip}`;
+  const quizClip = options.quizQuestion === undefined ? clip : `quiz-${options.quizQuestion}-${clip}`;
+  const audioKey = options.slice ? 'phonemes' : `${bank}/${quizClip}`;
   setActive(options.id ?? clip);
   try {
    const context = audioContext.current ??= new AudioContext();
@@ -81,7 +83,7 @@ export function useReadingAudio(bank: string) {
     const bytes = options.slice
      ? loadPhonemes().then(data => data.slice(0))
      : loadBank(bank).then(data => {
-        const value = data[clip];
+        const value = data[quizClip] ?? data[clip];
         if (!value) throw new Error('Reading audio clip missing');
         return Uint8Array.from(atob(value), character => character.charCodeAt(0)).buffer;
        });

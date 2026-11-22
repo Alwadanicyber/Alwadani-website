@@ -1,4 +1,4 @@
-export type ReadingChapter = {id:number;title:string;en:string;page:number;goal:string;patterns:{pattern:string;words:string;tip:string}[];note:string;passages:{title:string;text:string;page:number}[];sh:string;quiz:{word:string;prompt:string;options:string[];answer:number;reason:string}[]};
+export type ReadingChapter = {id:number;title:string;en:string;page:number;goal:string;patterns:{pattern:string;words:string;tip:string;endingExample?:{letter:string;word:string}}[];note:string;passages:{title:string;text:string;page:number}[];sh:string;quiz:{word:string;prompt:string;options:string[];answer:number;reason:string}[]};
 export const readingChapters:ReadingChapter[] = [
   {
     "id": 1,
@@ -10,7 +10,7 @@ export const readingChapters:ReadingChapter[] = [
       {
         "pattern": "A–G",
         "words": "ant bat cat dog egg fan gap",
-        "tip": "A /æ/ · B /b/ · C /k/ · D /d/ · E /e/ · F /f/ · G /ɡ/"
+        "tip": "A /æ/ · B /b/ · C /k/ · D /d/ · E /ɛ/ · F /f/ · G /ɡ/"
       },
       {
         "pattern": "H–M",
@@ -20,12 +20,13 @@ export const readingChapters:ReadingChapter[] = [
       {
         "pattern": "N–T",
         "words": "net ox pen quit red sun top",
-        "tip": "N /n/ · O /ɑ/ · P /p/ · qu /kw/ · R /r/ · S /s/ · T /t/"
+        "tip": "N /n/ · O /ɑ/ · P /p/ · qu /kw/ · R /ɹ/ · S /s/ · T /t/"
       },
       {
         "pattern": "U–Z",
-        "words": "up van wet box yes zip",
-        "tip": "U /ʌ/ · V /v/ · W /w/ · X /ks/ في box · Y /j/ · Z /z/"
+        "words": "up van wet yes zip",
+        "tip": "U /ʌ/ · V /v/ · W /w/ · X /ks/ · Y /j/ · Z /z/",
+        "endingExample": {"letter": "X", "word": "box"}
       }
     ],
     "note": "الحروف قد يكون لها أكثر من صوت. هذه أمثلة أولية، والرموز الصوتية للمعلم. النطق هنا أمريكي؛ لا نعتمد على الكتابة العربية وحدها.",
@@ -83,27 +84,27 @@ export const readingChapters:ReadingChapter[] = [
       {
         "pattern": "sh · ch",
         "words": "ship fish chip chin",
-        "tip": "sh /ʃ/ مثل ش؛ ch /tʃ/."
+        "tip": "اسمع sh /ʃ/ في ship، ثم ch /tʃ/ في chip."
       },
       {
         "pattern": "th",
         "words": "thin bath this that",
-        "tip": "th /θ/ في thin و/ð/ في this."
+        "tip": "ضع طرف اللسان بين الأسنان. اسمع /θ/ بلا اهتزاز في thin وbath، و/ð/ مع اهتزاز الصوت في this وthat."
       },
       {
         "pattern": "ph · wh",
         "words": "phone photo when which",
-        "tip": "ph /f/؛ wh /w/ في هذا النموذج."
+        "tip": "اسمع ph /f/ في phone وphoto، وwh /w/ في when وwhich."
       },
       {
         "pattern": "ck · ng",
         "words": "duck sock sing ring",
-        "tip": "ck /k/؛ ng /ŋ/ دون g منفصلة في sing."
+        "tip": "اسمع ck /k/ في duck وsock، وng /ŋ/ في sing وring دون نطق g منفصلة."
       },
       {
         "pattern": "ff · ll · ss · zz",
         "words": "off puff bell hill kiss mess buzz fizz",
-        "tip": "الحرف المكرر هنا لا يعني نطق الصوت مرتين."
+        "tip": "اقرأ كل زوج بصوت واحد. استمع إلى ff في off، وll في bell، وss في kiss، وzz في buzz."
       }
     ],
     "note": "قل sh بهواء مستمر دون إضافة حركة. تدريب she sells الأصعب أدناه للترديد بمساعدة المعلم، وليس اختبار سرعة.",

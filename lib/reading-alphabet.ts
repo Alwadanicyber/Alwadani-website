@@ -117,7 +117,7 @@ export const readingAlphabet = [
       "leg",
       "lip"
     ],
-    "tip": "ضع طرف اللسان خلف الأسنان العليا."
+    "tip": "المس بطرف اللسان اللثة خلف الأسنان العليا، كما في أول leg وlip. أبقِ شفتيك مرتاحتين."
   },
   {
     "letter": "m",
@@ -171,7 +171,7 @@ export const readingAlphabet = [
   },
   {
     "letter": "r",
-    "ipa": "r",
+    "ipa": "ɹ",
     "phones": "r",
     "examples": [
       "red",
@@ -237,7 +237,7 @@ export const readingAlphabet = [
       "box",
       "fox"
     ],
-    "tip": "نسمع صوتي /k/ و/s/ في نهاية هذين المثالين."
+    "tip": "قل /k/ ثم /s/ مباشرةً دون حركة بينهما. استمع إلى /ks/ في آخر box وfox."
   },
   {
     "letter": "y",
