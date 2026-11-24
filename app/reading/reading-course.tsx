@@ -2,10 +2,12 @@
 import {useEffect,useRef,useState} from 'react';
 import {flushSync} from 'react-dom';
 import Link from 'next/link';
-import {CheckCircle2,ChevronLeft,ChevronRight,Download,Volume2,Square} from 'lucide-react';
+import {CheckCircle2,ChevronLeft,ChevronRight,Volume2,Square} from 'lucide-react';
 import SiteHeader from '../site-header';
 import {readingChapters} from '@/lib/reading-course';
 import {readingAlphabet} from '@/lib/reading-alphabet';
+import {alphabetReviewLetter,letterExamSections,type LetterExamClip,type LetterExamSection} from '@/lib/reading-letter-exams';
+import ReadingLetterExam,{LetterExamButton,ReadingLetterPassage} from './reading-letter-exam';
 import {readingPhonemeBank,readingWordBank} from './reading-phonemes';
 import {ReadingMouthDialog,ReadingMouthPreview} from './reading-mouth-models';
 import {additionalMouthModels,readingMouthSelection,type MouthSelection} from './reading-mouth-data';
@@ -32,6 +34,8 @@ export default function ReadingCourse(){
  const [mouthModel,setMouthModel]=useState<MouthSelection|null>(null);
  const mouthDialog=useRef<HTMLDialogElement>(null);
  const mouthVideo=useRef<HTMLVideoElement>(null);
+ const examDialog=useRef<HTMLDialogElement>(null);
+ const [examSection,setExamSection]=useState<LetterExamSection|null>(null);
  const {active:playing,notice:audioNotice,stop:stopAudio,play:playAudio}=useReadingAudio(
   alphabet?'alphabet':`chapter-${chapter.id}`,alphabet?undefined:practiceBank,
   alphabet||chapter.id<=2?'aep-consonants':'aep-vowels',
@@ -82,6 +86,19 @@ export default function ReadingCourse(){
    id, bankName:sound?readingPhonemeBank(value):readingWordBank(value),
   });
  }
+ function showExam(section:LetterExamSection){
+  stopPlayback();
+  flushSync(()=>setExamSection(section));
+  examDialog.current?.showModal();
+ }
+ function closeExam(){
+  stopPlayback();
+  setExamSection(null);
+ }
+ function playExam(clip:LetterExamClip,id:string,onStart?:()=>void){
+  const bankName=clip.kind==='sound'?readingPhonemeBank(clip.value):clip.bank??'alphabet';
+  void play(`${clip.kind}-${clip.value}`,{bankName,id,onStart});
+ }
  function playQuizWord(word:string,question:number,key:string){
   void play(`word-${word.toLowerCase()}`,{
    id:key,quizQuestion:question,bankName:practiceBank,
@@ -105,7 +122,12 @@ export default function ReadingCourse(){
   {alphabet?<section className="reading-alphabet" aria-labelledby="alphabet-title">
    <header className="reading-alphabet-header"><div><p className="reading-kicker">YOUR FIRST SOUNDS · A–Z</p><h1 id="alphabet-title">الحروف وأصواتها</h1><p>اضغط الحرف الكبير لتسمع صوته، ثم استمع إلى الكلمتين. مع X، اسمع /ks/ في آخر الكلمتين.</p><p>نتعلم صوت الحرف داخل الكلمة، وليس اسمه. بعض الحروف لها أصوات أخرى ستأتي في الفصول التالية.</p></div><span className="reading-alphabet-badge">26 حرفًا<br/>52 كلمة</span></header>
    {audioControls}
-   <div className="reading-alphabet-grid" dir="ltr">{readingAlphabet.map(item=>{
+   {letterExamSections.map(section=><section key={section.id} className="reading-alphabet-group" aria-labelledby={`letters-${section.id}`}>
+    <div className="reading-letter-group-heading">
+     <h2 id={`letters-${section.id}`} lang="en" dir="ltr">{section.title}</h2>
+     <LetterExamButton section={section} onOpen={showExam}/>
+    </div>
+    <div className="reading-alphabet-grid" dir="ltr">{readingAlphabet.filter(item=>section.letters.includes(item.letter)).map(item=>{
     const model=readingMouthSelection(item.ipa,item.letter,item.examples);
     return <article className="reading-letter-card" key={item.letter}>
     <button type="button" className="reading-letter-sound" aria-label={`صوت الحرف ${item.letter.toUpperCase()}`} aria-pressed={playing===`sound-${item.letter}`} onClick={()=>void playClip('sound',item.letter)}><span lang="en">{item.letter.toUpperCase()}<small>{item.letter}</small></span><span className="reading-letter-ipa">/{item.ipa}/ <Volume2 size={18}/></span></button>
@@ -114,15 +136,18 @@ export default function ReadingCourse(){
     <p dir="rtl">{item.tip}</p>
    </article>;
    })}</div>
+    <ReadingLetterPassage text={section.passage}/>
+   </section>)}
+   <ReadingLetterPassage text={alphabetReviewLetter} title="اقرأ رسالة المراجعة من A إلى Z"/>
    <section className="reading-extra-mouth" aria-labelledby="extra-mouth-heading">
     <h2 id="extra-mouth-heading">أصوات إضافية في النطق الأمريكي</h2>
     <div className="reading-extra-mouth-grid" dir="ltr">{additionalMouthModels.map(id=>
      <ReadingMouthPreview key={id} selection={{kind:'video',id}} showSound onShow={showMouthModel}/>
     )}</div>
    </section>
-   <div className="reading-alphabet-footer"><p>الترتيب: الحروف ← الحروف الثنائية الساكنة ← حروف العلة الثنائية والمركّبة ← باقي أنماط القراءة.</p><button type="button" className="reading-primary" onClick={()=>navigate(0)}>تدريب الحروف واختبارها <ChevronLeft size={18}/></button><a href="/reading/reading-guide.pdf" className="reading-audio" target="_blank" rel="noreferrer"><Download size={18}/> الدليل الأصلي المصوّر</a></div>
+   <div className="reading-alphabet-footer"><p>الترتيب: الحروف ← الحروف الثنائية الساكنة ← حروف العلة الثنائية والمركّبة ← باقي أنماط القراءة.</p><button type="button" className="reading-primary" onClick={()=>navigate(0)}>تدريب الحروف واختبارها <ChevronLeft size={18}/></button></div>
   </section>:<>
-   <div className="reading-progress"><span>اختبارات صوتية أُنجزت: <bdi dir="ltr">{completed} / {readingChapters.length}</bdi></span><progress value={completed} max={readingChapters.length}/><small>أفضل نتيجة محفوظة على هذا المتصفح فقط. نتائج الاختبارات النصية السابقة منفصلة عن هذه الاختبارات الصوتية الجديدة.</small></div>
+   <div className="reading-progress"><span>اختبارات صوتية أُنجزت: <bdi dir="ltr">{completed} / {readingChapters.length}</bdi></span><progress value={completed} max={readingChapters.length}/><small>أفضل نتيجة محفوظة على هذا المتصفح.</small></div>
    <div className="reading-layout">
     <nav className="reading-chapters" aria-label="فصول دورة القراءة">
      <h2>رحلتك بالترتيب</h2>
@@ -140,17 +165,22 @@ export default function ReadingCourse(){
       </button>)}
      </div>
     </nav>
-    <article className="reading-content" aria-labelledby="chapter-title"><div className="reading-chapter-label">الفصل {chapter.id} من {readingChapters.length} · <a href={`/reading/reading-guide.pdf#page=${chapter.page}`} target="_blank" rel="noreferrer">الشرح المصوّر في الدليل ↗</a></div><h1 id="chapter-title">{chapter.title}</h1><p className="reading-goal">{chapter.goal}</p>
+    <article className="reading-content" aria-labelledby="chapter-title"><div className="reading-chapter-label">الفصل {chapter.id} من {readingChapters.length}</div><h1 id="chapter-title">{chapter.title}</h1><p className="reading-goal">{chapter.goal}</p>
      {chapter.id===1&&<button type="button" className="reading-audio" onClick={showAlphabet}>افتح لوحة الحروف: ٢٦ حرفًا ومثالان لكل حرف</button>}
      <section aria-label="الشرح والتدريب">
       <h2>١. افهم النمط واسمع الكلمات</h2>
       <p>استمع إلى الصوت أو الكلمة، وانتبه إلى الحروف المظلّلة.</p>
-      <div className="reading-patterns">{chapter.patterns.map((pattern)=>
-       <ReadingPatternCard key={pattern.pattern} pattern={pattern} playing={playing} onPlay={playClip} onShowMouth={showMouthModel}/>
-      )}</div>
+      <div className="reading-patterns">{chapter.patterns.map(pattern=>{
+       const section=chapter.id===1?letterExamSections.find(item=>item.title===pattern.pattern):undefined;
+       return <ReadingPatternCard key={pattern.pattern} pattern={pattern} playing={playing} onPlay={playClip} onShowMouth={showMouthModel}
+        action={section&&<LetterExamButton section={section} onOpen={showExam}/>}>
+        {section&&<ReadingLetterPassage text={section.passage}/>}
+       </ReadingPatternCard>;
+      })}</div>
+      {chapter.id===1&&<ReadingLetterPassage text={alphabetReviewLetter} title="اقرأ رسالة المراجعة من A إلى Z"/>}
       <aside className="reading-tip">💡 {chapter.note}</aside>
      </section>
-     <section className="reading-passages"><h2>٢. اقرأ وطبّق</h2><p>اسمع النموذج، ثم اقرأ بنفسك. عند التعثر، قسّم الكلمة إلى أصوات وادمجها مرة أخرى.</p>{chapter.passages.map(p=><div key={p.page} className="reading-passage"><div className="reading-passage-top"><h3 lang="en" dir="ltr">{p.title}</h3><div className="reading-passage-buttons"><button type="button" className="reading-audio" aria-pressed={playing===`passage-${p.page}`} onClick={()=>void play(`passage-${p.page}`)}><Volume2 size={17}/> استمع للنص</button><button type="button" className="reading-audio" aria-pressed={playing===`slow-passage-${p.page}`} onClick={()=>void play(`slow-passage-${p.page}`)}>استمع ببطء</button></div></div><p lang="en" dir="ltr" className="reading-english">{p.text}</p><a href={`/reading/reading-guide.pdf#page=${p.page}`} target="_blank" rel="noreferrer">من الدليل · صفحة {p.page} ↗</a></div>)}</section>
+     <section className="reading-passages"><h2>٢. اقرأ وطبّق</h2><p>اسمع النموذج، ثم اقرأ بنفسك. عند التعثر، قسّم الكلمة إلى أصوات وادمجها مرة أخرى.</p>{chapter.passages.map(p=><div key={p.page} className="reading-passage"><div className="reading-passage-top"><h3 lang="en" dir="ltr">{p.title}</h3><div className="reading-passage-buttons"><button type="button" className="reading-audio" aria-pressed={playing===`passage-${p.page}`} onClick={()=>void play(`passage-${p.page}`)}><Volume2 size={17}/> استمع للنص</button><button type="button" className="reading-audio" aria-pressed={playing===`slow-passage-${p.page}`} onClick={()=>void play(`slow-passage-${p.page}`)}>استمع ببطء</button></div></div><p lang="en" dir="ltr" className="reading-english">{p.text}</p></div>)}</section>
      <section className="reading-sh" aria-labelledby="reading-sh-heading">
       <div className="reading-passage-top">
        <h2 id="reading-sh-heading">٣. دقيقة مع صوت <bdi lang="en">sh /ʃ/</bdi></h2>
@@ -192,14 +222,11 @@ export default function ReadingCourse(){
       {!submitted?<button className="reading-primary" type="submit" disabled={Object.keys(answers).length!==chapter.quiz.length}>اعرض نتيجة الاستماع</button>:<div className="reading-result" role="status"><strong>نتيجتك: <bdi dir="ltr">{score} / {chapter.quiz.length}</bdi></strong><p>{score===chapter.quiz.length?'أحسنت الاستماع! يمكنك متابعة الفصل التالي.':'يمكنك إعادة تشغيل الخيارات ومراجعة التفسير، ثم المحاولة من جديد.'}</p><p>أفضل نتيجة: <bdi dir="ltr">{best[chapter.id]} / {chapter.quiz.length}</bdi></p><button type="button" className="reading-audio" onClick={()=>{stopPlayback();setAnswers({});setHeard({});setSubmitted(false);}}>إعادة الاختبار الصوتي</button></div>}
      </form></section>
      <footer className="reading-pagination"><button type="button" onClick={()=>index===0?showAlphabet():navigate(index-1)}><ChevronRight size={18}/> {index===0?'لوحة الحروف':'الفصل السابق'}</button>{index<readingChapters.length-1?<button type="button" className="reading-primary" onClick={()=>navigate(index+1)}>الفصل التالي <ChevronLeft size={18}/></button>:<Link className="reading-download" href="/?grade=general">العودة إلى الدروس</Link>}</footer>
-     <p className="reading-source">المصدر: دليل أساسيات القراءة الإنجليزية المرفق. ترتيب الفصول مكيّف لبدء الحروف ثم الحروف الثنائية ثم حروف العلة المركّبة. الاختبارات وفقرات sh تدريب إضافي.</p>
     </article>
    </div>
   </>}
-  <footer className="reading-source">
-   نماذج الأصوات وفيديوهات حركة الفم من <a href="https://aepronunciation.com/app/" lang="en">American English Pronunciation</a> (<a href="/reading/aep-2.4.0/SOURCES.txt">المصادر</a> · <a href="/reading/aep-2.4.0/LICENSE.txt" lang="en">GPLv3</a>).
-   {' '}تسجيلات كلمات من <a href="/reading/voice-v3/recordings-credits.txt" lang="en">Wikimedia Commons</a>، و<a href="/reading/voice-v3/audio-credits-v4.txt">مصادر إضافية</a>. بعض الكلمات والنصوص بصوت أمريكي مولّد.
-  </footer>
+  <ReadingLetterExam key={examSection?.id} section={examSection} dialog={examDialog} playing={playing} notice={audioNotice}
+   onPlay={playExam} onStop={stopPlayback} onClose={closeExam}/>
   <ReadingMouthDialog selection={mouthModel} dialog={mouthDialog} video={mouthVideo} playing={playing} notice={audioNotice}
    onClose={closeMouthModel} onVideoPlay={stopAudio} onSound={playClip}/>
  </main></div>;

@@ -1,3 +1,4 @@
+import type {ReactNode} from 'react';
 import {Volume2} from 'lucide-react';
 import {readingExampleWord, type ReadingPattern} from '@/lib/reading-course';
 import {readingPhonemeId} from './reading-phonemes';
@@ -6,6 +7,8 @@ import {ReadingMouthPreview} from './reading-mouth-models';
 
 type Props = {
  pattern: ReadingPattern;
+ action?:ReactNode;
+ children?:ReactNode;
  playing: string;
  onPlay: (kind:'sound'|'word', value:string, id:string) => void;
  onShowMouth: (selection:MouthSelection) => void;
@@ -24,11 +27,14 @@ function ExampleLetters({example}:{example:string}){
  )}</>;
 }
 
-export default function ReadingPatternCard({pattern,playing,onPlay,onShowMouth}:Props){
+export default function ReadingPatternCard({pattern,playing,onPlay,onShowMouth,action,children}:Props){
  const compact=pattern.groups.length>1&&pattern.groups.every(group=>group.spellings.length===1);
 
  return <div className="reading-pattern">
-  <h3 lang="en" dir="ltr">{pattern.pattern}</h3>
+  <div className="reading-letter-group-heading">
+   <h3 lang="en" dir="ltr">{pattern.pattern}</h3>
+   {action}
+  </div>
   <div className={`reading-sound-groups${compact?' reading-sound-groups--tiles':''}`} lang="en" dir="ltr">
    {pattern.groups.map((group,index)=>{
     const letters=group.spellings.map(spelling=>spelling.letters).join(', ');
@@ -75,5 +81,6 @@ export default function ReadingPatternCard({pattern,playing,onPlay,onShowMouth}:
    })}
   </div>
   {pattern.tip&&<ReadingTip text={pattern.tip}/>}
+  {children}
  </div>;
 }

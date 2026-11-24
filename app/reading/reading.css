@@ -292,3 +292,82 @@
  box-shadow:inset 0 0 0 1px var(--rd-accent);
 }
 .reading-sequence-video {margin-top:10px}
+
+.reading-alphabet-group {
+ margin-top:25px;
+ padding-top:16px;
+ border-top:1px solid var(--rd-line);
+}
+.reading-letter-group-heading {
+ display:flex;
+ flex-wrap:wrap;
+ justify-content:space-between;
+ align-items:center;
+ gap:10px;
+}
+.reading-letter-group-heading :is(h2,h3) {margin:0}
+.reading-alphabet-group .reading-letter-group-heading {
+ direction:ltr;
+}
+.reading-alphabet-group .reading-letter-group-heading button {direction:rtl}
+.reading-alphabet-group .reading-alphabet-grid {margin-top:12px}
+.reading-letter-passage {
+ margin-top:14px;
+ padding:12px 14px;
+ border:1px solid var(--rd-line);
+ border-radius:10px;
+ background:color-mix(in srgb,var(--rd-accent) 7%,var(--rd-paper));
+}
+.reading-letter-passage h3 {margin:0;text-align:start;font-size:1rem}
+.reading-letter-passage p {
+ margin:6px 0 0;
+ font:1.125rem/1.85 Georgia,serif;
+ white-space:pre-line;
+}
+.reading-letter-passage mark {
+ color:var(--rd-ink);
+ background:color-mix(in srgb,var(--rd-accent) 22%,var(--rd-paper));
+ font-weight:700;
+}
+.reading-exam-levels {display:grid;gap:8px}
+.reading-exam-levels button {justify-content:space-between;text-align:start}
+.reading-exam-levels small {display:block;margin-top:4px}
+.reading-exam-counter {
+ display:flex;
+ flex-wrap:wrap;
+ justify-content:space-between;
+ align-items:center;
+ gap:8px;
+}
+.reading-letter-exam progress {width:100%;accent-color:var(--rd-accent)}
+.reading-letter-exam fieldset {display:grid;gap:12px;min-width:0;margin:12px 0;padding:0;border:0}
+.reading-letter-exam legend {margin-bottom:10px}
+.reading-letter-exam fieldset>.reading-audio {justify-self:start}
+.reading-exam-choices {
+ display:grid;
+ grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:8px;
+}
+.reading-exam-choices label {
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ gap:6px;
+ min-height:48px;
+ padding:6px;
+ cursor:pointer;
+ border:1px solid var(--rd-line);
+ border-radius:8px;
+ font:700 1.15rem/1.4 Georgia,serif;
+}
+.reading-exam-choices input {accent-color:var(--rd-accent);margin:0}
+.reading-exam-choices label:has(:checked) {
+ border-color:var(--rd-accent);
+ box-shadow:inset 0 0 0 1px var(--rd-accent);
+}
+.reading-exam-choices label:has(:disabled) {opacity:.55;cursor:default}
+.reading-exam-actions {display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.reading-exam-review summary {padding:10px 0;cursor:pointer;min-height:44px}
+.reading-exam-review ol {margin:0;padding-inline-start:24px}
+.reading-exam-review li {margin:6px 0}
+.reading-exam-review li button {margin-inline-end:7px}

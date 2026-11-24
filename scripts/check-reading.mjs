@@ -3,6 +3,7 @@ import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {readingChapters,readingExampleWord} from '../lib/reading-course.ts';
 import {readingAlphabet} from '../lib/reading-alphabet.ts';
+import {alphabetReviewLetter,letterExamLevels,letterExamSections} from '../lib/reading-letter-exams.ts';
 import {clearWordBank,modelFocusBank,readingPhonemeBank,readingPhonemeId,readingWordBank} from '../app/reading/reading-phonemes.ts';
 import {additionalMouthModels,mouthModelIds,mouthModels,readingMouthModelId,readingMouthSelection} from '../app/reading/reading-mouth-data.ts';
 import {shPracticeTiming} from '../app/reading/sh-practice-timing.ts';
@@ -98,6 +99,45 @@ for(const letter of readingAlphabet){
  audioBytes(audioBank(soundBank),`sound-${letter.letter}`);
  for(const word of letter.examples)audioBytes(alphabet,`word-${word.toLowerCase()}`);
 }
+const letters=readingAlphabet.map(letter=>letter.letter);
+const extractLetters=text=>[...text.matchAll(/\[([a-z]+)\]/gi)].map(([,letters])=>letters[0].toLowerCase()).sort();
+assert.deepEqual(extractLetters(alphabetReviewLetter),letters);
+assert.deepEqual(letterExamSections.map(section=>section.title),readingChapters[0].patterns.map(pattern=>pattern.pattern));
+assert.deepEqual(letterExamSections.flatMap(section=>[...section.letters]),letters);
+let examQuestions=0;
+for(const section of letterExamSections){
+ assert.deepEqual(extractLetters(section.passage),[...section.letters]);
+ assert.deepEqual(section.exams.sound.map(question=>question.answer),[...section.letters]);
+ assert.deepEqual(section.exams.position.map(question=>question.answer),[...section.letters]);
+ for(const {id} of letterExamLevels){
+  for(const {options,answer,clip,position} of section.exams[id]){
+   examQuestions++;
+   assert.equal(options.length,3);
+   assert.equal(new Set(options).size,options.length);
+   assert(options.includes(answer));
+   if(clip.kind==='sound'){
+    assert.equal(id,'sound');
+    assert.equal(answer,clip.value);
+    const soundBank=readingPhonemeBank(clip.value);
+    assert(soundBank);
+    audioBytes(audioBank(soundBank),`sound-${clip.value}`);
+   }else{
+    assert(recordedWords.has(clip.value)||readingWordBank(clip.value)===clip.bank,`Expected a credited recording for ${clip.value}`);
+    audioBytes(clip.bank?audioBank(clip.bank):alphabet,`word-${clip.value}`);
+    if(id==='word') assert.equal(answer,clip.value);
+    else if(position==='last') assert.equal(clip.value.at(-1),answer);
+    else assert.equal(clip.value[0],answer);
+   }
+  }
+ }
+}
+assert.equal(examQuestions,68);
+const studentCourse=readFileSync(new URL('../app/reading/reading-course.tsx',import.meta.url),'utf8');
+assert.doesNotMatch(studentCourse,/reading-guide\.pdf|SOURCES\.txt|recordings-credits\.txt|audio-credits-v4\.txt/);
+const teacherReading=readFileSync(new URL('../app/teacher/reading/page.tsx',import.meta.url),'utf8');
+assert.match(teacherReading,/await requireOwner\(\)/);
+assert.match(teacherReading,/reading-guide\.pdf/);
+assert.match(teacherReading,/SOURCES\.txt/);
 assert.equal(readingAlphabet.find(a=>a.letter==='q').phones,'k w');
 assert.equal(readingAlphabet.find(a=>a.letter==='x').phones,'k s');
 function checkSelection(symbol,audio,examples,bank){
@@ -181,4 +221,4 @@ assert.deepEqual(she.options,['see','she','tea']);assert.equal(she.answer,1);
 assert(readingChapters[1].sh.startsWith('She sells seashells by the seashore.'));
 assert(readFileSync(new URL('../public/reading/reading-guide.pdf',import.meta.url)).subarray(0,5).equals(Buffer.from('%PDF-')));
 const catalog=readFileSync(new URL('../app/catalog.tsx',import.meta.url),'utf8');assert(catalog.includes('href="/reading"'));
-console.log('PASS: requested chapter order, 26 letter sounds, 106 chapter sound placements, 47 source videos, 52 examples, 32 audio questions with distinct playable files, and complete practice and passage audio.');
+console.log('PASS: requested chapter order, 26 letter sounds, 106 chapter sound placements, 47 source videos, 52 examples, 68 new letter-exam questions, 32 chapter audio questions, and complete practice and passage audio.');
