@@ -10,7 +10,6 @@
 .reading-source a{color:var(--rd-accent)}
 
 .reading-sound-groups {
- container-type:inline-size;
  display:grid;
  gap:12px;
  margin-top:14px;
@@ -372,36 +371,3 @@
 .reading-exam-review ol {margin:0;padding-inline-start:24px}
 .reading-exam-review li {margin:6px 0}
 .reading-exam-review li button {margin-inline-end:7px}
-
-.reading-sound-group--shared {
- display:grid;
- grid-template-columns:minmax(0,1fr);
- grid-template-areas:"before" "sound" "after";
- gap:10px;
-}
-.reading-sound-group--shared .reading-sound-head {
- grid-area:sound;
- align-self:center;
- justify-content:center;
- flex-direction:column;
- padding:9px;
- margin:0;
- border:1px solid var(--rd-line);
- border-radius:10px;
- background:color-mix(in srgb,var(--rd-accent) 9%,var(--rd-paper));
-}
-.reading-shared-label {
- color:var(--rd-accent);
- font:700 .85rem/1.4 system-ui,sans-serif;
-}
-.reading-sound-group--shared .reading-sound-model {justify-content:center}
-.reading-spellings--before {grid-area:before}
-.reading-spellings--after {grid-area:after}
-.reading-sound-group--shared .reading-spellings {align-self:center}
-@container (min-width:32rem) {
- .reading-sound-group--shared {
-  grid-template-columns:minmax(0,1fr) 8.5rem minmax(0,1fr);
-  grid-template-areas:"before sound after";
- }
- .reading-sound-group--shared .reading-sound-model {flex-direction:column}
-}
