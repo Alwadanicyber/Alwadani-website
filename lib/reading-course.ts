@@ -1,10 +1,11 @@
 export type ReadingSpelling = {letters:string; examples:string[]};
 export type ReadingSoundGroup = {ipa:string; spellings:ReadingSpelling[]; atEnd?:boolean; audio?:string};
 export type ReadingPattern = {pattern:string; groups:ReadingSoundGroup[]; tip?:string};
+type ReadingQuizQuestion = {word:string; prompt:string; options:string[]; answer:number; reason:string; wordAudio?:true};
 export type ReadingChapter = {
  id:number; title:string; en:string; page:number; goal:string; patterns:ReadingPattern[]; note:string;
  passages:{title:string; text:string; page:number}[]; sh:string;
- quiz:{word:string; prompt:string; options:string[]; answer:number; reason:string}[];
+ quiz:ReadingQuizQuestion[];
 };
 
 // Brackets mark only the letters students should focus on, including split spellings like a…e.
@@ -19,6 +20,10 @@ function sound(ipa:string, ...spellings:ReadingSpelling[]):ReadingSoundGroup {
 export function readingExampleWord(example:string):string {
  return example.replace(/[\[\]]/g,'');
 }
+function wordQuestion(word:string,options:string[],reason:string):ReadingQuizQuestion {
+ return {word,prompt:`كيف ننطق كلمة ${word}؟`,options,answer:options.indexOf(word),reason,wordAudio:true};
+}
+
 export const readingChapters:ReadingChapter[] = [
   {
     "id": 1,
@@ -116,7 +121,9 @@ export const readingChapters:ReadingChapter[] = [
         ],
         "answer": 2,
         "reason": "sun /sʌn/ فيها u قصيرة /ʌ/، وليست i القصيرة في sin."
-      }
+      },
+      wordQuestion('gap',['cap','gap','tap'],'تبدأ gap بصوت /ɡ/، وcap بصوت /k/، وtap بصوت /t/.'),
+      wordQuestion('wet',['net','pen','wet'],'تبدأ wet بصوت /w/، وتبدأ net بـ /n/، وpen بـ /p/.')
     ]
   },
   {
@@ -209,7 +216,9 @@ export const readingChapters:ReadingChapter[] = [
         ],
         "answer": 0,
         "reason": "thin /θɪn/ تبدأ بـ th /θ/؛ يمر الهواء بين طرف اللسان والأسنان."
-      }
+      },
+      wordQuestion('which',['which','when','chip'],'اسمع /tʃ/ في نهاية which. تبدأ chip بهذا الصوت، أما when فتنتهي بـ /n/.'),
+      wordQuestion('ring',['tin','ring','tip'],'تنتهي ring بصوت /ŋ/، وتنتهي tin بـ /n/ وtip بـ /p/.')
     ]
   },
   {
@@ -452,7 +461,9 @@ export const readingChapters:ReadingChapter[] = [
         ],
         "answer": 0,
         "reason": "cup /kʌp/ فيها /ʌ/؛ ركز على صوت العلة في الوسط."
-      }
+      },
+      wordQuestion('sit',['sat','run','sit'],'في sit نسمع /ɪ/، وفي sat نسمع /æ/، وفي run نسمع /ʌ/.'),
+      wordQuestion('pot',['pan','pot','pig'],'تبدأ الكلمات الثلاث بـ /p/. في pot اسمع صوت o القصير ثم /t/.')
     ]
   },
   {
@@ -538,7 +549,9 @@ export const readingChapters:ReadingChapter[] = [
         ],
         "answer": 1,
         "reason": "grin /ɡrɪn/ تبدأ بصوتي g وr، وفيها i قصيرة."
-      }
+      },
+      wordQuestion('slip',['slip','smell','snap'],'تبدأ slip بالصوتين /sl/، وsmell بـ /sm/، وsnap بـ /sn/.'),
+      wordQuestion('sink',['bank','snap','sink'],'في sink اسمع /ɪ/ ثم /ŋk/. في bank اسمع /æ/ قبل /ŋk/.')
     ]
   },
   {
@@ -618,7 +631,9 @@ export const readingChapters:ReadingChapter[] = [
         ],
         "answer": 1,
         "reason": "hope /hoʊp/ فيها /oʊ/؛ hop فيها o قصيرة، وhoop فيها /uː/."
-      }
+      },
+      wordQuestion('cube',['cub','cube','cute'],'في cube نسمع /juː/ ثم /b/. في cub نسمع /ʌ/، وتنتهي cute بـ /t/.'),
+      wordQuestion('note',['note','not','hope'],'في note اسمع /oʊ/ ثم /t/. في not تكون o قصيرة، وفي hope يأتي /p/ في النهاية.')
     ]
   },
   {
@@ -694,7 +709,9 @@ export const readingChapters:ReadingChapter[] = [
         ],
         "answer": 2,
         "reason": "give /ɡɪv/ استثناء: g صلبة /ɡ/، وi قصيرة رغم e الأخيرة."
-      }
+      },
+      wordQuestion('cent',['sit','get','cent'],'تبدأ cent بصوت /s/ وفيها /ɛ/، بينما في sit نسمع /ɪ/.'),
+      wordQuestion('get',['gem','get','gentle'],'تبدأ get بصوت /ɡ/ المسموع في go. تبدأ gem وgentle بصوت /dʒ/.')
     ]
   },
   {
@@ -779,7 +796,9 @@ export const readingChapters:ReadingChapter[] = [
         ],
         "answer": 2,
         "reason": "star /stɑr/ فيها ar /ɑr/؛ store فيها or وstir فيها ir."
-      }
+      },
+      wordQuestion('corn',['corn','car','fork'],'في corn اسمع /ɔr/ ثم /n/. في car اسمع /ɑr/، وتبدأ fork بصوت /f/.'),
+      wordQuestion('turn',['term','stir','turn'],'في turn وterm وstir نسمع /ɝ/. تبدأ turn بـ /t/ وتنتهي بـ /n/.')
     ]
   },
   {
@@ -852,7 +871,9 @@ export const readingChapters:ReadingChapter[] = [
         ],
         "answer": 2,
         "reason": "lamb /læm/ تنتهي بـ /m/؛ b الأخيرة صامتة."
-      }
+      },
+      wordQuestion('thumb',['lamb','thumb','lamp'],'تبدأ thumb بصوت /θ/ وتنتهي بـ /m/. حرف b صامت في thumb وlamb.'),
+      wordQuestion('night',['night','wit','wet'],'في night تمثل igh الصوت /aɪ/. في wit نسمع /ɪ/، وفي wet نسمع /ɛ/.')
     ]
   },
   {
@@ -924,7 +945,9 @@ export const readingChapters:ReadingChapter[] = [
         ],
         "answer": 2,
         "reason": "picture /ˈpɪktʃɚ/ تنتهي بصوت /tʃɚ/ في النطق الأمريكي."
-      }
+      },
+      wordQuestion('watch',['catch','cat','watch'],'تنتهي watch وcatch بصوت /tʃ/. اسمع اختلاف الحركة بينهما. تنتهي cat بـ /t/.'),
+      wordQuestion('bridge',['page','bridge','village'],'تنتهي bridge بصوت /dʒ/ كما في page وvillage. اسمع /br/ في أول bridge.')
     ]
   }
 ];

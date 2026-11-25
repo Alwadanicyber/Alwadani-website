@@ -17,8 +17,9 @@ import {shPracticeTiming} from './sh-practice-timing';
 import './reading.css';
 
 // Old text-question results stay in v1; they do not count as sound-test results.
-const storageKey='alwadani-reading-sounds-v2';
-type Progress=Record<string,number>;
+const storageKey='alwadani-reading-sounds-v3';
+const legacyStorageKey='alwadani-reading-sounds-v2';
+type Progress=Record<string,{score:number;total:number}>;
 function Highlight({text}:{text:string}){
  return <>{text.split(/(sh)/gi).map((part,i)=>part.toLowerCase()==='sh'?<mark key={i}>{part}</mark>:part)}</>;
 }
@@ -43,8 +44,22 @@ export default function ReadingCourse(){
  useEffect(()=>{
   const timer=window.setTimeout(()=>{
    try{
-    const saved=JSON.parse(localStorage.getItem(storageKey)||'{}'),valid:Progress={};
-    for(const c of readingChapters){const n=saved?.[c.id];if(Number.isInteger(n)&&n>=0&&n<=c.quiz.length)valid[c.id]=n;}
+    const saved=JSON.parse(localStorage.getItem(storageKey)||'{}');
+    const legacy=JSON.parse(localStorage.getItem(legacyStorageKey)||'{}');
+    const valid:Progress={};
+    for(const chapter of readingChapters){
+     const total=chapter.quiz.length;
+     const result=saved?.[chapter.id];
+     if(result?.total===total&&Number.isInteger(result.score)&&result.score>=0&&result.score<=total){
+      valid[chapter.id]={score:result.score,total};
+      continue;
+     }
+     const oldScore=legacy?.[chapter.id];
+     const oldTotal=chapter.quiz.filter(question=>!question.wordAudio).length;
+     if(Number.isInteger(oldScore)&&oldScore>=0&&oldScore<=oldTotal){
+      valid[chapter.id]={score:oldScore,total:oldTotal};
+     }
+    }
     setBest(valid);
    }catch{setNotice('يمكنك التعلم والاختبار؛ حفظ التقدم غير متاح في هذا المتصفح.');}
    const match=window.location.hash.match(/^#chapter-(\d+)$/);
@@ -100,15 +115,19 @@ export default function ReadingCourse(){
   void play(`${clip.kind}-${clip.value}`,{bankName,id,onStart});
  }
  function playQuizWord(word:string,question:number,key:string){
+  const wordAudio=chapter.quiz[question].wordAudio;
   void play(`word-${word.toLowerCase()}`,{
-   id:key,quizQuestion:question,bankName:practiceBank,
+   id:key,quizQuestion:wordAudio?undefined:question,bankName:wordAudio?`chapter-${chapter.id}`:practiceBank,
    onStart:()=>setHeard(previous=>({...previous,[key]:true})),
   });
  }
  function submit(){
   if(Object.keys(answers).length!==chapter.quiz.length)return;
   stopPlayback();setSubmitted(true);
-  const next={...best,[chapter.id]:Math.max(best[chapter.id]??0,score)};setBest(next);
+  const total=chapter.quiz.length;
+  const previous=best[chapter.id];
+  const bestScore=previous?.total===total?Math.max(previous.score,score):score;
+  const next={...best,[chapter.id]:{score:bestScore,total}};setBest(next);
   try{localStorage.setItem(storageKey,JSON.stringify(next));}catch{setNotice('ظهرت نتيجتك، لكن تعذّر حفظها في هذا المتصفح.');}
  }
  const audioControls=<div className="reading-audio-controls"><button type="button" className="reading-audio" onClick={stopPlayback}><Square size={14}/> إيقاف الصوت</button><span role="status" aria-live="polite">{audioNotice}</span></div>;
@@ -161,7 +180,7 @@ export default function ReadingCourse(){
       {readingChapters.map((item,i)=><button type="button" key={item.id} aria-current={index===i?'step':undefined} onClick={()=>navigate(i)}>
        <span className="reading-number">{String(item.id).padStart(2,'0')}</span>
        <span>{item.title}<small lang="en" dir="ltr">{item.en}</small></span>
-       {best[item.id]!==undefined&&<span className="reading-best" dir="ltr" aria-label={`أفضل نتيجة ${best[item.id]} من ${item.quiz.length}`}>{best[item.id]}/{item.quiz.length}</span>}
+       {best[item.id]!==undefined&&<span className="reading-best" dir="ltr" aria-label={`أفضل نتيجة ${best[item.id].score} من ${best[item.id].total}`}>{best[item.id].score}/{best[item.id].total}</span>}
       </button>)}
      </div>
     </nav>
@@ -219,7 +238,7 @@ export default function ReadingCourse(){
        {submitted&&<span className="reading-choice-reveal" lang="en" dir="ltr">{word}{correct&&<CheckCircle2 size={18}/>}</span>}
       </div>;
      })}</div>{submitted&&<p className="reading-feedback">{answers[qi]===q.answer?'أحسنت!':'محاولة جيدة، اسمع النطق الصحيح ثم جرّب مجددًا.'} {q.reason}</p>}</fieldset>)}
-      {!submitted?<button className="reading-primary" type="submit" disabled={Object.keys(answers).length!==chapter.quiz.length}>اعرض نتيجة الاستماع</button>:<div className="reading-result" role="status"><strong>نتيجتك: <bdi dir="ltr">{score} / {chapter.quiz.length}</bdi></strong><p>{score===chapter.quiz.length?'أحسنت الاستماع! يمكنك متابعة الفصل التالي.':'يمكنك إعادة تشغيل الخيارات ومراجعة التفسير، ثم المحاولة من جديد.'}</p><p>أفضل نتيجة: <bdi dir="ltr">{best[chapter.id]} / {chapter.quiz.length}</bdi></p><button type="button" className="reading-audio" onClick={()=>{stopPlayback();setAnswers({});setHeard({});setSubmitted(false);}}>إعادة الاختبار الصوتي</button></div>}
+      {!submitted?<button className="reading-primary" type="submit" disabled={Object.keys(answers).length!==chapter.quiz.length}>اعرض نتيجة الاستماع</button>:<div className="reading-result" role="status"><strong>نتيجتك: <bdi dir="ltr">{score} / {chapter.quiz.length}</bdi></strong><p>{score===chapter.quiz.length?'أحسنت الاستماع! يمكنك متابعة الفصل التالي.':'يمكنك إعادة تشغيل الخيارات ومراجعة التفسير، ثم المحاولة من جديد.'}</p><p>أفضل نتيجة: <bdi dir="ltr">{best[chapter.id]?.score} / {chapter.quiz.length}</bdi></p><button type="button" className="reading-audio" onClick={()=>{stopPlayback();setAnswers({});setHeard({});setSubmitted(false);}}>إعادة الاختبار الصوتي</button></div>}
      </form></section>
      <footer className="reading-pagination"><button type="button" onClick={()=>index===0?showAlphabet():navigate(index-1)}><ChevronRight size={18}/> {index===0?'لوحة الحروف':'الفصل السابق'}</button>{index<readingChapters.length-1?<button type="button" className="reading-primary" onClick={()=>navigate(index+1)}>الفصل التالي <ChevronLeft size={18}/></button>:<Link className="reading-download" href="/?grade=general">العودة إلى الدروس</Link>}</footer>
     </article>

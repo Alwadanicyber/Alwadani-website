@@ -9,7 +9,7 @@ import {additionalMouthModels,mouthModelIds,mouthModels,readingMouthModelId,read
 import {shPracticeTiming} from '../app/reading/sh-practice-timing.ts';
 assert.equal(readingChapters.length,10);
 assert.deepEqual(readingChapters.map(c=>c.page),[2,8,21,5,11,15,18,32,35,37],'Requested order: letters, consonant digraphs, vowel digraphs, then the rest');
-assert.equal(readingChapters.reduce((n,c)=>n+c.quiz.length,0),32);
+assert.equal(readingChapters.reduce((n,c)=>n+c.quiz.length,0),50);
 assert.deepEqual(readingChapters[2].passages.map(p=>p.page),[22,25,28,31]);
 const voiceDirectory = new URL('../public/reading/voice-v3/',import.meta.url);
 function audioBank(name){
@@ -163,7 +163,7 @@ for(const [i,c] of readingChapters.entries()){
  assert(c.title&&c.en&&c.goal&&c.note);
  assert(c.patterns.length>0&&c.patterns.every(p=>p.pattern&&p.groups.length));
  assert(c.passages.length>0&&c.passages.every(p=>p.title&&p.text&&p.page>=c.page));
- assert(/sh/i.test(c.sh));assert(c.quiz.length>=3);
+ assert(/sh/i.test(c.sh));assert.equal(c.quiz.length,5);
  const bank = audioBank(`chapter-${c.id}`);
  for(const word of ['box','dog','duck','fox','leg','lip','up']){
   if(bank[`word-${word}`]) assert.equal(bank[`word-${word}`],alphabet[`word-${word}`]);
@@ -210,7 +210,9 @@ for(const [i,c] of readingChapters.entries()){
   assert.equal(q.options[q.answer],q.word,'Correct sound must pronounce the displayed word');
   const hashes=q.options.map(w=>{
    const word=w.toLowerCase();
-   return createHash('sha256').update(audioBytes(practiceBank,`quiz-${index}-word-${word}`)).digest('hex');
+   if(q.wordAudio) assert(recordedWords.has(word),`Expected a credited recording for ${word}`);
+   const bytes=q.wordAudio?audioBytes(bank,`word-${word}`):audioBytes(practiceBank,`quiz-${index}-word-${word}`);
+   return createHash('sha256').update(bytes).digest('hex');
   });
   assert.equal(new Set(hashes).size,3,'Sound options must not be identical recordings');
  }
@@ -221,4 +223,4 @@ assert.deepEqual(she.options,['see','she','tea']);assert.equal(she.answer,1);
 assert(readingChapters[1].sh.startsWith('She sells seashells by the seashore.'));
 assert(readFileSync(new URL('../public/reading/reading-guide.pdf',import.meta.url)).subarray(0,5).equals(Buffer.from('%PDF-')));
 const catalog=readFileSync(new URL('../app/catalog.tsx',import.meta.url),'utf8');assert(catalog.includes('href="/reading"'));
-console.log('PASS: requested chapter order, 26 letter sounds, 106 chapter sound placements, 47 source videos, 52 examples, 68 new letter-exam questions, 32 chapter audio questions, and complete practice and passage audio.');
+console.log('PASS: requested chapter order, 26 letter sounds, 106 chapter sound placements, 47 source videos, 52 examples, 68 new letter-exam questions, 50 chapter audio questions, and complete practice and passage audio.');
