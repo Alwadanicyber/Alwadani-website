@@ -40,9 +40,26 @@ export default function ReadingPatternCard({pattern,playing,onPlay,onShowMouth,a
     const letters=group.spellings.map(spelling=>spelling.letters).join(', ');
     const examples=group.spellings.flatMap(spelling=>spelling.examples.map(readingExampleWord));
     const groupId=`${pattern.pattern}:${index}`;
-    return <div key={groupId} className={`reading-sound-group${group.atEnd?' reading-sound-group--ending':''}`}>
-     {group.ipa&&<div className="reading-sound-head">
-      {group.ipa.split(' ~ ').map(symbol=>{
+    const symbols=group.ipa?group.ipa.split(' ~ '):[];
+    const shared=symbols.length===1&&group.spellings.length>1;
+    const center=Math.ceil(group.spellings.length/2);
+    const spellings=group.spellings.map(({letters,examples})=>
+     <div className="reading-spelling" key={letters}>
+      <h4>{letters}</h4>
+      <div className="reading-word-bank">{examples.map(example=>{
+       const word=readingExampleWord(example);
+       const id=`${groupId}:${letters}:word:${word}`;
+       return <button type="button" key={word} aria-pressed={playing===id} onClick={()=>onPlay('word',word,id)} aria-label={`Listen: ${word}`}>
+        <Volume2 size={14} aria-hidden="true"/><span><ExampleLetters example={example}/></span>
+       </button>;
+      })}</div>
+     </div>
+    );
+    return <div key={groupId} className={`reading-sound-group${group.atEnd?' reading-sound-group--ending':''}${shared?' reading-sound-group--shared':''}`}>
+     {shared&&<div className="reading-spellings reading-spellings--before">{spellings.slice(0,center)}</div>}
+     {symbols.length>0&&<div className="reading-sound-head">
+      {shared&&<span className="reading-shared-label" lang="ar" dir="rtl">صوت مشترك</span>}
+      {symbols.map(symbol=>{
        const audio=group.audio??readingPhonemeId(symbol);
        const selection=readingMouthSelection(symbol,audio,examples);
        const contextualWord=!audio&&selection?.kind==='sequence' ? selection.example : undefined;
@@ -63,20 +80,7 @@ export default function ReadingPatternCard({pattern,playing,onPlay,onShowMouth,a
       })}
       {group.atEnd&&<span className="reading-sound-position" lang="ar" dir="rtl">في آخر الكلمة</span>}
      </div>}
-     <div className="reading-spellings">
-      {group.spellings.map(({letters,examples})=>
-       <div className="reading-spelling" key={letters}>
-        <h4>{letters}</h4>
-        <div className="reading-word-bank">{examples.map(example=>{
-         const word=readingExampleWord(example);
-         const id=`${groupId}:${letters}:word:${word}`;
-         return <button type="button" key={word} aria-pressed={playing===id} onClick={()=>onPlay('word',word,id)} aria-label={`Listen: ${word}`}>
-          <Volume2 size={14} aria-hidden="true"/><span><ExampleLetters example={example}/></span>
-         </button>;
-        })}</div>
-       </div>
-      )}
-     </div>
+     <div className={`reading-spellings${shared?' reading-spellings--after':''}`}>{shared?spellings.slice(center):spellings}</div>
     </div>;
    })}
   </div>
